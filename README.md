@@ -5,6 +5,11 @@
 - **Orquestación:** n8n Self-Hosted (Docker Compose)
 - **Base de Datos:** PostgreSQL + pgvector
 - **IA Ops:** Observabilidad con Langfuse y Pruebas Unitarias de Prompts
+- **Metodolgoia:** SCRUM
+
+ 
+
+ 
 
 ## 🚀 Despliegue Local de Infraestructura
 ```bash
