@@ -6,6 +6,7 @@
 - **Base de Datos:** PostgreSQL + pgvector
 - **IA Ops:** Observabilidad con Langfuse y Pruebas Unitarias de Prompts
 
+
 ## 🚀 Despliegue Local de Infraestructura
 ```bash
 cd infrastructure
