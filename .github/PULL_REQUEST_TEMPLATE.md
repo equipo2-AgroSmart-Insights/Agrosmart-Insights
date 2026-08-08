@@ -2,19 +2,19 @@
 - **Issue vinculado:** Closes #
 
 ## 📝 Descripción del Cambio
-Resumen técnico del cambio implementado.
+Setup de infraestructura base, Docker Compose y pruebas unitarias de seguridad para prompts (Caso 2).
 
 ## 📐 Tipo de Cambio
 - [ ] Backend / n8n Workflow (`src/n8n-workflows/`)
 - [ ] Frontend NLQ (`src/frontend/`)
 - [ ] Base de Datos SQL (`src/database/`)
-- [ ] IA Ops / Prompts (`src/ia-ops/`)
-- [ ] Pipeline CI/CD / Infraestructura (`infrastructure/` o `.github/`)
+- [x] IA Ops / Prompts (`src/ia-ops/`)
+- [x] Pipeline CI/CD / Infraestructura (`infrastructure/` o `.github/`)
 
 ## 🛡️ Checklist DevSecOps
-- [ ] **Cero Credenciales Expuestas:** Se verificó que no hay llaves API ni contraseñas quemadas.
-- [ ] **Variables de Entorno:** Todo valor sensible utiliza `.env` o GitHub Secrets.
-- [ ] **Trazabilidad:** La tarea está vinculada a un Issue en el tablero.
+- [x] **Cero Credenciales Expuestas:** No se incluyeron API keys en texto plano.
+- [x] **Variables de Entorno:** Se utiliza `.env.example`.
+- [x] **Pruebas de IA:** Pruebas de inyección configuradas en PyTest.
 
 ## ✍️ Aprobaciones Requeridas
 - **Líder DevSecOps:** [ ] Aprobado
