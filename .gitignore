@@ -1,0 +1,18 @@
+﻿# Entorno y credenciales
+.env
+.env.local
+*.pem
+*.key
+
+# Archivos de build y dependencias
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+
+# Logs y bases de datos locales
+*.log
+*.db
+.n8n/
+pgdata/
