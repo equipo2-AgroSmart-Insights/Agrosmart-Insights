@@ -4,7 +4,7 @@
 - **Frontend:** Microfrontend NLQ (Natural Language Query)
 - **Orquestación:** n8n Self-Hosted (Docker Compose)
 - **Base de Datos:** PostgreSQL + pgvector
-- **IA Ops:** Observabilidad con Langfuse y Pruebas Unitarias de Prompts
+- **IA Ops:** Observabilidad con Langfuse y Pruebas Unitarias de los Prompts
 
 ## 🚀 Despliegue Local de Infraestructura
 ```bash
