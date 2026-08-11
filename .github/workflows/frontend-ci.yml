@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'src/frontend/**'
+      - '.github/workflows/frontend-ci.yml'
   push:
     branches:
-      - 'LeonCangalaya'
+      - main
     paths:
       - 'src/frontend/**'
+      - '.github/workflows/frontend-ci.yml'
 
 jobs:
   validate-frontend:
