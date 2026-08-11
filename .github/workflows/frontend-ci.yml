@@ -12,6 +12,9 @@ on:
       - 'src/frontend/**'
       - '.github/workflows/frontend-ci.yml'
 
+permissions:
+  contents: read
+
 jobs:
   validate-frontend:
     runs-on: ubuntu-latest
