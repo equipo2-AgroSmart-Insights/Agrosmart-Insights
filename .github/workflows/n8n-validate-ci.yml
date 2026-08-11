@@ -1,4 +1,4 @@
-﻿name: n8n Workflow & Security Validation
+name: n8n Workflow & Security Validation
 
 on:
   pull_request:
