@@ -1,4 +1,4 @@
-﻿name: AI Ops & Prompt Security Testing
+name: AI Ops & Prompt Security Testing
 
 on:
   pull_request:
