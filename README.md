@@ -88,7 +88,8 @@ docker compose up -d
 ## Canal DevSecOps (estado Sprint 0)
 
 - Branch protection en `main`: PR obligatorio, 1 approval, status checks, conversation resolution, sin bypass admin.
-- Secrets: configurar en GitHub → Settings → Secrets and variables (no hardcodear keys).
+- Secrets (GitHub → Settings → Secrets and variables): `GROQ_API_KEY`, `GEMINI_API_KEY`, `HUGGINGFACE_API_KEY`, `MAPTILER_API_KEY`, `POSTGRES_PASSWORD_DEV` (contraseña de la DB). No hardcodear keys.
+- Stack IA/APIs de los flujos n8n actuales: Groq, Google Gemini, Hugging Face, MapTiler, Open-Meteo (sin key) + Postgres/pgvector.
 - Evidencia de avance: solo lo que está en este repositorio.
 
 ## Roadmap por sprint (DevSecOps)

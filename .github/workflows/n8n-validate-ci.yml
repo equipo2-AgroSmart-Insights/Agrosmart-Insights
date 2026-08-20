@@ -35,9 +35,11 @@ jobs:
               sys.exit(0)
 
           secret_patterns = [
-              (re.compile(r'sk-[a-zA-Z0-9]{20,}'), 'API Key de OpenAI/Anthropic'),
+              (re.compile(r'sk-[a-zA-Z0-9]{20,}'), 'API Key estilo sk- (OpenAI/Anthropic u otras)'),
+              (re.compile(r'gsk_[a-zA-Z0-9]{20,}'), 'API Key de Groq'),
+              (re.compile(r'hf_[a-zA-Z0-9]{20,}'), 'Token de Hugging Face'),
               (re.compile(r'ghp_[a-zA-Z0-9]{36}'), 'GitHub Token'),
-              (re.compile(r'postgres://[^:]+:[^@]+@'), 'Cadena PostgreSQL con Password')
+              (re.compile(r'postgres://[^:]+:[^@]+@'), 'Cadena PostgreSQL con Password'),
           ]
 
           errors = 0
