@@ -16,7 +16,7 @@ src/frontend/
 ```
 
 ## Despliegue
-Estático (GitHub Pages / Vercel). El pipeline `frontend-ci.yml` valida lint/build en cada PR que toque esta carpeta.
+Estático (GitHub Pages / Vercel). El pipeline `frontend-ci.yml` valida lint/build en cada PR (es required check de `main`).
 
 ## Checklist DevSecOps
 - No hardcodear API keys.

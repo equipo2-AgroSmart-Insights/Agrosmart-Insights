@@ -1,10 +1,9 @@
 name: Frontend CI Pipeline
 
 on:
-  pull_request:
-    paths:
-      - 'src/frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+  # Sin filtro de paths en pull_request: este job es required check en main.
+  # Si no corre en un PR, GitHub queda en "Expected — Waiting for status".
+  pull_request: {}
   push:
     branches:
       - main
