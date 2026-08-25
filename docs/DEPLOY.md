@@ -1,5 +1,17 @@
 # Despliegue — AgroSmart Insights
 
+> Guía completa Sprint 1: `docs/sprint-1/SETUP-VERCEL-RENDER.md`  
+> Secrets GitHub: `docs/sprint-1/SECRETS-GITHUB-SPRINT1.md`
+
+## Pipeline CD (GitHub Actions)
+
+Tras merge a `main`, el workflow `.github/workflows/deploy.yml` ejecuta:
+
+1. **Validar** — lint, build frontend, JSON n8n  
+2. **Vercel** — deploy producción (si `VERCEL_TOKEN` configurado)  
+3. **Render** — trigger deploy hook n8n (si `RENDER_DEPLOY_HOOK_N8N` configurado)  
+4. **Health check** — HTTP 200 (si URLs configuradas)
+
 ## Frontend → Vercel
 
 1. Conectar GitHub en [vercel.com/account/settings/authentication](https://vercel.com/account/settings/authentication).

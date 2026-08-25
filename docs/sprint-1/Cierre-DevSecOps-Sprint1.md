@@ -32,7 +32,7 @@
 | Health check HTTP | `infrastructure/scripts/health-check.sh` + secret `N8N_HEALTH_URL` | ✅ |
 | Script rollback | `infrastructure/scripts/rollback.sh` | ✅ |
 | Deploy SSH opcional | Job `deploy-via-ssh` (manual, secrets `SSH_KEY`, `SERVER_HOST`) | ✅ |
-| Servidor cloud **en vivo** | Vercel + Render conectados por el equipo | ⏳ Manual en dashboard |
+| Servidor cloud **en vivo** | Vercel + Render — pipeline CD listo; activar secrets (ver SETUP-VERCEL-RENDER.md) | ⏳ 5–10 min manual |
 
 ---
 
