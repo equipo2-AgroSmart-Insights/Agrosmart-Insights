@@ -1,0 +1,1480 @@
+{
+  "name": "WF 2: API de Chat + Análisis Predictivo",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v1/query",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1344,
+        624
+      ],
+      "id": "7748e434-901e-473a-bb4a-4145596e80b5",
+      "name": "Webhook",
+      "webhookId": "f470e647-f261-4777-a327-84b411281b11"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"error\": \"Sesión inválida o ausente\" }",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1120,
+        864
+      ],
+      "id": "1756ba0b-9b5c-44cd-88f7-47c7d0100018",
+      "name": "Respond to Webhook - Sesión inválida"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.pregunta }}",
+        "options": {
+          "systemMessage": "Eres un sistema experto de análisis, clasificación y enrutamiento de consultas para la plataforma agrícola AgroSmart. Tu tarea es examinar la pregunta del usuario, identificar su intención fundamental y extraer las variables clave en un formato JSON estricto.\n\nPaso 1: CLASIFICACIÓN (Elige una sola opción para \"tipo_consulta\"):\n1. \"precio_puntual\": Para el valor actual, costo, cotización o precio presente. (Ej. \"¿A cuánto está?\", \"cuánto cuesta\").\n2. \"tendencia_prediccion\": Para el futuro, pronósticos, volúmenes de mercado, logística, ingreso de camiones o desabastecimiento por factores de transporte/mercado.\n3. \"clima\": Para condiciones meteorológicas (lluvias, temperatura, sequía, heladas), predicciones del clima y CÓMO AFECTAN estas condiciones al rendimiento o salud de los cultivos.\n4. \"analisis_satelital_riesgo\": EXCLUSIVAMENTE cuando el usuario pide explícitamente \"imágenes satelitales\", \"mapas\", \"vista de satélite\" o \"análisis espacial\". NO usar para preguntas sobre clima, rendimiento o sequías si no mencionan satélites.\n5. \"general\": Para consultas teóricas, saludos o temas que NO encajen en las otras categorías.\n\nPaso 2: EXTRACCIÓN DE ENTIDADES:\n- Identifica el producto agrícola mencionado.\n- Identifica si el periodo es histórico, actual (hoy) o futuro.\n- Identifica la ubicación geográfica (ciudad, provincia, departamento o región). \n\nREGLA CRÍTICA DE ROBUSTEZ: Ignora por completo errores ortográficos, falta de tildes o caracteres extraños de codificación. Extrae la ubicación lógica sin importar cómo esté escrita.\n\nDevuelve ÚNICAMENTE un objeto JSON válido, sin bloques de código markdown, sin saludos y sin texto adicional. Utiliza estrictamente esta estructura exacta:\n{\n  \"producto\": \"nombre del producto agrícola o null\",\n  \"periodo\": \"hoy | historico | futuro | null\",\n  \"tipo_consulta\": \"precio_puntual | tendencia_prediccion | clima | analisis_satelital_riesgo | general\",\n  \"lugar\": \"nombre de la ciudad, provincia o región limpia (ej. Junín), o null\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -688,
+        608
+      ],
+      "id": "7c108c3f-a241-4201-95eb-86f094c02a6b",
+      "name": "AI Agent",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        800
+      ],
+      "id": "98107e23-3e16-4ed7-a767-485a93046cf2",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "GZk9yjxIXBqz5PUt",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "sesion_prueba_123"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -560,
+        800
+      ],
+      "id": "8c0d25ee-43d5-4911-931c-6f74c6bdbadc",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "description": "Usa esta herramienta para buscar información de precios diarios, clima actual y manuales agrícolas."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1.1,
+      "position": [
+        -368,
+        832
+      ],
+      "id": "5132688b-f7ae-4a89-87c5-14db36da5ffe",
+      "name": "Answer questions with a vector store"
+    },
+    {
+      "parameters": {
+        "tableName": "documentos_rag",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        -448,
+        1008
+      ],
+      "id": "0629102d-cfbb-4266-a766-08cc68cf2e7e",
+      "name": "Postgres PGVector Store",
+      "credentials": {
+        "postgres": {
+          "id": "blZlq5en2xDTNg57",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "groq/compound-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        976
+      ],
+      "id": "bedee141-2b59-493c-a913-1daa69307fd2",
+      "name": "Groq Chat Model1",
+      "credentials": {
+        "groqApi": {
+          "id": "GZk9yjxIXBqz5PUt",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        1168
+      ],
+      "id": "adb5df83-91a2-44f7-8b09-d00ad38bee06",
+      "name": "Embeddings HuggingFace Inference",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "Sq9dIhrw5s7bdC26",
+          "name": "Hugging Face account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1c38e51e-4861-41b3-b500-c766f5042dd5",
+              "leftValue": "={{ $json.body.session_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c642423d-4caa-4db9-a3ee-9de455e7159c",
+              "leftValue": "={{ $json.body.session_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1120,
+        624
+      ],
+      "id": "384bd5de-f3fa-432f-b97a-283e565ef70b",
+      "name": "If - validacion de sesion"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.output).tipo_consulta }}",
+                    "rightValue": "precio_puntual",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "32bcffbd-2549-4d1c-b7c1-a9007a3d6b75"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "186b8b76-aff9-4eb0-a2d2-93876df6d5e8",
+                    "leftValue": "={{ JSON.parse($json.output).tipo_consulta }}",
+                    "rightValue": "tendencia_prediccion",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7aa27e67-8fa8-4ef3-8a4d-d464889ae670",
+                    "leftValue": "={{ JSON.parse($json.output).tipo_consulta }}",
+                    "rightValue": "clima",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c5cfc437-280e-4aab-9f75-29d59abcaf67",
+                    "leftValue": "={{ JSON.parse($json.output).tipo_consulta }}",
+                    "rightValue": "analisis_satelital_riesgo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        992,
+        576
+      ],
+      "id": "2f9a8760-ad18-415a-b0c5-18460f5af3aa",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1856,
+        320
+      ],
+      "id": "d93ed3c4-f4b4-4c55-8601-600f31fa8f47",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"respuesta\": \"Lo siento, por ahora solo puedo ayudarte con precios actuales y predicciones agrícolas. ¿Podrías reformular tu pregunta?\" }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1008,
+        1056
+      ],
+      "id": "00c9d77d-b8d3-44aa-ab54-f724b61d4aff",
+      "name": "Respond to Webhook - otras preguntas"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos todos los elementos que vienen de Postgres\nconst items = $input.all().map(item => item.json);\n\n// Verificamos si la consulta anterior traía un producto específico\n// (Asumiendo que el JSON del Agente o Webhook pasa por aquí)\nlet productoBuscado = null;\ntry {\n    const jsonAnterior = $node[\"AI Agent\"]?.json || $node[\"Switch\"]?.json || {};\n    const parsed = typeof jsonAnterior.output === 'string' ? JSON.parse(jsonAnterior.output) : jsonAnterior;\n    productoBuscado = parsed.producto;\n} catch(e) {\n    productoBuscado = null;\n}\n\nif (productoBuscado) {\n    // CASO ESPECÍFICO: Encontramos un producto en la consulta\n    let itemEncontrado = items.find(i => i.producto && i.producto.toLowerCase().includes(productoBuscado.toLowerCase())) || items[0] || {};\n    \n    return [{\n        json: {\n            modo: \"especifico\",\n            producto: itemEncontrado.producto || productoBuscado,\n            precio_actual: parseFloat(itemEncontrado.precio || 0).toFixed(2),\n            volumen_actual: parseFloat(itemEncontrado.volumen || 0).toFixed(2),\n            fecha: itemEncontrado.fecha || \"Reciente\",\n            datos_completos: [itemEncontrado]\n        }\n    }];\n} else {\n    // CASO GENERAL: No hay producto específico, devolvemos un resumen de los principales productos\n    return [{\n        json: {\n            modo: \"general\",\n            producto: \"Mercado General Agrícola\",\n            total_productos_analizados: items.length,\n            // Tomamos una muestra de los primeros 5 productos para el resumen\n            resumen_mercado: items.slice(0, 6).map(i => `${i.producto}: $${i.precio} (Vol: ${i.volumen})`),\n            datos_completos: items.slice(0, 10) // Pasamos los primeros 10 para la IA\n        }\n    }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        592
+      ],
+      "id": "9c973a06-6769-4db0-b45b-2ebb2564b5e4",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json }}",
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Eres AgroSmart Insights, el asesor estratégico de mercados agrícolas. Tu base de datos incluye precios mayoristas, volúmenes de carga (ingreso de camiones), variables climáticas y proyecciones históricas.\n\nREGLAS DE ANÁLISIS INTEGRAL:\n1. ANÁLISIS LOGÍSTICO: Si el usuario pregunta por volumen o abastecimiento, compara el volumen actual con los promedios históricos. Si el volumen es bajo, advierte sobre posibles riesgos de desabastecimiento en Lima.\n2. CONTEXTO CLIMÁTICO: Si el usuario menciona lluvia, sequía o clima, correlaciónalo con la salud del cultivo. (Ej: \"Bajas precipitaciones + alta evapotranspiración = estrés hídrico, se recomienda priorizar riego\").\n3. DECISIONES ESTRATÉGICAS: Cuando el usuario pregunte si \"conviene vender o esperar\", calcula el margen basándote en la tendencia. \n   - Si la tendencia de precio es al alza y el volumen de ingreso de carga es bajo (escasez), recomienda vender pronto.\n   - Si la tendencia es estable y hay alto volumen de entrada, sugiere esperar a una mejora en las condiciones.\n4. CORRELACIÓN HISTÓRICA: Utiliza la data de los últimos 5 años (tu base histórica) para comparar si el comportamiento actual es anómalo.\n\nRESPUESTA:\n- Sé directo, profesional y utiliza un tono de consultor de negocios.\n- Prohibido saludar o pedir datos; entrega el análisis directamente.\n- Si no hay suficientes datos para una decisión financiera, explica qué variable falta (ej. \"Para mayor precisión, necesito confirmar el volumen de entrada en el mercado mayorista\")."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1680,
+        592
+      ],
+      "id": "e87f042c-49b6-4314-864f-473624c51b03",
+      "name": "Basic LLM Chain",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        736
+      ],
+      "id": "d37a4528-c551-4be4-9c77-99cd0ae9f2db",
+      "name": "Groq Chat Model2",
+      "credentials": {
+        "groqApi": {
+          "id": "GZk9yjxIXBqz5PUt",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"respuesta\": $json.output } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2016,
+        592
+      ],
+      "id": "a3f209b3-1e33-486f-989b-e2b9b8b9a56e",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "content": "## I'm a note \nesta con el user tester puesto, para usarlo cambiarlo a {{ $json.session_id }}",
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        1072
+      ],
+      "id": "898e0455-c1af-4b3a-820e-33584609a585",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT fecha, producto, precio, volumen, unidad \nFROM precios_diarios \nWHERE producto ILIKE '%' || $1 || '%' \nORDER BY fecha DESC \nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [ (typeof $json.output === 'string' ? JSON.parse($json.output).producto : $json.producto) ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1328,
+        304
+      ],
+      "id": "bd81bf73-8df1-4faf-b96e-37c4be6e0ea6",
+      "name": "Execute a SQL query - PRECIOS",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "blZlq5en2xDTNg57",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ \"Producto: \" + $json.producto + \", Precio: S/\" + $json.precio + \" por \" + $json.unidad + \", Fecha: \" + $json.fecha }}",
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Eres un asistente amable de AgroSmart. Tu tarea es convertir datos técnicos de precios en una respuesta corta, natural y amigable para el usuario. Regla: Si recibes un precio y un producto, responde en una frase natural como: \"El precio actual del producto [Nombre] es de [Precio] por unidad según los últimos registros.\" No incluyas tablas ni formato JSON, solo texto plano."
+            },
+            {
+              "message": "Si el usuario pregunta por un día específico como 'ayer', 'anteayer' o una fecha concreta, calcula la fecha exacta (restando días a la fecha actual de agosto de 2026) y asegúrate de filtrar la base de datos usando esa fecha exacta (fecha = 'YYYY-MM-DD'), en lugar de traer siempre el último registro."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1552,
+        304
+      ],
+      "id": "39a7adc7-7e01-4afb-9aa8-e204f1f94051",
+      "name": "Basic LLM Chain1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "model": "groq/compound-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        448
+      ],
+      "id": "e9e143be-0803-4951-a979-0fa0f881d0a9",
+      "name": "Groq Chat Model3",
+      "credentials": {
+        "groqApi": {
+          "id": "GZk9yjxIXBqz5PUt",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ \"Ubicación: \" + $json.ubicacion + \", Fecha: \" + $json.fecha + \", Temperatura: \" + $json.temperatura + \"°C, Precipitación (Lluvias): \" + $json.precipitacion + \" mm, Humedad: \" + $json.humedad + \"%, Evapotranspiración: \" + $json.evapotranspiracion }}",
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Eres un experto agrometeorólogo y asesor de cultivos de AgroSmart. Recibirás los datos meteorológicos actuales de una zona agrícola (temperatura, precipitación, humedad y evapotranspiración).  Tu tarea es redactar un informe claro, útil y profesional para los agricultores que incluya: 1. **Estado actual del clima:** Describe de forma sencilla qué indican la temperatura, la humedad y las lluvias recientes. 2. **Evaluación de riesgo (Sequía o Exceso):** Analiza si hay indicios de sequía (precipitaciones muy bajas y alta evaporación) o si las condiciones son favorables. 3. **Impacto en los cultivos y recomendaciones:** Explica cómo estas condiciones meteorológicas afectan el desarrollo de los sembríos en la zona y dale una recomendación práctica de riego o cuidado al agricultor.  Escribe la respuesta directamente para el usuario, sin mencionar objetos JSON ni estructuras técnicas."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1568,
+        880
+      ],
+      "id": "9000cdd0-7981-4fa1-9d46-58f36877ce2b",
+      "name": "Basic LLM Chain2",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        1024
+      ],
+      "id": "eb03ad45-a900-4da4-bbe9-0cce8a68c03a",
+      "name": "Groq Chat Model4",
+      "credentials": {
+        "groqApi": {
+          "id": "GZk9yjxIXBqz5PUt",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"respuesta\": $json.output } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1936,
+        880
+      ],
+      "id": "ed58707f-ebba-428e-a79f-8d839fc8bc96",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cea18deb-525f-4144-97e0-f4b4eb95bfba",
+              "leftValue": "={{ $json.output ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -192,
+        608
+      ],
+      "id": "48a91d5c-5fb6-4c88-883d-49bf4191691e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').first().json.body.pregunta }}",
+        "options": {
+          "systemMessage": "Eres un sistema experto de análisis, clasificación y enrutamiento de consultas para la plataforma agrícola AgroSmart. Tu tarea es examinar la pregunta del usuario, identificar su intención fundamental y extraer las variables clave en un formato JSON estricto.\n\nPaso 1: CLASIFICACIÓN (Elige una sola opción para \"tipo_consulta\"):\n1. \"precio_puntual\": Para el valor actual, costo, cotización o precio presente. (Ej. \"¿A cuánto está?\", \"cuánto cuesta\").\n2. \"tendencia_prediccion\": Para el futuro, pronósticos, volúmenes de mercado, logística, ingreso de camiones o desabastecimiento por factores de transporte/mercado.\n3. \"clima\": Para condiciones meteorológicas (lluvias, temperatura, sequía, heladas), predicciones del clima y CÓMO AFECTAN estas condiciones al rendimiento o salud de los cultivos.\n4. \"analisis_satelital_riesgo\": EXCLUSIVAMENTE cuando el usuario pide explícitamente \"imágenes satelitales\", \"mapas\", \"vista de satélite\" o \"análisis espacial\". NO usar para preguntas sobre clima, rendimiento o sequías si no mencionan satélites.\n5. \"general\": Para consultas teóricas, saludos o temas que NO encajen en las otras categorías.\n\nPaso 2: EXTRACCIÓN DE ENTIDADES:\n- Identifica el producto agrícola mencionado.\n- Identifica si el periodo es histórico, actual (hoy) o futuro.\n- Identifica la ubicación geográfica (ciudad, provincia, departamento o región). \n\nREGLA CRÍTICA DE ROBUSTEZ: Ignora por completo errores ortográficos, falta de tildes o caracteres extraños de codificación. Extrae la ubicación lógica sin importar cómo esté escrita.\n\nDevuelve ÚNICAMENTE un objeto JSON válido, sin bloques de código markdown, sin saludos y sin texto adicional. Utiliza estrictamente esta estructura exacta:\n{\n  \"producto\": \"nombre del producto agrícola o null\",\n  \"periodo\": \"hoy | historico | futuro | null\",\n  \"tipo_consulta\": \"precio_puntual | tendencia_prediccion | clima | analisis_satelital_riesgo | general\",\n  \"lugar\": \"nombre de la ciudad, provincia o región limpia (ej. Junín), o null\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        128,
+        736
+      ],
+      "id": "adc5c459-415e-4371-9ea0-d67d80c7e942",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        128,
+        896
+      ],
+      "id": "8e01efd4-2870-4967-9383-cef2c846cff1",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LyNfR9P6Fcyg1UOl",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "sesion_prueba_123"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        224,
+        1024
+      ],
+      "id": "602e2cad-eb8f-471c-b988-967f8fb15168",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "description": "Usa esta herramienta para buscar información de precios diarios, clima actual y manuales agrícolas."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        880
+      ],
+      "id": "2a0ef1fd-573c-4817-ab6a-e61de48d9351",
+      "name": "Answer questions with a vector store1"
+    },
+    {
+      "parameters": {
+        "tableName": "documentos_rag",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        1040
+      ],
+      "id": "e03e5740-178a-42ca-9f3e-da30737b588a",
+      "name": "Postgres PGVector Store1",
+      "credentials": {
+        "postgres": {
+          "id": "blZlq5en2xDTNg57",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        512,
+        1152
+      ],
+      "id": "bded85e4-12ec-47fd-9ed0-1c7099249835",
+      "name": "Embeddings HuggingFace Inference1",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "Sq9dIhrw5s7bdC26",
+          "name": "Hugging Face account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        976
+      ],
+      "id": "54489305-6960-4c09-a579-1311198aee2e",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LyNfR9P6Fcyg1UOl",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1632,
+        448
+      ],
+      "id": "d5a8bc87-986f-4a38-8e72-fe3201c3dfcb",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LyNfR9P6Fcyg1UOl",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        1024
+      ],
+      "id": "9acd44cd-7004-457c-a2f5-e67f8cafb18f",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LyNfR9P6Fcyg1UOl",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1776,
+        736
+      ],
+      "id": "6e8f4fe3-d39c-4494-ad48-9b2f32e6e258",
+      "name": "Google Gemini Chat Model5",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LyNfR9P6Fcyg1UOl",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.maptiler.com/geocoding/{{ JSON.parse($json.output).lugar }}.json?key=MNBb9jDN39U4XjDftOQF",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1312,
+        1200
+      ],
+      "id": "2f2e82c3-a68d-4def-935a-a36a268f042b",
+      "name": "HTTP Request (MapTiler - Geocodificación)",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT fecha, producto, precio, volumen \nFROM precios_diarios \nWHERE ($1::text IS NULL OR producto ILIKE '%' || $1 || '%')\nORDER BY fecha DESC \nLIMIT 30;",
+        "options": {
+          "queryReplacement": "={{ [ (typeof $json.output === 'string' ? JSON.parse($json.output).producto : $json.producto) || null ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1296,
+        608
+      ],
+      "id": "2eb61dec-3f6e-4c59-a1ef-32b541aadb4f",
+      "name": "Execute a SQL query1 - MERCADO PRECIOS GENERAL",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "blZlq5en2xDTNg57",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT precio, fecha FROM precios_diarios WHERE producto = '{{ $('Switch').item.json.producto }}' ORDER BY fecha DESC LIMIT 7;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1744,
+        1200
+      ],
+      "id": "d77dd954-c4d8-4ba0-adbc-84f84c208c04",
+      "name": "Execute a SQL query",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "blZlq5en2xDTNg57",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Traemos el clima y los precios usando la sintaxis moderna\nconst satelite = $('HTTP Request open meteo').first().json; \nconst precios = $input.all();\n\n// 2. Traemos de forma segura lo que entendió la primera IA\nconst texto_primera_ia = $('Switch').first().json.output;\nconst datos_usuario = JSON.parse(texto_primera_ia);\n\n// 3. Armamos el reporte completo incluyendo el producto y la ciudad\nconst reporte = `\nCONTEXTO DE LA CONSULTA:\n- Producto a evaluar: ${datos_usuario.producto}\n- Ubicación: ${datos_usuario.lugar}\n\nDATOS DEL CLIMA (Open-Meteo):\n${JSON.stringify(satelite.daily)}\n\nHISTORIAL DE PRECIOS (Últimos 7 días):\n${JSON.stringify(precios)}\n`;\n\nreturn { prompt_final: reporte };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1936,
+        1200
+      ],
+      "id": "9db3fe95-dee6-49ae-92fd-c50c4d90652a",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt_final }}",
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Eres un analista de riesgo agrícola sénior de AgroSmart. Te entregaré datos de geolocalización satelital, variables climáticas recientes de la región y el historial de precios del producto consultado. \n\nTu trabajo es cruzar estas variables, predecir si habrá desabastecimiento o una subida de precios inminente, y emitir una recomendación clara de máximo 3 párrafos para el agricultor o comprador. \n\nREGLA ESTRICTA DE REDACCIÓN: \nAl iniciar tu respuesta, debes mencionar explícitamente que tu evaluación se basa en el \"análisis espacial y satelital de la zona\" combinado con los modelos meteorológicos, para que el usuario entienda la precisión geográfica del reporte."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2096,
+        1200
+      ],
+      "id": "f1265866-b6f9-4d26-aff9-67a7fd227712",
+      "name": "Basic LLM Chain3",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2096,
+        1344
+      ],
+      "id": "75917f35-594d-4c02-9243-3d41da96ae1e",
+      "name": "Groq Chat Model5",
+      "credentials": {
+        "groqApi": {
+          "id": "GZk9yjxIXBqz5PUt",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2240,
+        1344
+      ],
+      "id": "057dd6bb-1e33-4bb3-92a5-92c44125e682",
+      "name": "Google Gemini Chat Model6",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LyNfR9P6Fcyg1UOl",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"respuesta\": $json.output } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2448,
+        1200
+      ],
+      "id": "52bed3c5-422d-4fcf-b298-6deed578556e",
+      "name": "Respond to Webhook3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM clima_diario ORDER BY fecha DESC LIMIT 5;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1344,
+        880
+      ],
+      "id": "568b592b-4a5e-407d-80c6-5c207c865eb4",
+      "name": "Execute a SQL query PREDICCIONES CLIMA",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "blZlq5en2xDTNg57",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://archive-api.open-meteo.com/v1/archive",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $json.features[0].geometry.coordinates[1] }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $json.features[0].geometry.coordinates[0] }}"
+            },
+            {
+              "name": "start_date",
+              "value": "2025-01-01"
+            },
+            {
+              "name": "end_date",
+              "value": "2025-08-19"
+            },
+            {
+              "name": "daily",
+              "value": "precipitation_sum"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1536,
+        1200
+      ],
+      "id": "e52cd95c-539d-437c-9060-26c690fbe3f0",
+      "name": "HTTP Request open meteo"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If - validacion de sesion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer questions with a vector store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres PGVector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Answer questions with a vector store",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer questions with a vector store",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - validacion de sesion": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook - Sesión inválida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query - PRECIOS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query1 - MERCADO PRECIOS GENERAL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query PREDICCIONES CLIMA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request (MapTiler - Geocodificación)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook - otras preguntas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query - PRECIOS": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres PGVector Store1": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Answer questions with a vector store1",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer questions with a vector store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer questions with a vector store1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request (MapTiler - Geocodificación)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request open meteo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1 - MERCADO PRECIOS GENERAL": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain3": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query PREDICCIONES CLIMA": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request open meteo": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "a27c3320-5ecf-4fb3-abc5-e06a7758c699",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "faec0db16fa1967a212b8a151276e8610be4c33101520a30c4176faa46ef65ff"
+  },
+  "nodeGroups": [],
+  "id": "8RZVPyDLwinpKqTK",
+  "tags": []
+}
