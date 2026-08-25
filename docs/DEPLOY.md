@@ -4,9 +4,9 @@
 
 1. Conectar GitHub en [vercel.com/account/settings/authentication](https://vercel.com/account/settings/authentication).
 2. **Import Project** → repo `equipo2-AgroSmart-Insights/Agrosmart-Insights`.
-3. **Root Directory:** `src/frontend`
+3. **Root Directory:** `src/frontend/agrosmart-frontend`
 4. **Environment Variable:**
-   - `VITE_WEBHOOK_URL` = URL pública del webhook WF2 (ej. `https://agrosmart-n8n.onrender.com/webhook/v1/query`)
+   - `VITE_N8N_WEBHOOK_URL` = URL pública del webhook WF2 (ej. `https://agrosmart-n8n.onrender.com/webhook/v1/query`)
 5. Deploy automático en cada merge a `main`.
 
 ## Backend → Render
@@ -31,7 +31,7 @@
 cd infrastructure
 copy .env.example .env
 docker compose up -d
-cd ../src/frontend
+cd ../src/frontend/agrosmart-frontend
 copy .env.example .env
 npm install && npm run dev
 ```

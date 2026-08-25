@@ -25,12 +25,12 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: src/frontend/package-lock.json
+          cache-dependency-path: src/frontend/agrosmart-frontend/package-lock.json
 
       - name: Build frontend (Vercel preview/prod)
-        working-directory: src/frontend
+        working-directory: src/frontend/agrosmart-frontend
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm ci
           npm run build
 
       - name: Validar workflows n8n versionados
@@ -41,6 +41,6 @@ jobs:
 
       - name: Nota de despliegue
         run: |
-          echo "Frontend: conectar repo a Vercel (root src/frontend)."
+          echo "Frontend: conectar repo a Vercel (root src/frontend/agrosmart-frontend)."
           echo "Backend n8n: aplicar render.yaml en Render Dashboard."
           echo "Secrets: configurar en Vercel (VITE_WEBHOOK_URL) y Render (API keys)."
