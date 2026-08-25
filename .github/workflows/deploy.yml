@@ -1,0 +1,46 @@
+name: Deploy Sprint 1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/frontend/**'
+      - 'infrastructure/**'
+      - 'src/n8n-workflows/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-before-deploy:
+    name: Validar artefactos desplegables
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Build frontend (Vercel preview/prod)
+        working-directory: src/frontend
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm run build
+
+      - name: Validar workflows n8n versionados
+        run: |
+          test -f src/n8n-workflows/production/wf0-ingesta-mensual-rag-midagri.json
+          test -f src/n8n-workflows/production/wf1-ingesta-diaria-precios-clima.json
+          test -f src/n8n-workflows/production/wf2-api-chat-analisis-predictivo.json
+
+      - name: Nota de despliegue
+        run: |
+          echo "Frontend: conectar repo a Vercel (root src/frontend)."
+          echo "Backend n8n: aplicar render.yaml en Render Dashboard."
+          echo "Secrets: configurar en Vercel (VITE_WEBHOOK_URL) y Render (API keys)."

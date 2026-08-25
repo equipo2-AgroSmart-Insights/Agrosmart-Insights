@@ -10,21 +10,26 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cambiar_password_dev_123}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ../src/database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-agrosmart_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
     container_name: agrosmart_n8n
     restart: always
     ports:
-      - "5678:5678"
+      - "${N8N_PORT:-5678}:5678"
     environment:
       - N8N_HOST=${N8N_HOST:-localhost}
       - N8N_PORT=5678
-      - N8N_PROTOCOL=http
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
       - NODE_ENV=production
       - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
       - DB_TYPE=postgresdb
@@ -33,10 +38,36 @@ services:
       - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-agrosmart_db}
       - DB_POSTGRESDB_USER=${POSTGRES_USER:-postgres}
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-cambiar_password_dev_123}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-}
+      - MAPTILER_API_KEY=${MAPTILER_API_KEY:-}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      - N8N_OTEL_ENABLED=${N8N_OTEL_ENABLED:-true}
+      - N8N_AGENTS_TRACING_ENABLED=${N8N_AGENTS_TRACING_ENABLED:-true}
+      - N8N_OTEL_EXPORTER_OTLP_ENDPOINT=${N8N_OTEL_EXPORTER_OTLP_ENDPOINT:-http://phoenix:6006}
+      - N8N_OTEL_TRACES_PRODUCTION_ONLY=false
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      phoenix:
+        condition: service_started
     volumes:
       - n8n_data:/home/node/.n8n
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: agrosmart_phoenix
+    restart: unless-stopped
+    ports:
+      - "6006:6006"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      - PHOENIX_HOST=0.0.0.0
 
 volumes:
   pgdata:

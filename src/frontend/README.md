@@ -1,23 +1,38 @@
 # Frontend NLQ (Microfrontend)
 
-**Owner:** Frontend  
-**Sprint 0:** esqueleto de carpeta. El chat NLQ se construye desde Sprint 2.
+**Owner:** Frontend (Cindy Huanca)  
+**Stack:** React 18 + Vite + Chart.js
 
-## Responsabilidad
-Interfaz ligera de Natural Language Query. El usuario escribe en lenguaje natural; el frontend **solo** habla con webhooks de n8n (nunca directo a PostgreSQL ni a APIs de IA).
+## Arquitectura demo
 
-## Estructura esperada
 ```
-src/frontend/
-├── public/
-├── src/
-├── package.json
-└── README.md
+components/chat/     → ChatInput, LoadingIndicator
+components/dashboard/ → DashboardContainer, PriceChart, ErrorState
+hooks/             → useNLQQuery
+context/           → QueryContext (estado compartido)
+services/          → n8nClient.js (único que conoce VITE_WEBHOOK_URL)
 ```
 
-## Despliegue
-Estático (GitHub Pages / Vercel). El pipeline `frontend-ci.yml` valida lint/build en cada PR (es required check de `main`).
+Contrato JSON esperado del webhook WF2:
 
-## Checklist DevSecOps
-- No hardcodear API keys.
-- Consumir solo `WEBHOOK_URL` / variables de entorno documentadas en `infrastructure/.env.example`.
+```json
+{
+  "respuesta": "texto",
+  "grafico": { "labels": [], "values": [] }
+}
+```
+
+## Desarrollo local
+
+```bash
+copy .env.example .env
+npm install
+npm run dev
+```
+
+## Despliegue (Vercel)
+
+Root directory: `src/frontend`  
+Variable obligatoria: `VITE_WEBHOOK_URL`
+
+Ver `docs/DEPLOY.md`.

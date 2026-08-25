@@ -3,8 +3,16 @@
 **Owner:** Líder DevSecOps
 
 ## Contenido
-- `docker-compose.yml` — n8n Self-Hosted + PostgreSQL con pgvector
+- `docker-compose.yml` — n8n + PostgreSQL/pgvector + Arize Phoenix (observabilidad)
 - `.env.example` — plantilla de variables (sin secretos reales)
+
+## Servicios locales
+
+| Servicio | URL |
+|---|---|
+| n8n | http://localhost:5678 |
+| PostgreSQL | localhost:5432 |
+| Phoenix | http://localhost:6006 |
 
 ## Uso
 ```bash
