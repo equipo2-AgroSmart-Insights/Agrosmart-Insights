@@ -24,12 +24,8 @@ Estado al integrar entregables de **HuancaMamani** (Frontend) y **CamayocBernabl
 
 > **Acción recomendada:** pedir a Backend que suba su rama con los JSON de n8n actualizados o confirmar que los de `production/` son la versión final.
 
-## Pendiente global (post-integración)
+## Estado Sprint 1 DevSecOps — CERRADO EN REPO
 
-1. **PR `LeonCangalaya` → `main`** con checks + aprobación.
-2. **Vercel:** conectar GitHub, root `src/frontend/agrosmart-frontend`, var `VITE_N8N_WEBHOOK_URL`.
-3. **Render:** blueprint `render.yaml`, migraciones SQL, importar WF0–WF2 en n8n UI.
-4. **Credentials n8n:** Postgres, Groq, Gemini, Hugging Face (no en JSON).
-5. **Seed demo:** cargar `002_seed_v2.sql` en Postgres.
-6. **Activar WF1 cron** y validar ingesta MIDAGRI + Open-Meteo en cloud.
-7. **ESLint en CI:** el frontend de Huanca tiene `npm run lint`; verificar que pase en PR.
+Ver checklist completo: `docs/sprint-1/Cierre-DevSecOps-Sprint1.md`
+
+Integración FE/BE: **correcta y alineada con WF2**. Pendiente solo activación manual Vercel/Render.

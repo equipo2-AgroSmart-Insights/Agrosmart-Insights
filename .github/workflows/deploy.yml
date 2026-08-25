@@ -31,6 +31,7 @@ jobs:
         working-directory: src/frontend/agrosmart-frontend
         run: |
           npm ci
+          npm run lint
           npm run build
 
       - name: Validar workflows n8n versionados
@@ -39,8 +40,50 @@ jobs:
           test -f src/n8n-workflows/production/wf1-ingesta-diaria-precios-clima.json
           test -f src/n8n-workflows/production/wf2-api-chat-analisis-predictivo.json
 
-      - name: Nota de despliegue
+      - name: Health check remoto (si secrets configurados)
+        env:
+          N8N_URL: ${{ secrets.N8N_HEALTH_URL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_HEALTH_URL }}
+          PHOENIX_URL: ${{ secrets.PHOENIX_HEALTH_URL }}
         run: |
-          echo "Frontend: conectar repo a Vercel (root src/frontend/agrosmart-frontend)."
-          echo "Backend n8n: aplicar render.yaml en Render Dashboard."
-          echo "Secrets: configurar en Vercel (VITE_WEBHOOK_URL) y Render (API keys)."
+          if [ -z "$N8N_URL" ] && [ -z "$FRONTEND_URL" ]; then
+            echo "ℹ️ Secrets N8N_HEALTH_URL / FRONTEND_HEALTH_URL no configurados. Omitiendo health check remoto."
+            exit 0
+          fi
+          chmod +x infrastructure/scripts/health-check.sh
+          infrastructure/scripts/health-check.sh
+
+      - name: Guía de despliegue
+        run: |
+          echo "Frontend → Vercel (root: src/frontend/agrosmart-frontend, var VITE_N8N_WEBHOOK_URL)"
+          echo "Backend n8n → Render (render.yaml) o SSH con secrets SERVER_HOST + SSH_KEY"
+          echo "Rollback local → infrastructure/scripts/rollback.sh"
+
+  deploy-via-ssh:
+    name: Despliegue SSH (opcional)
+    runs-on: ubuntu-latest
+    needs: validate-before-deploy
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Desplegar con Docker Compose vía SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -eu
+            cd ~/Agrosmart-Insights || exit 1
+            git fetch origin main
+            git checkout main
+            git pull origin main
+            cd infrastructure
+            docker compose pull || true
+            docker compose up -d
+            chmod +x scripts/health-check.sh
+            N8N_URL="${N8N_HEALTH_URL:-http://localhost:5678/healthz}" ./scripts/health-check.sh || {
+              echo "Health check falló — ejecutar scripts/rollback.sh"
+              exit 1
+            }
