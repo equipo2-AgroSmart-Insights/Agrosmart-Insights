@@ -1,8 +1,10 @@
 # Blueprint Render — AgroSmart Insights (Sprint 1)
 # Docs: https://render.com/docs/blueprint-spec
 #
-# Frontend → Vercel (src/frontend/vercel.json)
+# Frontend → Vercel (src/frontend/agrosmart-frontend)
 # Backend  → Render (n8n + Postgres)
+#
+# Plan free: ~512 MB RAM — n8n latest requiere ajustes de memoria.
 
 databases:
   - name: agrosmart-postgres
@@ -16,7 +18,7 @@ services:
     name: agrosmart-n8n
     runtime: image
     image:
-      url: docker.io/n8nio/n8n:latest
+      url: docker.io/n8nio/n8n:1.83.2
     plan: free
     healthCheckPath: /healthz
     envVars:
@@ -26,8 +28,16 @@ services:
         sync: false
       - key: N8N_PROTOCOL
         value: https
-      - key: WEBHOOK_URL
+      - key: PORT
+        value: "5678"
+      - key: N8N_EDITOR_BASE_URL
         sync: false
+      - key: N8N_WEBHOOK_URL
+        sync: false
+      - key: N8N_RUNNERS_ENABLED
+        value: "false"
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=384"
       - key: DB_TYPE
         value: postgresdb
       - key: DB_POSTGRESDB_HOST
@@ -50,6 +60,10 @@ services:
         fromDatabase:
           name: agrosmart-postgres
           property: password
+      - key: DB_POSTGRESDB_SCHEMA
+        value: public
+      - key: DB_POSTGRESDB_SSL_ENABLED
+        value: "true"
       - key: GROQ_API_KEY
         sync: false
       - key: GEMINI_API_KEY
