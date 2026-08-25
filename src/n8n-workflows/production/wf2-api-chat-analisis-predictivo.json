@@ -9,7 +9,7 @@
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
+      "typeVersion": 2,
       "position": [
         -1344,
         624
@@ -27,7 +27,7 @@
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
+      "typeVersion": 1.1,
       "position": [
         -1120,
         864
@@ -44,7 +44,7 @@
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 3.1,
+      "typeVersion": 1.7,
       "position": [
         -688,
         608
@@ -79,7 +79,7 @@
         "sessionKey": "sesion_prueba_123"
       },
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
-      "typeVersion": 1.4,
+      "typeVersion": 1.2,
       "position": [
         -560,
         800
@@ -89,10 +89,11 @@
     },
     {
       "parameters": {
-        "description": "Usa esta herramienta para buscar información de precios diarios, clima actual y manuales agrícolas."
+        "description": "Usa esta herramienta para buscar información de precios diarios, clima actual y manuales agrícolas.",
+        "name": "informacion_agricola"
       },
       "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         -368,
         832
@@ -106,7 +107,7 @@
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
-      "typeVersion": 1.3,
+      "typeVersion": 1,
       "position": [
         -448,
         1008
@@ -196,7 +197,7 @@
         "options": {}
       },
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
+      "typeVersion": 2,
       "position": [
         -1120,
         624
@@ -306,7 +307,7 @@
         }
       },
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.4,
+      "typeVersion": 3,
       "position": [
         992,
         576
@@ -323,7 +324,7 @@
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
+      "typeVersion": 1.1,
       "position": [
         1856,
         320
@@ -340,7 +341,7 @@
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
+      "typeVersion": 1.1,
       "position": [
         1008,
         1056
@@ -376,7 +377,7 @@
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.9,
+      "typeVersion": 1.4,
       "position": [
         1680,
         592
@@ -414,7 +415,7 @@
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
+      "typeVersion": 1.1,
       "position": [
         2016,
         592
@@ -445,7 +446,7 @@
         }
       },
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
+      "typeVersion": 2.4,
       "position": [
         1328,
         304
@@ -478,7 +479,7 @@
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.9,
+      "typeVersion": 1.4,
       "position": [
         1552,
         304
@@ -522,7 +523,7 @@
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.9,
+      "typeVersion": 1.4,
       "position": [
         1568,
         880
@@ -560,7 +561,7 @@
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
+      "typeVersion": 1.1,
       "position": [
         1936,
         880
@@ -594,7 +595,7 @@
         "options": {}
       },
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
+      "typeVersion": 2,
       "position": [
         -192,
         608
@@ -611,7 +612,7 @@
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 3.1,
+      "typeVersion": 1.7,
       "position": [
         128,
         736
@@ -624,7 +625,7 @@
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         128,
         896
@@ -644,7 +645,7 @@
         "sessionKey": "sesion_prueba_123"
       },
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
-      "typeVersion": 1.4,
+      "typeVersion": 1.2,
       "position": [
         224,
         1024
@@ -654,10 +655,11 @@
     },
     {
       "parameters": {
-        "description": "Usa esta herramienta para buscar información de precios diarios, clima actual y manuales agrícolas."
+        "description": "Usa esta herramienta para buscar información de precios diarios, clima actual y manuales agrícolas.",
+        "name": "informacion_agricola"
       },
       "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         352,
         880
@@ -671,7 +673,7 @@
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
-      "typeVersion": 1.3,
+      "typeVersion": 1,
       "position": [
         400,
         1040
@@ -710,7 +712,7 @@
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         640,
         976
@@ -729,7 +731,7 @@
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         1632,
         448
@@ -749,7 +751,7 @@
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         1712,
         1024
@@ -768,7 +770,7 @@
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         1776,
         736
@@ -784,11 +786,11 @@
     },
     {
       "parameters": {
-        "url": "=https://api.maptiler.com/geocoding/{{ JSON.parse($json.output).lugar }}.json?key=MNBb9jDN39U4XjDftOQF",
+        "url": "=https://api.maptiler.com/geocoding/{{ JSON.parse($json.output).lugar }}.json?key={{ $env.MAPTILER_API_KEY }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
+      "typeVersion": 4.2,
       "position": [
         1312,
         1200
@@ -806,7 +808,7 @@
         }
       },
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
+      "typeVersion": 2.4,
       "position": [
         1296,
         608
@@ -828,7 +830,7 @@
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
+      "typeVersion": 2.4,
       "position": [
         1744,
         1200
@@ -871,7 +873,7 @@
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.9,
+      "typeVersion": 1.4,
       "position": [
         2096,
         1200
@@ -905,7 +907,7 @@
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         2240,
         1344
@@ -928,7 +930,7 @@
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
+      "typeVersion": 1.1,
       "position": [
         2448,
         1200
@@ -943,7 +945,7 @@
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
+      "typeVersion": 2.4,
       "position": [
         1344,
         880
@@ -989,7 +991,7 @@
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
+      "typeVersion": 4.2,
       "position": [
         1536,
         1200

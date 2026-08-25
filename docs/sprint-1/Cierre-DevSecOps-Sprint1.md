@@ -32,7 +32,7 @@
 | Health check HTTP | `infrastructure/scripts/health-check.sh` + secret `N8N_HEALTH_URL` | ✅ |
 | Script rollback | `infrastructure/scripts/rollback.sh` | ✅ |
 | Deploy SSH opcional | Job `deploy-via-ssh` (manual, secrets `SSH_KEY`, `SERVER_HOST`) | ✅ |
-| Servidor cloud **en vivo** | Vercel + Render — pipeline CD listo; activar secrets (ver SETUP-VERCEL-RENDER.md) | ⏳ 5–10 min manual |
+| Servidor cloud **en vivo** | Vercel (`agrosmart-insights`) + Render (`agrosmart-n8n` + `agrosmart-postgres`) | ✅ 25/08/2026 |
 
 ---
 
@@ -59,10 +59,16 @@
 
 ---
 
-## Único paso manual restante (cloud vivo)
+## Estado cloud (25/08/2026)
 
-1. **Vercel:** importar repo, root `src/frontend/agrosmart-frontend`, `VITE_N8N_WEBHOOK_URL`.
-2. **Render:** aplicar `render.yaml`, migraciones SQL, importar WF0–WF2.
-3. **GitHub Secrets (opcional health):** `N8N_HEALTH_URL`, `FRONTEND_HEALTH_URL`.
+| Ítem | Estado |
+|---|---|
+| Render n8n `https://agrosmart-n8n.onrender.com` | ✅ Operativo (imagen `1.83.2`, heap 384 MB) |
+| PostgreSQL + 9 445 filas GMML | ✅ Migraciones y seed ejecutados |
+| WF2 importado, credenciales y webhook POST | ✅ `/webhook/v1/query` registrado |
+| Vercel frontend Hobby | ✅ Publicado; `VITE_N8N_WEBHOOK_URL` configurada |
+| Timeout cliente 30 s | ⏳ En este PR (`n8nClient.js`) — el bundle actual en Vercel sigue en 6 s |
+| WF0 / WF1 (ingesta cron) | ⏳ Importar y activar cuando Backend lo pida |
+| Secrets CD GitHub (`VERCEL_*`, `RENDER_DEPLOY_HOOK_N8N`) | ⏳ Opcional para deploy automático post-merge |
 
-Con eso el Sprint 1 DevSecOps queda **cerrado en repo + CI**; el cloud en vivo es activación en dashboard (5–10 min).
+Con el merge de este PR (timeout + WF2 compatible) el Sprint 1 DevSecOps queda **cerrado en repo + cloud**. El arquitecto solo debe aprobar el PR.
