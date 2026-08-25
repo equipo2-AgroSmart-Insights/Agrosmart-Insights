@@ -1,5 +1,5 @@
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
-const TIMEOUT_MS = 6000;
+const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 30000;
 
 function getSessionId() {
   const key = "agrosmart_session_id";
@@ -37,7 +37,7 @@ export async function sendNLQQuery(query) {
     return await response.json();
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("La consulta tardó más de 6 segundos. Intenta de nuevo.", { cause: error });
+      throw new Error(`La consulta tardó más de ${Math.round(TIMEOUT_MS / 1000)} segundos. Intenta de nuevo.`, { cause: error });
     }
     throw error;
   } finally {

@@ -63,7 +63,7 @@ services:
       - key: DB_POSTGRESDB_SCHEMA
         value: public
       - key: DB_POSTGRESDB_SSL_ENABLED
-        value: "true"
+        value: "false"
       - key: GROQ_API_KEY
         sync: false
       - key: GEMINI_API_KEY
