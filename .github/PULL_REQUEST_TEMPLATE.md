@@ -2,7 +2,7 @@
 - **Issue vinculado:** Closes #
 
 ## 📝 Descripción del Cambio
-Resumen técnico del cambio implementado.
+Describe brevemente qué cambia este PR y por qué.
 
 ## 📐 Tipo de Cambio
 - [ ] Backend / n8n Workflow (`src/n8n-workflows/`)
@@ -12,9 +12,9 @@ Resumen técnico del cambio implementado.
 - [ ] Pipeline CI/CD / Infraestructura (`infrastructure/` o `.github/`)
 
 ## 🛡️ Checklist DevSecOps
-- [ ] **Cero Credenciales Expuestas:** Se verificó que no hay llaves API ni contraseñas quemadas.
-- [ ] **Variables de Entorno:** Todo valor sensible utiliza `.env` o GitHub Secrets.
-- [ ] **Trazabilidad:** La tarea está vinculada a un Issue en el tablero.
+- [ ] **Cero Credenciales Expuestas:** No se incluyeron API keys en texto plano.
+- [ ] **Variables de Entorno:** Se utiliza `.env.example`.
+- [ ] **Pruebas de IA:** Pruebas de inyección configuradas en PyTest.
 
 ## ✍️ Aprobaciones Requeridas
 - **Líder DevSecOps:** [ ] Aprobado
