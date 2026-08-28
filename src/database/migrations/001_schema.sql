@@ -1,3 +1,6 @@
+-- 0. Crear base de datos de n8n
+CREATE DATABASE n8n_system;
+
 -- 1. Habilitar la extensión de vectores
 CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 

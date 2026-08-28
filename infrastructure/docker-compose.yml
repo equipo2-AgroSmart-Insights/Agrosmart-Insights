@@ -1,4 +1,4 @@
-﻿version: '3.8'
+version: '3.8'
 
 services:
   postgres:
@@ -35,7 +35,7 @@ services:
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-agrosmart_db}
+      - DB_POSTGRESDB_DATABASE=n8n_system
       - DB_POSTGRESDB_USER=${POSTGRES_USER:-postgres}
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-cambiar_password_dev_123}
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
