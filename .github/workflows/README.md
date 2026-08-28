@@ -20,3 +20,10 @@ Estos nombres están enlazados en **Branch Protection** de `main`. Si fallan, el
 | | deploy-via-ssh | Manual — Docker Compose en VPS (SSH_KEY, SERVER_HOST) |
 
 Guías: `docs/sprint-1/SETUP-VERCEL-RENDER.md` y `docs/sprint-1/SECRETS-GITHUB-SPRINT1.md`
+
+> ⚠️ `deploy-vercel` y `deploy-render` son disparadores opcionales: si faltan sus secrets, terminan en no-op (exit 0) y quedan en verde sin desplegar nada. El deploy real de producción va por la integración nativa de Vercel/Render con el repo.
+
+## Seguridad — SAST / Dependencias
+
+- **Dependabot** (`.github/dependabot.yml`): actualizaciones semanales de npm (frontend), pip (`src/ia-ops/tests`) y GitHub Actions.
+- **Vulnerability alerts** habilitadas a nivel de repositorio (GitHub Security → Dependabot alerts).
