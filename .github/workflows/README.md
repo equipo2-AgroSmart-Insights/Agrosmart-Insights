@@ -25,5 +25,6 @@ Guías: `docs/sprint-1/SETUP-VERCEL-RENDER.md` y `docs/sprint-1/SECRETS-GITHUB-S
 
 ## Seguridad — SAST / Dependencias
 
-- **Dependabot** (`.github/dependabot.yml`): actualizaciones semanales de npm (frontend), pip (`src/ia-ops/tests`) y GitHub Actions.
+- **Dependabot** (`.github/dependabot.yml`): actualizaciones semanales de npm (frontend), pip (`src/ia-ops/tests`) y GitHub Actions. Vigila **dependencias de terceros**.
 - **Vulnerability alerts** habilitadas a nivel de repositorio (GitHub Security → Dependabot alerts).
+- **CodeQL** (`codeql-analysis.yml`): analiza el **código propio** (Python de `src/ia-ops` y JS/TS del frontend) en cada push/PR a `main` y semanalmente. No es un bot ni abre PRs — solo reporta hallazgos en GitHub Security → Code scanning alerts. No está configurado como required check (no bloquea merges), para no generar falsos bloqueos mientras se afinan las reglas.
