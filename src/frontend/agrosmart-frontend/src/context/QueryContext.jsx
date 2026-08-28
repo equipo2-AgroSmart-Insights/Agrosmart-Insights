@@ -11,6 +11,7 @@ export function QueryProvider({ children }) {
   return <QueryContext.Provider value={value}>{children}</QueryContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook compartido con componentes
 export function useQueryContext() {
   const ctx = useContext(QueryContext);
   if (!ctx) throw new Error("useQueryContext debe usarse dentro de QueryProvider");

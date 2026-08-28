@@ -1,23 +1,39 @@
 # Frontend NLQ (Microfrontend)
 
-**Owner:** Frontend  
-**Sprint 0:** esqueleto de carpeta. El chat NLQ se construye desde Sprint 2.
+**Owner:** Cindy Huanca Mamani (Frontend)  
+**App:** `agrosmart-frontend/` (React 19 + Vite 8 + Chart.js)
 
-## Responsabilidad
-Interfaz ligera de Natural Language Query. El usuario escribe en lenguaje natural; el frontend **solo** habla con webhooks de n8n (nunca directo a PostgreSQL ni a APIs de IA).
+## Estructura
 
-## Estructura esperada
 ```
 src/frontend/
-├── public/
-├── src/
-├── package.json
-└── README.md
+└── agrosmart-frontend/
+    ├── src/components/chat/       ChatInput, LoadingIndicator
+    ├── src/components/dashboard/  DashboardContainer, PriceChart, ErrorState
+    ├── src/context/               QueryContext
+    ├── src/hooks/                 useNLQQuery
+    ├── src/services/              n8nClient.js
+    ├── .env.example               VITE_N8N_WEBHOOK_URL
+    └── vercel.json
+```
+
+## Contrato con WF2 (n8n)
+
+- **POST** `{ pregunta, session_id }`
+- **Respuesta:** `{ respuesta, grafico? }`
+
+## Desarrollo local
+
+```bash
+cd src/frontend/agrosmart-frontend
+copy .env.example .env
+npm install
+npm run dev
 ```
 
 ## Despliegue
-Estático (GitHub Pages / Vercel). El pipeline `frontend-ci.yml` valida lint/build en cada PR (es required check de `main`).
 
-## Checklist DevSecOps
-- No hardcodear API keys.
-- Consumir solo `WEBHOOK_URL` / variables de entorno documentadas en `infrastructure/.env.example`.
+Vercel root directory: `src/frontend/agrosmart-frontend`  
+Variable: `VITE_N8N_WEBHOOK_URL`
+
+Ver `docs/DEPLOY.md`.

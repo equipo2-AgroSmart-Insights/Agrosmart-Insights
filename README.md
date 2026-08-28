@@ -3,20 +3,23 @@
 ## Propósito
 Microfrontend NLQ + n8n Self-Hosted + PostgreSQL/pgvector + multi-modelo IA, con canal DevSecOps que bloquea merges inseguros.
 
-## Arquitectura (Sprint 0)
+## Arquitectura (Sprint 1)
 
 ```mermaid
 flowchart LR
-  U[Usuario / Comerciante] --> FE[Frontend NLQ]
-  FE -->|Webhook HTTP| N8N[n8n Self-Hosted]
-  N8N --> LLM[OpenAI / Anthropic failover]
+  U[Usuario] --> FE[Frontend React/Vite]
+  FE -->|POST webhook| N8N[n8n Self-Hosted]
+  N8N --> LLM[Groq + Gemini + HuggingFace]
   N8N --> DB[(PostgreSQL + pgvector)]
-  OD[Open Data MIDAGRI] -->|Cron ingesta| N8N
-  N8N --> OBS[Langfuse / Phoenix]
-  GH[GitHub Actions CI] -.->|bloquea PR| FE
+  OD[MIDAGRI + Open-Meteo] -->|Cron WF0/WF1| N8N
+  N8N --> PHX[Arize Phoenix]
+  GH[GitHub Actions CI/CD] -.-> FE
   GH -.-> N8N
-  GH -.-> IA[IA Ops tests]
+  FE --> VER[Vercel]
+  N8N --> REN[Render]
 ```
+
+Ver diagramas en `docs/sprint-1/assets/` y guía de despliegue en `docs/DEPLOY.md`.
 
 ## Estructura del repositorio
 
@@ -95,8 +98,8 @@ docker compose up -d
 | Sprint | Entregable DevSecOps |
 |---|---|
 | 0 | Estructura, `.env.example`, protection, secrets, informes |
-| 1 | Pipelines n8n + frontend endurecidos / cloud |
-| 2–3 | `ai-testing-ci` + observabilidad Langfuse |
+| 1 | WF0/WF1/WF2 versionados, frontend React, Docker+Phoenix, Vercel+Render |
+| 2–3 | `ai-testing-ci` + observabilidad Langfuse/Phoenix |
 | 4 | Métricas de pipeline y auditoría final |
 
 ## Licencia / curso

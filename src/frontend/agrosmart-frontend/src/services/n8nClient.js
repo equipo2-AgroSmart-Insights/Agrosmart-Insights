@@ -1,7 +1,21 @@
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
-const TIMEOUT_MS = 6000;
+const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 30000;
+
+function getSessionId() {
+  const key = "agrosmart_session_id";
+  let sessionId = sessionStorage.getItem(key);
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    sessionStorage.setItem(key, sessionId);
+  }
+  return sessionId;
+}
 
 export async function sendNLQQuery(query) {
+  if (!WEBHOOK_URL) {
+    throw new Error("VITE_N8N_WEBHOOK_URL no está configurada. Copia .env.example a .env");
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -11,12 +25,10 @@ export async function sendNLQQuery(query) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         pregunta: query,
-        session_id: "sesion-prueba",
+        session_id: getSessionId(),
       }),
       signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`n8n respondió con estado ${response.status}`);
@@ -24,10 +36,11 @@ export async function sendNLQQuery(query) {
 
     return await response.json();
   } catch (error) {
-    clearTimeout(timeoutId);
     if (error.name === "AbortError") {
-      throw new Error("La consulta tardó más de 5 segundos. Intenta de nuevo.");
+      throw new Error(`La consulta tardó más de ${Math.round(TIMEOUT_MS / 1000)} segundos. Intenta de nuevo.`, { cause: error });
     }
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

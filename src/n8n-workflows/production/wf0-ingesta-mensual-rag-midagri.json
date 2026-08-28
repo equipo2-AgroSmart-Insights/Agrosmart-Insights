@@ -1,0 +1,465 @@
+{
+  "name": "WF0: Ingesta Mensual RAG - MIDAGRI",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\n// ==========================================\n// CONFIGURACIÓN MANUAL PARA DATA ANTIGUA\n// ==========================================\nconst anioTarget = 2026; // Cambia esto al año que quieras\nconst mesTarget = 1;     // Cambia esto al mes que quieras (1 = Enero, 2 = Febrero, 3 = Marzo...)\n\nconst shortYear = String(anioTarget).slice(-2);\nconst monthNum = String(mesTarget).padStart(2, '0');\nconst meses = [\"ene\", \"feb\", \"mar\", \"abr\", \"may\", \"jun\", \"jul\", \"ago\", \"set\", \"oct\", \"nov\", \"dic\"];\nconst monthName = meses[mesTarget - 1];\n\n// Truco de JS para saber exactamente cuántos días tuvo ese mes (incluso si fue bisiesto)\nconst diasDelMes = new Date(anioTarget, mesTarget, 0).getDate();\n\n// Bucle desde el día 1 hasta el ÚLTIMO día de ese mes histórico\nfor (let day = 1; day <= diasDelMes; day++) {\n  // En JS, los meses empiezan en 0, por eso restamos 1 al mesTarget\n  const d = new Date(anioTarget, mesTarget - 1, day);\n  \n  // Nos saltamos domingos (0) y sábados (6)\n  if (d.getDay() === 0 || d.getDay() === 6) continue;\n\n  const paddedDay = String(day).padStart(2, '0');\n  const url = `https://siea.midagri.gob.pe/files/datos_estadisticas/diarias/mml/${anioTarget}/${monthNum}/sisap-ingreso-gmml-${paddedDay}${monthName}${shortYear}.pdf`;\n  \n  results.push({\n    json: {\n      fecha_archivo: `${paddedDay}/${monthNum}/${anioTarget}`,\n      url_pdf: url\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        192
+      ],
+      "name": "Generar URLs del Mes1",
+      "id": "2719e0a2-1bf4-4dbc-b5e7-5d9052650296"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url_pdf }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -416,
+        192
+      ],
+      "name": "Descargar PDFs1",
+      "id": "e14f20e9-1bd5-47e5-9229-f27bf4e85433",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2f440c3d-4a78-43c1-b1b5-d46a1dba5e32",
+              "leftValue": "=$binary.data",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "8dd44983-d277-42f8-b270-c97abaf8a8c9",
+              "leftValue": "={{ $binary?.data?.mimeType || 'vacio' }}",
+              "rightValue": "application/pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -192,
+        192
+      ],
+      "id": "b9ddf102-d394-468b-8235-23093bf8680c",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        64,
+        352
+      ],
+      "name": "Default Data Loader1",
+      "id": "b483099b-cf5d-49c4-be67-ed4978de10d8"
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        64,
+        512
+      ],
+      "name": "Recursive Character Text Splitter1",
+      "id": "7db74a45-a989-4807-bfd5-80e2de6caa1f"
+    },
+    {
+      "parameters": {
+        "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        352
+      ],
+      "id": "d2fffd9c-0c4a-4078-8c17-7354f901182a",
+      "name": "Embeddings HuggingFace Inference",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "Sq9dIhrw5s7bdC26",
+          "name": "Hugging Face account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": "documentos_rag",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        64,
+        176
+      ],
+      "id": "48c8c9fe-083a-4d40-a58c-10780ab48310",
+      "name": "Postgres PGVector Store1",
+      "credentials": {
+        "postgres": {
+          "id": "blZlq5en2xDTNg57",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -880,
+        192
+      ],
+      "name": "Schedule Trigger Mensual1",
+      "id": "e37dc2cd-bc7f-40d0-ac9d-1aae396c44fa"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3334c1dc-e0fb-449e-9299-a3b9b2435778",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  if (!item.json.text) continue;\n  \n  const text = item.json.text;\n  const lines = text.split('\\n').map(line => line.trim()).filter(line => line !== '');\n  \n  let fechaHistorica = new Date().toISOString().split('T')[0];\n  \n  if (item.json.info && item.json.info.CreationDate) {\n      const rawDate = item.json.info.CreationDate;\n      const year = rawDate.substring(2, 6);\n      const month = rawDate.substring(6, 8);\n      const day = rawDate.substring(8, 10);\n      fechaHistorica = `${year}-${month}-${day}`;\n  }\n\n  for (let i = 0; i < lines.length - 3; i++) {\n    const unidad = lines[i+2];\n    \n    if ([\"Kilogramo\", \"Atado\", \"Cajon\", \"Cajón\", \"Saco\", \"Bolsa\", \"Mano\", \"Docena\", \"Ciento\"].includes(unidad)) {\n      const producto = lines[i];\n      const volumenRaw = lines[i+1];\n      const preciosRaw = lines[i+3];\n      \n      const preciosArr = preciosRaw.split(' ').filter(p => p.trim() !== '');\n      \n      // PRECIOS: Corregido. \"Hoy\" es el índice 2.\n      let precioFinal = 0;\n      if (preciosArr.length > 2 && preciosArr[2] !== ':') {\n          precioFinal = parseFloat(preciosArr[2]);\n      } else if (preciosArr.length > 1 && preciosArr[1] !== ':') {\n          precioFinal = parseFloat(preciosArr[1]); // Respaldo: Ayer\n      }\n\n      const volumenesArr = volumenRaw.split(' ').filter(v => v.trim() !== '');\n      // VOLÚMENES: \"Hoy\" es el índice 1.\n      let volumenFinal = 0;\n      if (volumenesArr.length > 1 && volumenesArr[1] !== ':') {\n          volumenFinal = parseFloat(volumenesArr[1]);\n      } else if (volumenesArr.length > 0 && volumenesArr[0] !== ':') {\n          volumenFinal = parseFloat(volumenesArr[0]); // Respaldo: Ayer\n      }\n\n      if (!isNaN(precioFinal)) {\n          results.push({\n            json: {\n              fecha: fechaHistorica,\n              producto: producto,\n              mercado: \"GMML\",\n              precio: precioFinal,\n              volumen: volumenFinal,\n              unidad: unidad\n            }\n          });\n      }\n      i += 3; \n    }\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        0
+      ],
+      "id": "b80b4fec-f5e6-42a4-8a46-fad80b7c8fb0",
+      "name": "Code in JavaScript limpia los datos"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "precios_diarios",
+          "mode": "list",
+          "cachedResultName": "precios_diarios"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "precio": "={{ $json.precio }}",
+            "volumen": "={{ $json.volumen }}",
+            "mercado": "={{ $json.mercado }}",
+            "producto": "={{ $json.producto }}",
+            "fecha": "={{ $json.fecha }}",
+            "unidad": "={{ $json.unidad }}"
+          },
+          "matchingColumns": [
+            "fecha",
+            "producto",
+            "mercado"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "producto",
+              "displayName": "producto",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "mercado",
+              "displayName": "mercado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "precio",
+              "displayName": "precio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "volumen",
+              "displayName": "volumen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "unidad",
+              "displayName": "unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        384,
+        0
+      ],
+      "id": "da19df9d-2e1f-445a-bf8b-beef5c48b304",
+      "name": "Insert or update rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "blZlq5en2xDTNg57",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## I'm a note \ncambiar el campo \nconst mesTarget = 2;     // Cambia esto al mes que quieras (1 = Enero, 2 = Febrero, 3 = Marzo...)\n",
+        "height": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        -48
+      ],
+      "id": "87787d0e-7ef5-462a-b8d3-32892f4ca368",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Generar URLs del Mes1": {
+      "main": [
+        [
+          {
+            "node": "Descargar PDFs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar PDFs1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter1": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger Mensual1": {
+      "main": [
+        [
+          {
+            "node": "Generar URLs del Mes1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript limpia los datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript limpia los datos": {
+      "main": [
+        [
+          {
+            "node": "Insert or update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "9f480f0c-6afb-4210-8e17-8cc1b1135e6c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "faec0db16fa1967a212b8a151276e8610be4c33101520a30c4176faa46ef65ff"
+  },
+  "nodeGroups": [],
+  "id": "S0PhRZ8ydHgElCDM",
+  "tags": []
+}

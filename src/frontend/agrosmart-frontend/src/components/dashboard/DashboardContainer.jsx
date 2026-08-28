@@ -1,5 +1,14 @@
 import { useQueryContext } from "../../context/QueryContext";
 import ErrorState from "./ErrorState";
+import PriceChart from "./PriceChart";
+
+function extractAnswer(result) {
+  return result?.respuesta || result?.response || result?.text || "";
+}
+
+function extractChart(result) {
+  return result?.grafico || result?.trend_data || result?.chart || null;
+}
 
 export default function DashboardContainer() {
   const { status, result, error } = useQueryContext();
@@ -12,13 +21,23 @@ export default function DashboardContainer() {
     return null;
   }
 
-  return (
-    <div>
-      <h3>Respuesta</h3>
+  const answer = extractAnswer(result);
+  const chart = extractChart(result);
 
-      <p style={{ whiteSpace: "pre-line" }}>
-        {result.text}
-      </p>
+  return (
+    <div className="dashboard">
+      {answer && (
+        <section>
+          <h3>Respuesta</h3>
+          <p style={{ whiteSpace: "pre-line" }}>{answer}</p>
+        </section>
+      )}
+      {chart?.labels?.length > 0 && (
+        <section>
+          <h3>Tendencia</h3>
+          <PriceChart data={chart} />
+        </section>
+      )}
     </div>
   );
 }
