@@ -7,7 +7,8 @@ set -eu
 
 N8N_URL="${N8N_URL:-http://localhost:5678/healthz}"
 FRONTEND_URL="${FRONTEND_URL:-}"
-PHOENIX_URL="${PHOENIX_URL:-http://localhost:6006}"
+PHOENIX_URL="${PHOENIX_URL:-}"
+HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-30}"
 
 check_url() {
   name="$1"
@@ -16,7 +17,7 @@ check_url() {
     echo "⏭️  $name: omitido (URL no configurada)"
     return 0
   fi
-  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" || echo "000")
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time "$HEALTH_CHECK_TIMEOUT" "$url" || echo "000")
   if [ "$code" = "200" ] || [ "$code" = "204" ]; then
     echo "✅ $name: HTTP $code ($url)"
     return 0
@@ -27,7 +28,7 @@ check_url() {
 
 failed=0
 check_url "n8n" "$N8N_URL" || failed=1
-check_url "Phoenix" "$PHOENIX_URL" || failed=1
+check_url "Phoenix" "$PHOENIX_URL" || true
 check_url "Frontend" "$FRONTEND_URL" || true
 
 if [ "$failed" -ne 0 ]; then

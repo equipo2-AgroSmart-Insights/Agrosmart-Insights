@@ -1,4 +1,8 @@
 name: Deploy Sprint 1 — CD Vercel + Render
+# Nota: el despliegue real de Vercel/Render ocurre por su integración nativa de Git
+# (fuera de este workflow). Los jobs deploy-vercel/deploy-render son disparadores
+# opcionales — si faltan los secrets VERCEL_*/RENDER_DEPLOY_HOOK_N8N quedan en
+# no-op (exit 0) y aparecen en verde sin haber desplegado nada.
 
 on:
   push:
@@ -66,7 +70,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Instalar Vercel CLI
-        run: npm install -g vercel@39
+        run: npm install -g vercel@59
 
       - name: Deploy producción Vercel
         working-directory: src/frontend/agrosmart-frontend
@@ -96,7 +100,7 @@ jobs:
           fi
           chmod +x infrastructure/scripts/health-check.sh
           infrastructure/scripts/health-check.sh || {
-            echo "❌ Health check falló. Ejecutar infrastructure/scripts/rollback.sh o redeploy en Vercel."
+            echo "❌ Health check falló. rollback.sh solo reinicia el stack Docker local — para Vercel usar 'vercel rollback' o redeploy manual desde su dashboard."
             exit 1
           }
 
