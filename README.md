@@ -1,6 +1,4 @@
-﻿# AgroSmart Insights
-**Caso 2 — Optimización de Mercados y Precios Agrícolas**  
-Célula 2 | Curso: Ingeniería de Software (DevSecOps + n8n + IA Ops)
+﻿# AgroSmart Insights - Optimización de Mercados y Precios Agrícolas (Caso 2)
 
 ## Propósito
 Microfrontend NLQ + n8n Self-Hosted + PostgreSQL/pgvector + multi-modelo IA, con canal DevSecOps que bloquea merges inseguros.

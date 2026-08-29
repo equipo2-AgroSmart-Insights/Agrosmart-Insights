@@ -1,15 +1,18 @@
 import { QueryProvider } from "./context/QueryContext";
-import ChatInput from "./components/chat/ChatInput";
-import LoadingIndicator from "./components/chat/LoadingIndicator";
-import DashboardContainer from "./components/dashboard/DashboardContainer";
+import Sidebar from "./components/layout/Sidebar";
+import Header from "./components/layout/Header";
+import NLQHome from "./components/chat/NLQHome";
 
 export default function App() {
   return (
     <QueryProvider>
-      <h1>AgroSmart Insights</h1>
-      <ChatInput />
-      <LoadingIndicator />
-      <DashboardContainer />
+      <Sidebar />
+      <div className="pl-72">
+        <Header />
+        <main className="relative pt-20 min-h-screen bg-background">
+          <NLQHome />
+        </main>
+      </div>
     </QueryProvider>
   );
 }
