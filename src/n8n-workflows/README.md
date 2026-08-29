@@ -22,3 +22,9 @@ El workflow `.github/workflows/n8n-validate-ci.yml` (job `Auditar JSONs de n8n`)
 ## Convención de nombres
 - `webhook-nlq-receiver.json` — endpoint NLQ para el frontend
 - `data-ingesta-cron.json` — ingesta Open Data MIDAGRI → PostgreSQL
+
+## Acceso al n8n compartido (Render)
+
+La instancia de n8n en Render (`agrosmart-n8n`) es Community Edition: no tiene roles granulares de "solo lectura" — cualquier usuario `Member` invitado puede ver **y editar** cualquier workflow directamente en el editor.
+
+**Regla:** ningún cambio hecho directo en el editor de n8n se considera definitivo. Si modificas un nodo ahí para probar algo, debes exportarlo de vuelta como `.json` y subirlo por Pull Request antes del próximo redeploy — de lo contrario, el cambio se pierde o queda sin trazabilidad (viola la regla de oro de arriba).
