@@ -1,12 +1,11 @@
 const NAV_ITEMS = [
-  { key: "nueva-consulta", label: "Nueva Consulta", icon: "add_circle", active: true },
-  { key: "historial", label: "Historial", icon: "history", active: false },
-  { key: "mercados-midagri", label: "Mercados MIDAGRI", icon: "monitoring", active: false },
-  { key: "clima", label: "Clima", icon: "wb_sunny", active: false },
-  { key: "calendario-agricola", label: "Planificación", icon: "calendar_month", active: false },
+  { key: "nueva-consulta", label: "Nueva Consulta", icon: "add_circle" },
+  { key: "mercados-midagri", label: "Mercados MIDAGRI", icon: "monitoring" },
+  { key: "monitoreo-satelital", label: "Monitoreo Satelital", icon: "satellite_alt" },
+  { key: "calendario-agricola", label: "Calendario Agrícola", icon: "calendar_month" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ activeView, onNavigate }) {
   return (
     <aside className="fixed left-0 top-0 h-full w-72 bg-surface-container-low border-r border-earth-brown/10 flex flex-col p-6 z-50">
       <div className="flex items-center gap-3 mb-10 px-2">
@@ -16,21 +15,25 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 flex flex-col gap-2">
-        {NAV_ITEMS.map((item) => (
-          <a
-            key={item.key}
-            href="#"
-            aria-current={item.active ? "page" : undefined}
-            className={
-              item.active
-                ? "flex items-center gap-4 px-4 py-3.5 rounded-full transition-all bg-primary-fixed text-on-primary-fixed font-bold shadow-sm"
-                : "flex items-center gap-4 px-4 py-3.5 rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all"
-            }
-          >
-            <span className="material-symbols-outlined">{item.icon}</span>
-            <span className="font-label-md text-label-md">{item.label}</span>
-          </a>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const isActive = activeView === item.key;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => onNavigate(item.key)}
+              aria-current={isActive ? "page" : undefined}
+              className={
+                isActive
+                  ? "flex items-center gap-4 px-4 py-3.5 rounded-full transition-all bg-primary-fixed text-on-primary-fixed font-bold shadow-sm text-left"
+                  : "flex items-center gap-4 px-4 py-3.5 rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all text-left"
+              }
+            >
+              <span className="material-symbols-outlined">{item.icon}</span>
+              <span className="font-label-md text-label-md">{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
     </aside>
   );

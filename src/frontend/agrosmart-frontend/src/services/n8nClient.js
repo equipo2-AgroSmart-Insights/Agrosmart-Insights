@@ -12,6 +12,10 @@ function getSessionId() {
 }
 
 export async function sendNLQQuery(query) {
+  return sendN8nAction({ pregunta: query });
+}
+
+export async function sendN8nAction(payload = {}) {
   if (!WEBHOOK_URL) {
     throw new Error("VITE_N8N_WEBHOOK_URL no está configurada. Copia .env.example a .env");
   }
@@ -24,8 +28,8 @@ export async function sendNLQQuery(query) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        pregunta: query,
         session_id: getSessionId(),
+        ...payload,
       }),
       signal: controller.signal,
     });
