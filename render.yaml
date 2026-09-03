@@ -1,0 +1,76 @@
+# Blueprint Render — AgroSmart Insights (Sprint 1)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Frontend → Vercel (src/frontend/agrosmart-frontend)
+# Backend  → Render (n8n + Postgres)
+#
+# Plan free: ~512 MB RAM — n8n latest requiere ajustes de memoria.
+
+databases:
+  - name: agrosmart-postgres
+    databaseName: agrosmart_db
+    user: agrosmart
+    plan: free
+    ipAllowList: []
+
+services:
+  - type: web
+    name: agrosmart-n8n
+    runtime: image
+    image:
+      url: docker.io/n8nio/n8n:1.83.2
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: N8N_ENCRYPTION_KEY
+        generateValue: true
+      - key: N8N_HOST
+        sync: false
+      - key: N8N_PROTOCOL
+        value: https
+      - key: PORT
+        value: "5678"
+      - key: N8N_EDITOR_BASE_URL
+        sync: false
+      - key: N8N_WEBHOOK_URL
+        sync: false
+      - key: N8N_RUNNERS_ENABLED
+        value: "false"
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=384"
+      - key: DB_TYPE
+        value: postgresdb
+      - key: DB_POSTGRESDB_HOST
+        fromDatabase:
+          name: agrosmart-postgres
+          property: host
+      - key: DB_POSTGRESDB_PORT
+        fromDatabase:
+          name: agrosmart-postgres
+          property: port
+      - key: DB_POSTGRESDB_DATABASE
+        fromDatabase:
+          name: agrosmart-postgres
+          property: database
+      - key: DB_POSTGRESDB_USER
+        fromDatabase:
+          name: agrosmart-postgres
+          property: user
+      - key: DB_POSTGRESDB_PASSWORD
+        fromDatabase:
+          name: agrosmart-postgres
+          property: password
+      - key: DB_POSTGRESDB_SCHEMA
+        value: public
+      - key: DB_POSTGRESDB_SSL_ENABLED
+        value: "false"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+      - key: MAPTILER_API_KEY
+        sync: false
+      - key: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
+        value: "true"

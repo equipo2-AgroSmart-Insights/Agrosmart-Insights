@@ -1,0 +1,65 @@
+name: n8n Workflow & Security Validation
+
+on:
+  # Sin filtro de paths en pull_request: este job es required check en main.
+  # Si no corre en un PR, GitHub queda en "Expected — Waiting for status".
+  pull_request: {}
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/n8n-workflows/**'
+      - '.github/workflows/n8n-validate-ci.yml'
+
+jobs:
+  validate-n8n-json:
+    name: Auditar JSONs de n8n
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Escanear JSONs y Credenciales
+        run: |
+          python -c "
+          import json, glob, re, sys
+
+          json_files = glob.glob('src/n8n-workflows/**/*.json', recursive=True)
+          if not json_files:
+              print('No hay flujos JSON subidos aún en src/n8n-workflows/. Pasando validación inicial.')
+              sys.exit(0)
+
+          secret_patterns = [
+              (re.compile(r'sk-[a-zA-Z0-9]{20,}'), 'API Key estilo sk- (OpenAI/Anthropic u otras)'),
+              (re.compile(r'gsk_[a-zA-Z0-9]{20,}'), 'API Key de Groq'),
+              (re.compile(r'hf_[a-zA-Z0-9]{20,}'), 'Token de Hugging Face'),
+              (re.compile(r'ghp_[a-zA-Z0-9]{36}'), 'GitHub Token'),
+              (re.compile(r'postgres://[^:]+:[^@]+@'), 'Cadena PostgreSQL con Password'),
+          ]
+
+          errors = 0
+          for file_path in json_files:
+              print(f'Analizando: {file_path}')
+              try:
+                  with open(file_path, 'r', encoding='utf-8') as f:
+                      content = f.read()
+                      json.loads(content)
+                  
+                  for pattern, secret_type in secret_patterns:
+                      if pattern.search(content):
+                          print(f' ERROR CRÍTICO: Se detectó {secret_type} expuesta en {file_path}')
+                          errors += 1
+              except json.JSONDecodeError as e:
+                  print(f' ERROR DE SINTAXIS JSON en {file_path}: {e}')
+                  errors += 1
+
+          if errors > 0:
+              print(f'\nSe encontraron {errors} errores de seguridad o formato. PR Rechazado.')
+              sys.exit(1)
+          print('\nValidación exitosa: Todos los JSON de n8n están limpios y son válidos.')
+          "
