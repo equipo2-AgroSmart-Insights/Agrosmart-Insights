@@ -1,0 +1,1041 @@
+{
+  "name": "WF1: Ingesta Diaria Precios y Clima",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst resultado = [];\n\nconst regiones = $items(\"Code in JavaScript Regiones productoras\");\n\nfor (const item of items) {\n  const clima = item.json.body ?? item.json;\n\n  if (!clima.daily?.time) {\n    continue;\n  }\n\n  // Identificar qué región corresponde a esta respuesta\n  let regionEncontrada = null;\n  let menorDistancia = Infinity;\n\n  for (const r of regiones) {\n    const region = r.json;\n\n    const distancia =\n      Math.abs(Number(clima.latitude) - Number(region.latitud)) +\n      Math.abs(Number(clima.longitude) - Number(region.longitud));\n\n    if (distancia < menorDistancia) {\n      menorDistancia = distancia;\n      regionEncontrada = region;\n    }\n  }\n\n  if (!regionEncontrada) {\n    continue;\n  }\n\n  // Crear una fila por cada día del pronóstico\n  for (let i = 0; i < clima.daily.time.length; i++) {\n\n    resultado.push({\n      json: {\n        region_id: regionEncontrada.region_id,\n        region: regionEncontrada.region,\n        ciudad_referencia: regionEncontrada.ciudad_referencia,\n\n        // Para mantener compatibilidad con tu tabla actual\n        ubicacion: regionEncontrada.region,\n\n        latitud: regionEncontrada.latitud,\n        longitud: regionEncontrada.longitud,\n\n        fecha: clima.daily.time[i],\n\n        temperatura:\n          clima.daily.temperature_2m_mean?.[i] ?? null,\n\n        precipitacion:\n          clima.daily.precipitation_sum?.[i] ?? null,\n\n        humedad:\n          clima.daily.relative_humidity_2m_mean?.[i] ?? null,\n\n        evapotranspiracion:\n          clima.daily.et0_fao_evapotranspiration?.[i] ?? null,\n\n        tipo_dato: \"pronostico\"\n      }\n    });\n  }\n}\n\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        336
+      ],
+      "id": "c8db57d0-3355-46c4-92b1-b74c6ea5063a",
+      "name": "Normaliza datos climáticos - Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        96
+      ],
+      "id": "f39837f8-93d2-4aec-9135-df8637d7efca",
+      "name": "Schedule Trigger 10:00 am"
+    },
+    {
+      "parameters": {
+        "url": "https://siea.midagri.gob.pe/publicaciones/datos-y-estadisticas-agrarias/boletines-diarios/ingreso-y-precios-en-el-gran-mercado-mayorista-de-lima",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "884815fe-24d3-45d4-8d2f-d0ec26c7def9",
+      "name": "HTTP Request 1 MIDAGRI",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        592,
+        0
+      ],
+      "id": "43a54b2c-e1b7-47e1-bfd0-dd292b2d8a03",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\n\n// 1. Calculamos la fecha de hoy en Perú (Lima)\nconst now = new Date(new Date().toLocaleString(\"en-US\", {timeZone: \"America/Lima\"}));\nconst year = now.getFullYear(); // 2026\nconst month = String(now.getMonth() + 1).padStart(2, '0'); // 08\nconst day = String(now.getDate()).padStart(2, '0'); // 13\nconst shortYear = String(year).slice(-2); // 26\n\nconst meses = [\"ene\", \"feb\", \"mar\", \"abr\", \"may\", \"jun\", \"jul\", \"ago\", \"set\", \"oct\", \"nov\", \"dic\"];\nconst monthName = meses[now.getMonth()]; // \"ago\"\n\n// El patrón exacto que buscamos para hoy: \"13ago26.pdf\"\nconst patronHoy = `${day}${monthName}${shortYear}.pdf`;\n\n// 2. Buscamos en el HTML si existe un enlace con ese patrón\nconst regex = new RegExp(`href=\"([^\"]*${patronHoy})\"`, \"i\");\nconst match = html.match(regex);\n\nlet pdfUrl = \"\";\n\nif (match) {\n    // ¡Lo encontró en la página web!\n    pdfUrl = match[1];\n    if (!pdfUrl.startsWith('http')) {\n        pdfUrl = 'https://siea.midagri.gob.pe' + pdfUrl;\n    }\n} else {\n    // Si no está en el HTML (MIDAGRI a veces tarda en actualizar la web), \n    // pero sabemos cómo estructuran sus carpetas, lo \"adivinamos\" y lo armamos nosotros:\n    pdfUrl = `https://siea.midagri.gob.pe/files/datos_estadisticas/diarias/mml/${year}/${month}/sisap-ingreso-gmml-${patronHoy}`;\n}\n\nreturn [{ json: { url_pdf: pdfUrl } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ed4fd92b-5501-484d-b569-6e7df5262c9c",
+      "name": "Code in JavaScript - identificar pdf de hoy",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url_pdf }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "9ceaa704-0e2e-49b9-991e-18f0e5fd7b95",
+      "name": "HTTP Request - descargar pdf",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  if (!item.json.text) continue;\n  \n  const text = item.json.text;\n  const lines = text.split('\\n').map(line => line.trim()).filter(line => line !== '');\n  \n  let fechaHistorica = new Date().toISOString().split('T')[0];\n  \n  if (item.json.info && item.json.info.CreationDate) {\n      const rawDate = item.json.info.CreationDate;\n      const year = rawDate.substring(2, 6);\n      const month = rawDate.substring(6, 8);\n      const day = rawDate.substring(8, 10);\n      fechaHistorica = `${year}-${month}-${day}`;\n  }\n\n  for (let i = 0; i < lines.length - 3; i++) {\n    const unidad = lines[i+2];\n    \n    if ([\"Kilogramo\", \"Atado\", \"Cajon\", \"Cajón\", \"Saco\", \"Bolsa\", \"Mano\", \"Docena\", \"Ciento\"].includes(unidad)) {\n      const producto = lines[i];\n      const volumenRaw = lines[i+1];\n      const preciosRaw = lines[i+3];\n      \n      const preciosArr = preciosRaw.split(' ').filter(p => p.trim() !== '');\n      \n      // PRECIOS: Corregido. \"Hoy\" es el índice 2.\n      let precioFinal = 0;\n      if (preciosArr.length > 2 && preciosArr[2] !== ':') {\n          precioFinal = parseFloat(preciosArr[2]);\n      } else if (preciosArr.length > 1 && preciosArr[1] !== ':') {\n          precioFinal = parseFloat(preciosArr[1]); // Respaldo: Ayer\n      }\n\n      const volumenesArr = volumenRaw.split(' ').filter(v => v.trim() !== '');\n      // VOLÚMENES: \"Hoy\" es el índice 1.\n      let volumenFinal = 0;\n      if (volumenesArr.length > 1 && volumenesArr[1] !== ':') {\n          volumenFinal = parseFloat(volumenesArr[1]);\n      } else if (volumenesArr.length > 0 && volumenesArr[0] !== ':') {\n          volumenFinal = parseFloat(volumenesArr[0]); // Respaldo: Ayer\n      }\n\n      if (!isNaN(precioFinal)) {\n          results.push({\n            json: {\n              fecha: fechaHistorica,\n              producto: producto,\n              mercado: \"GMML\",\n              precio: precioFinal,\n              volumen: volumenFinal,\n              unidad: unidad\n            }\n          });\n      }\n      i += 3; \n    }\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        0
+      ],
+      "id": "b4bc542a-7515-4c7e-befc-5d1530991fda",
+      "name": "Code in JavaScript limpia los datos"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "precios_diarios",
+          "mode": "list",
+          "cachedResultName": "precios_diarios"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "precio": "={{ $json.precio }}",
+            "volumen": "={{ $json.volumen }}",
+            "mercado": "={{ $json.mercado }}",
+            "producto": "={{ $json.producto }}",
+            "fecha": "={{ $json.fecha }}",
+            "unidad": "={{ $json.unidad }}"
+          },
+          "matchingColumns": [
+            "fecha",
+            "producto",
+            "mercado"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "producto",
+              "displayName": "producto",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "mercado",
+              "displayName": "mercado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "precio",
+              "displayName": "precio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "volumen",
+              "displayName": "volumen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "unidad",
+              "displayName": "unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        976,
+        0
+      ],
+      "id": "b1c7f123-26df-4b85-8418-ecec58f39079",
+      "name": "Insert or update rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "NlYqfaQmKJKhbe1I",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      region_id: 1,\n      region: \"Junín\",\n      ciudad_referencia: \"Huancayo\",\n      latitud: -12.0651,\n      longitud: -75.2049\n    }\n  },\n  {\n    json: {\n      region_id: 2,\n      region: \"Ica\",\n      ciudad_referencia: \"Ica\",\n      latitud: -14.0678,\n      longitud: -75.7286\n    }\n  },\n  {\n    json: {\n      region_id: 3,\n      region: \"La Libertad\",\n      ciudad_referencia: \"Trujillo\",\n      latitud: -8.1116,\n      longitud: -79.0287\n    }\n  },\n  {\n    json: {\n      region_id: 4,\n      region: \"Huánuco\",\n      ciudad_referencia: \"Huánuco\",\n      latitud: -9.9306,\n      longitud: -76.2422\n    }\n  },\n  {\n    json: {\n      region_id: 5,\n      region: \"Ayacucho\",\n      ciudad_referencia: \"Ayacucho\",\n      latitud: -13.1631,\n      longitud: -74.2236\n    }\n  },\n  {\n    json: {\n      region_id: 6,\n      region: \"Arequipa\",\n      ciudad_referencia: \"Arequipa\",\n      latitud: -16.4090,\n      longitud: -71.5375\n    }\n  },\n  {\n    json: {\n      region_id: 7,\n      region: \"Áncash\",\n      ciudad_referencia: \"Huaraz\",\n      latitud: -9.5278,\n      longitud: -77.5278\n    }\n  },\n  {\n    json: {\n      region_id: 8,\n      region: \"Cajamarca\",\n      ciudad_referencia: \"Cajamarca\",\n      latitud: -7.1617,\n      longitud: -78.5128\n    }\n  },\n  {\n    json: {\n      region_id: 9,\n      region: \"Piura\",\n      ciudad_referencia: \"Piura\",\n      latitud: -5.1945,\n      longitud: -80.6328\n    }\n  },\n  {\n    json: {\n      region_id: 10,\n      region: \"Lima\",\n      ciudad_referencia: \"Huaral\",\n      latitud: -11.4950,\n      longitud: -77.2078\n    }\n  },\n  {\n    json: {\n      region_id: 11,\n      region: \"Cusco\",\n      ciudad_referencia: \"Cusco\",\n      latitud: -13.5319,\n      longitud: -71.9675\n    }\n  },\n  {\n    json: {\n      region_id: 12,\n      region: \"Apurímac\",\n      ciudad_referencia: \"Abancay\",\n      latitud: -13.6339,\n      longitud: -72.8814\n    }\n  },\n  {\n    json: {\n      region_id: 13,\n      region: \"Pasco\",\n      ciudad_referencia: \"Cerro de Pasco\",\n      latitud: -10.6864,\n      longitud: -76.2625\n    }\n  },\n  {\n    json: {\n      region_id: 14,\n      region: \"Lambayeque\",\n      ciudad_referencia: \"Chiclayo\",\n      latitud: -6.7714,\n      longitud: -79.8409\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        224
+      ],
+      "id": "4190f9ca-922d-46cc-acc3-f2be5357a37f",
+      "name": "Code in JavaScript Regiones productoras"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $json.latitud }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $json.longitud }}"
+            },
+            {
+              "name": "daily",
+              "value": "temperature_2m_mean,precipitation_sum,relative_humidity_2m_mean,et0_fao_evapotranspiration"
+            },
+            {
+              "name": "timezone",
+              "value": "America/Lima"
+            },
+            {
+              "name": "forecast_days",
+              "value": "7"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        224
+      ],
+      "id": "622c941a-c6ad-4f2b-bb00-92e8ecd1ae33",
+      "name": "HTTP Request Open Meteo Forecast 7 dias",
+      "retryOnFail": false,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO clima_diario (\n    fecha,\n    ubicacion,\n    region_id,\n    ciudad_referencia,\n    latitud,\n    longitud,\n    temperatura,\n    precipitacion,\n    humedad,\n    evapotranspiracion,\n    tipo_dato\n)\nVALUES (\n    $1::date,\n    $2::text,\n    $3::integer,\n    $4::text,\n    $5::double precision,\n    $6::double precision,\n    $7::double precision,\n    $8::double precision,\n    $9::double precision,\n    $10::double precision,\n    $11::text\n)\nON CONFLICT (fecha, ubicacion, tipo_dato)\nDO UPDATE SET\n    region_id = EXCLUDED.region_id,\n    ciudad_referencia = EXCLUDED.ciudad_referencia,\n    latitud = EXCLUDED.latitud,\n    longitud = EXCLUDED.longitud,\n    temperatura = EXCLUDED.temperatura,\n    precipitacion = EXCLUDED.precipitacion,\n    humedad = EXCLUDED.humedad,\n    evapotranspiracion = EXCLUDED.evapotranspiracion;",
+        "options": {
+          "queryReplacement": "={{ [   $json.fecha,   $json.ubicacion,   $json.region_id,   $json.ciudad_referencia,   $json.latitud,   $json.longitud,   $json.temperatura,   $json.precipitacion,   $json.humedad,   $json.evapotranspiracion,   $json.tipo_dato ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1936,
+        336
+      ],
+      "id": "ea10bb42-56a1-4521-b631-52f64c2c7366",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "NlYqfaQmKJKhbe1I",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.statusCode >= 200 && $json.statusCode < 300 }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "7f9156cd-ff4e-49f3-924e-2e7661049122"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9e59858b-4437-4971-86aa-6361e701c33d",
+                    "leftValue": "={{ $json.statusCode === 429 || ($json.statusCode >= 500 && $json.statusCode < 600) }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        384,
+        224
+      ],
+      "id": "947e2297-e62d-4d9a-9005-0775acdca4a2",
+      "name": "Switch - Validar respuesta Open Meteo"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $('Code in JavaScript Regiones productoras').item.json.latitud }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $('Code in JavaScript Regiones productoras').item.json.longitud }}"
+            },
+            {
+              "name": "daily",
+              "value": "temperature_2m_mean,precipitation_sum,relative_humidity_2m_mean,et0_fao_evapotranspiration"
+            },
+            {
+              "name": "timezone",
+              "value": "America/Lima"
+            },
+            {
+              "name": "forecast_days",
+              "value": "7"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        544
+      ],
+      "id": "296862f3-76ee-4b0d-a72d-9f0d88ec044d",
+      "name": "HTTP Open Meteo Retry 1",
+      "retryOnFail": false,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $('Code in JavaScript Regiones productoras').item.json.latitud }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $('Code in JavaScript Regiones productoras').item.json.longitud }}"
+            },
+            {
+              "name": "daily",
+              "value": "temperature_2m_mean,precipitation_sum,relative_humidity_2m_mean,et0_fao_evapotranspiration"
+            },
+            {
+              "name": "timezone",
+              "value": "America/Lima"
+            },
+            {
+              "name": "forecast_days",
+              "value": "7"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        752,
+        624
+      ],
+      "id": "d551dd81-490c-4979-85b2-e8d1d21be56b",
+      "name": "HTTP Open Meteo Retry 2",
+      "retryOnFail": false,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.statusCode >= 200 && $json.statusCode < 300 }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "7f9156cd-ff4e-49f3-924e-2e7661049122"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9e59858b-4437-4971-86aa-6361e701c33d",
+                    "leftValue": "={{ $json.statusCode === 429 || ($json.statusCode >= 500 && $json.statusCode < 600) }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        352,
+        544
+      ],
+      "id": "8b8ef350-fbb6-4e36-b133-aff11c6578c4",
+      "name": "Switch Retry 1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.statusCode >= 200 && $json.statusCode < 300 }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "7f9156cd-ff4e-49f3-924e-2e7661049122"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9e59858b-4437-4971-86aa-6361e701c33d",
+                    "leftValue": "={{ $json.statusCode === 429 || ($json.statusCode >= 500 && $json.statusCode < 600) }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        912,
+        624
+      ],
+      "id": "0eb2368f-7412-4d9c-a73b-56705eb88291",
+      "name": "Switch - Retry 2"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $('Code in JavaScript Regiones productoras').item.json.latitud }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $('Code in JavaScript Regiones productoras').item.json.longitud }}"
+            },
+            {
+              "name": "daily",
+              "value": "temperature_2m_mean,precipitation_sum,relative_humidity_2m_mean,et0_fao_evapotranspiration"
+            },
+            {
+              "name": "timezone",
+              "value": "America/Lima"
+            },
+            {
+              "name": "forecast_days",
+              "value": "7"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        720
+      ],
+      "id": "77fcf69a-4b7f-443d-8522-220c53cad3d3",
+      "name": "HTTP Open Meteo Retry 3",
+      "retryOnFail": false,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.statusCode >= 200 && $json.statusCode < 300 }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "7f9156cd-ff4e-49f3-924e-2e7661049122"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9e59858b-4437-4971-86aa-6361e701c33d",
+                    "leftValue": "={{ $json.statusCode === 429 || ($json.statusCode >= 500 && $json.statusCode < 600) }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1440,
+        720
+      ],
+      "id": "8744d1a6-c84b-4a81-90bc-31d58a7dec0a",
+      "name": "Switch - Retry 3"
+    },
+    {
+      "parameters": {
+        "amount": 4
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        624
+      ],
+      "id": "6d1382da-44d8-4dd9-981e-cdaf4bfd42ed",
+      "name": "Wait Retry 4 segundos",
+      "webhookId": "e80eaf51-0497-4081-82fd-c317226601f4"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -16,
+        544
+      ],
+      "id": "78435adb-4746-417e-ba08-ae35183a709b",
+      "name": "Wait 2 segundos",
+      "webhookId": "e80eaf51-0497-4081-82fd-c317226601f4"
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1104,
+        720
+      ],
+      "id": "d1109e11-a26c-4a43-9078-c4655032a56d",
+      "name": "Wait Retry 8 segundos",
+      "webhookId": "e80eaf51-0497-4081-82fd-c317226601f4"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Open-Meteo continúa devolviendo HTTP 429 o 5xx después de 3 reintentos con backoff exponencial (2s, 4s y 8s)."
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        720
+      ],
+      "id": "a2560991-2696-487b-95cb-5c64dcaf9493",
+      "name": "Stop and Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Normaliza datos climáticos - Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger 10:00 am": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request 1 MIDAGRI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript Regiones productoras",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request 1 MIDAGRI": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript - identificar pdf de hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript limpia los datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript - identificar pdf de hoy": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - descargar pdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - descargar pdf": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript limpia los datos": {
+      "main": [
+        [
+          {
+            "node": "Insert or update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript Regiones productoras": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request Open Meteo Forecast 7 dias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request Open Meteo Forecast 7 dias": {
+      "main": [
+        [
+          {
+            "node": "Switch - Validar respuesta Open Meteo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Validar respuesta Open Meteo": {
+      "main": [
+        [
+          {
+            "node": "Normaliza datos climáticos - Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 2 segundos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Open Meteo Retry 1": {
+      "main": [
+        [
+          {
+            "node": "Switch Retry 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Open Meteo Retry 2": {
+      "main": [
+        [
+          {
+            "node": "Switch - Retry 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Retry 1": {
+      "main": [
+        [
+          {
+            "node": "Normaliza datos climáticos - Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Retry 4 segundos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Retry 2": {
+      "main": [
+        [
+          {
+            "node": "Normaliza datos climáticos - Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Retry 8 segundos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Open Meteo Retry 3": {
+      "main": [
+        [
+          {
+            "node": "Switch - Retry 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Retry 4 segundos": {
+      "main": [
+        [
+          {
+            "node": "HTTP Open Meteo Retry 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2 segundos": {
+      "main": [
+        [
+          {
+            "node": "HTTP Open Meteo Retry 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Retry 8 segundos": {
+      "main": [
+        [
+          {
+            "node": "HTTP Open Meteo Retry 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Retry 3": {
+      "main": [
+        [
+          {
+            "node": "Normaliza datos climáticos - Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e7faa208-af90-47ab-b826-01a32e1d482f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "faec0db16fa1967a212b8a151276e8610be4c33101520a30c4176faa46ef65ff"
+  },
+  "nodeGroups": [],
+  "id": "dG46t9XSYr8xFROD",
+  "tags": []
+}
