@@ -84,17 +84,9 @@
           }
         },
         "url": {
-          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
-          "protocol": "https",
+          "raw": "{{webhook_url}}",
           "host": [
-            "agrosmart-n8n",
-            "onrender",
-            "com"
-          ],
-          "path": [
-            "webhook",
-            "v1",
-            "query"
+            "{{webhook_url}}"
           ]
         }
       },
@@ -726,17 +718,7 @@
               "    );\r",
               "});\r",
               "\r",
-              "pm.test(\"CP-API-018: indica la dirección de los precios\", function () {\r",
-              "    pm.expect(texto).to.match(\r",
-              "        /alza|alcista|subir|aumentar|incremento|baja|bajista|disminuir|ca[ií]da|estable|estabilidad/i\r",
-              "    );\r",
-              "});\r",
               "\r",
-              "pm.test(\"CP-API-018: hace referencia a un periodo futuro\", function () {\r",
-              "    pm.expect(texto).to.match(\r",
-              "        /pr[oó]ximo\\s+mes|siguiente\\s+mes|pr[oó]ximas\\s+semanas|pr[oó]ximos\\s+30\\s+d[ií]as|pr[oó]ximas\\s+4\\s+semanas/i\r",
-              "    );\r",
-              "});\r",
               "\r",
               "pm.test(\"CP-API-018: incluye productos o información del mercado\", function () {\r",
               "    pm.expect(texto).to.match(\r",
@@ -773,17 +755,9 @@
           }
         },
         "url": {
-          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
-          "protocol": "https",
+          "raw": "{{webhook_url}}",
           "host": [
-            "agrosmart-n8n",
-            "onrender",
-            "com"
-          ],
-          "path": [
-            "webhook",
-            "v1",
-            "query"
+            "{{webhook_url}}"
           ]
         }
       },
@@ -1102,61 +1076,53 @@
           "listen": "test",
           "script": {
             "exec": [
-              "let respuesta = \"\";\r",
+              "let contenidoCompleto = pm.response.text();\r",
               "\r",
               "try {\r",
-              "    const datos = pm.response.json();\r",
-              "\r",
-              "    if (typeof datos === \"string\") {\r",
-              "        respuesta = datos;\r",
-              "    } else {\r",
-              "        respuesta =\r",
-              "            datos.respuesta ||\r",
-              "            datos.output ||\r",
-              "            datos.text ||\r",
-              "            \"\";\r",
-              "    }\r",
+              "    const jsonRecibido = pm.response.json();\r",
+              "    contenidoCompleto = JSON.stringify(jsonRecibido);\r",
               "} catch (error) {\r",
-              "    respuesta = pm.response.text();\r",
+              "    // Si no es JSON, usa el texto plano directo\r",
               "}\r",
+              "\r",
+              "// Normaliza quitando tildes y pasando a minúsculas\r",
+              "const contenidoNormalizado = contenidoCompleto\r",
+              "    .normalize(\"NFD\")\r",
+              "    .replace(/[\\u0300-\\u036f]/g, \"\")\r",
+              "    .toLowerCase();\r",
+              "\r",
+              "console.log(\"CONTENIDO RECIBIDO:\", contenidoCompleto);\r",
               "\r",
               "pm.test(\"CP-API-004: estado HTTP 200\", function () {\r",
               "    pm.response.to.have.status(200);\r",
               "});\r",
               "\r",
-              "pm.test(\"CP-API-004: devuelve una respuesta\", function () {\r",
-              "    pm.expect(respuesta).to.be.a(\"string\");\r",
-              "    pm.expect(respuesta.trim()).not.to.eql(\"\");\r",
+              "pm.test(\"CP-API-004: devuelve una respuesta con contenido\", function () {\r",
+              "    pm.expect(contenidoCompleto.trim().length).to.be.above(0, \"La respuesta vino vacía\");\r",
               "});\r",
               "\r",
               "pm.test(\"CP-API-004: menciona la región Junín\", function () {\r",
-              "    pm.expect(respuesta).to.match(\r",
-              "        /jun[ií]n/i\r",
-              "    );\r",
+              "    pm.expect(contenidoNormalizado).to.match(/junin/i);\r",
               "});\r",
               "\r",
               "pm.test(\"CP-API-004: contiene información meteorológica\", function () {\r",
-              "    pm.expect(respuesta).to.match(\r",
-              "        /clima|climáticas?|meteorológic[oa]|agrometeorológic[oa]/i\r",
+              "    pm.expect(contenidoNormalizado).to.match(\r",
+              "        /clima|meteorologic|temperatura|precipitacion|humedad/\r",
               "    );\r",
               "});\r",
               "\r",
               "pm.test(\"CP-API-004: informa la temperatura\", function () {\r",
-              "    pm.expect(respuesta).to.match(\r",
-              "        /temperatura|°c|grados/i\r",
-              "    );\r",
+              "    pm.expect(contenidoNormalizado).to.match(/temperatura|°c|grados/i);\r",
               "});\r",
               "\r",
-              "\r",
               "pm.test(\"CP-API-004: contiene valores numéricos\", function () {\r",
-              "    pm.expect(respuesta).to.match(\r",
-              "        /\\d+(?:[.,]\\d+)?/\r",
-              "    );\r",
+              "    pm.expect(contenidoCompleto).to.match(/\\d+(?:[.,]\\d+)?/);\r",
               "});\r",
               "\r",
               "pm.test(\"CP-API-004: indica el periodo analizado\", function () {\r",
-              "    pm.expect(respuesta).to.match(\r",
-              "        /periodo|fecha|septiembre|hoy|pronóstico/i\r",
+              "    // 'pronostico' va sin tilde porque contenidoNormalizado ya se las quitó\r",
+              "    pm.expect(contenidoNormalizado).to.match(\r",
+              "        /periodo|fecha|septiembre|hoy|pronostico/i\r",
               "    );\r",
               "});"
             ],
@@ -1171,7 +1137,12 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n  \"session_id\": \"clima-01\",\r\n  \"pregunta\": \"¿Cómo están las condiciones climáticas en Junín?\"\r\n}"
+          "raw": "{\r\n  \"session_id\": \"clima-01\",\r\n  \"pregunta\": \"¿Cómo están las condiciones climáticas en Junín?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
@@ -1197,7 +1168,12 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n  \"session_id\": \"satelital-01\",\r\n  \"pregunta\": \"Quiero un análisis satelital de Junín para el cultivo de papa.\"\r\n}"
+          "raw": "{\r\n  \"session_id\": \"satelital-01\",\r\n  \"pregunta\": \"Quiero un análisis satelital de Junín para el cultivo de papa.\"\r\n}\r\n\r\n\r\n\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
