@@ -1,4 +1,4 @@
-name: Pruebas unitarias con Vitest
+name: Pruebas unitarias frontend con Vitest
 
 on:
   push:

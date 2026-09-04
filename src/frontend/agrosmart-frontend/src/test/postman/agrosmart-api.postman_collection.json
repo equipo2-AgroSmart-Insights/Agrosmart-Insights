@@ -1,0 +1,1362 @@
+{
+  "info": {
+    "_postman_id": "d22725cd-e088-44f6-b4a0-7571c70c98c7",
+    "name": "AgroSmart  - QA",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "49093015",
+    "_collection_link": "https://go.postman.co/collection/49093015-d22725cd-e088-44f6-b4a0-7571c70c98c7?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "CP-API-001 - Precio de Cebolla",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let datos = {};\r",
+              "let respuesta = \"\";\r",
+              "let esJson = false;\r",
+              "\r",
+              "try {\r",
+              "    datos = pm.response.json();\r",
+              "    esJson = true;\r",
+              "\r",
+              "    const contenido = Array.isArray(datos)\r",
+              "        ? (datos[0] || {})\r",
+              "        : datos;\r",
+              "\r",
+              "    respuesta =\r",
+              "        contenido.respuesta ||\r",
+              "        contenido.output ||\r",
+              "        contenido.text ||\r",
+              "        contenido.message ||\r",
+              "        \"\";\r",
+              "\r",
+              "    if (typeof respuesta !== \"string\") {\r",
+              "        respuesta = JSON.stringify(respuesta);\r",
+              "    }\r",
+              "} catch (error) {\r",
+              "    respuesta = pm.response.text();\r",
+              "}\r",
+              "\r",
+              "pm.test(\"CP-API-01: estado 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-01: respuesta válida\", function () {\r",
+              "    pm.expect(respuesta).to.be.a(\"string\");\r",
+              "    pm.expect(respuesta.trim()).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "\r",
+              "pm.test(\"CP-API-01: contiene precio y valor numérico\", function () {\r",
+              "    pm.expect(respuesta).to.match(/precio|soles?|s\\/\\.?/i);\r",
+              "    pm.expect(respuesta).to.match(/\\d+(?:[.,]\\d+)?/);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-01: indica la unidad de medida\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /kilogramo?|kilos?|\\bkg\\b|sacos?|jabas?|cajas?|unidad/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-01: responde en menos de 30 segundos\", function () {\r",
+              "    pm.expect(pm.response.responseTime).to.be.below(30000);\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"precio-01\",\r\n  \"pregunta\": \"¿A cuánto está la cebolla hoy?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-002 - Precio de Zanahoria",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = {};\r",
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    json = pm.response.json();\r",
+              "\r",
+              "    respuesta =\r",
+              "        json.text ||\r",
+              "        json.respuesta ||\r",
+              "        json.output ||\r",
+              "        \"\";\r",
+              "} catch (error) {\r",
+              "    respuesta = \"\";\r",
+              "}\r",
+              "\r",
+              "pm.test(\"CP-API-012: estado 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-012: respuesta JSON\", function () {\r",
+              "    pm.response.to.be.json;\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-012: contiene texto de respuesta\", function () {\r",
+              "    pm.expect(respuesta).to.be.a(\"string\");\r",
+              "    pm.expect(respuesta.trim()).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-012: contiene información de precio\", function () {\r",
+              "    pm.expect(respuesta).to.match(/precio|soles?|s\\/\\.?/i);\r",
+              "    pm.expect(respuesta).to.match(/\\d+(?:[.,]\\d{1,2})?/);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-012: indica la unidad comercial\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /kilogramos?|\\bkg\\b|kilos?|sacos?|jabas?|cajas?|toneladas?|unidad/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-012: responde en menos de 30 segundos\", function () {\r",
+              "    pm.expect(pm.response.responseTime).to.be.below(30000);\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"precio-02\",\r\n  \"pregunta\": \"¿Cuál es el precio actual de la zanahoria?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{webhook_url}}",
+          "host": [
+            "{{webhook_url}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-003 - Precio sin indicar producto",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = {};\r",
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    json = pm.response.json();\r",
+              "\r",
+              "    respuesta =\r",
+              "        json.text ||\r",
+              "        json.respuesta ||\r",
+              "        json.output ||\r",
+              "        \"\";\r",
+              "} catch (error) {\r",
+              "    respuesta = \"\";\r",
+              "}\r",
+              "\r",
+              "pm.test(\"CP-API-03: estado 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-03: respuesta JSON\", function () {\r",
+              "    pm.response.to.be.json;\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-03: contiene una respuesta válida\", function () {\r",
+              "    pm.expect(respuesta).to.be.a(\"string\");\r",
+              "    pm.expect(respuesta.trim()).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-03: menciona precio o producto\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /precios?|productos?|mercado|cultivo/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-03: solicita información adicional\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /falta\\s+informaci[oó]n|indicarme|indique|especificar|nombre\\s+del\\s+producto|respuesta\\s+m[aá]s\\s+precisa/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-03: no presenta un error interno\", function () {\r",
+              "    pm.expect(respuesta).not.to.match(\r",
+              "        /internal server error|stack trace|syntaxerror|exception|error interno/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-03: responde en menos de 30 segundos\", function () {\r",
+              "    pm.expect(pm.response.responseTime).to.be.below(30000);\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"precio-03\",\r\n  \"pregunta\": \"¿Cuáles son los precios actuales del mercado?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-004 - Consulta de ingreso en kg",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = {};\r",
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    json = pm.response.json();\r",
+              "\r",
+              "    respuesta =\r",
+              "        json.respuesta ||\r",
+              "        json.text ||\r",
+              "        json.output ||\r",
+              "        \"\";\r",
+              "} catch (error) {\r",
+              "    respuesta = \"\";\r",
+              "}\r",
+              "\r",
+              "const texto = String(respuesta)\r",
+              "    .replace(/\\*\\*/g, \"\")\r",
+              "    .replace(/\\u202f/g, \" \")\r",
+              "    .replace(/\\s+/g, \" \")\r",
+              "    .trim();\r",
+              "\r",
+              "const oraciones = texto.split(/[.!?\\n]+/);\r",
+              "\r",
+              "console.log(\"RESPUESTA VALIDADA:\", texto);\r",
+              "\r",
+              "pm.test(\"CP-API-04: estado 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-04: respuesta JSON válida\", function () {\r",
+              "    pm.response.to.be.json;\r",
+              "    pm.expect(texto).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-04: menciona específicamente rocoto\", function () {\r",
+              "    pm.expect(texto.toLowerCase()).to.include(\"rocoto\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-04: relaciona rocoto, volumen, cantidad y kilogramos\", function () {\r",
+              "    const respuestaCorrecta = oraciones.some(function (oracion) {\r",
+              "        const mencionaRocoto = /rocoto/i.test(oracion);\r",
+              "        const mencionaVolumen = /volumen|cantidad|ingresaron?|ingreso/i.test(oracion);\r",
+              "        const contieneCantidad = /\\d+(?:[\\s.,]\\d+)*/.test(oracion);\r",
+              "        const contieneKilogramos =\r",
+              "            /kilogramos?|\\bkilos?\\b|\\bkg\\b/i.test(oracion);\r",
+              "\r",
+              "        return (\r",
+              "            mencionaRocoto &&\r",
+              "            mencionaVolumen &&\r",
+              "            contieneCantidad &&\r",
+              "            contieneKilogramos\r",
+              "        );\r",
+              "    });\r",
+              "\r",
+              "    pm.expect(respuestaCorrecta).to.eql(true);\r",
+              "});\r",
+              "\r",
+              "\r",
+              "pm.test(\"CP-API-04: solamente responde sobre volumen de ingreso\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /contexto\\s+clim[aá]tico|tendencia\\s+de\\s+precios?|correlaci[oó]n\\s+hist[oó]rica|decisi[oó]n\\s+estrat[eé]gica|recomendaci[oó]n|acciones\\s+sugeridas|vender|esperar/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-04: no proporciona precios\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /precio\\s+actual|s\\/\\.?\\s*\\d+/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-04: respuesta breve y directa\", function () {\r",
+              "    const cantidadPalabras = texto.split(/\\s+/).filter(Boolean).length;\r",
+              "\r",
+              "    pm.expect(cantidadPalabras).to.be.below(70);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-04: responde en menos de 30 segundos\", function () {\r",
+              "    pm.expect(pm.response.responseTime).to.be.below(30000);\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"volumen-01\",\r\n  \"pregunta\": \"¿Cuántos kilogramos de aji rocoto ingresaron?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-005 - Consulta de ingreso sin unidad",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = {};\r",
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    json = pm.response.json();\r",
+              "\r",
+              "    respuesta =\r",
+              "        json.respuesta ||\r",
+              "        json.text ||\r",
+              "        json.output ||\r",
+              "        \"\";\r",
+              "} catch (error) {\r",
+              "    respuesta = \"\";\r",
+              "}\r",
+              "\r",
+              "const texto = String(respuesta)\r",
+              "    .replace(/\\*\\*/g, \"\")\r",
+              "    .replace(/\\u202f/g, \" \")\r",
+              "    .replace(/\\s+/g, \" \")\r",
+              "    .trim();\r",
+              "\r",
+              "const oraciones = texto.split(/[.!?\\n]+/);\r",
+              "\r",
+              "console.log(\"RESPUESTA VALIDADA:\", texto);\r",
+              "\r",
+              "pm.test(\"CP-API-05: estado 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: respuesta JSON válida\", function () {\r",
+              "    pm.response.to.be.json;\r",
+              "    pm.expect(texto).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: menciona específicamente zanahoria\", function () {\r",
+              "    pm.expect(texto.toLowerCase()).to.include(\"zanahoria\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: contiene información de volumen de ingreso\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /volumen\\s+(?:actual|de\\s+ingreso)|cantidad\\s+ingresada|ingresaron?|ingreso/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: contiene una cantidad numérica\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /\\d+(?:[\\s.,]\\d+)*/\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: relaciona zanahoria con cantidad y volumen\", function () {\r",
+              "    const resultadoCorrecto = oraciones.some(function (oracion) {\r",
+              "        const contieneZanahoria = /zanahoria/i.test(oracion);\r",
+              "        const contieneVolumen = /volumen|cantidad|ingresaron?|ingreso/i.test(oracion);\r",
+              "        const contieneCantidad = /\\d+(?:[\\s.,]\\d+)*/.test(oracion);\r",
+              "        const contieneUnidad =\r",
+              "            /kilogramos?|\\bkilos?\\b|\\bkg\\b|toneladas?|\\btn\\b|t(?![a-z])/i.test(oracion);\r",
+              "\r",
+              "        return (\r",
+              "            contieneZanahoria &&\r",
+              "            contieneVolumen &&\r",
+              "            contieneCantidad &&\r",
+              "            contieneUnidad\r",
+              "        );\r",
+              "    });\r",
+              "\r",
+              "    pm.expect(resultadoCorrecto).to.eql(true);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: indica el volumen en toneladas\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /\\d+(?:[\\s.,]\\d+)*\\s*(?:toneladas?|tn|t)(?![a-z])/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "\r",
+              "pm.test(\"CP-API-05: no proporciona precios\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /precio|s\\/\\.?\\s*\\d+|soles?/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: no incluye información climática\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /clim[aá]tic|lluvia|sequ[ií]a|helada|temperatura/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: no incluye tendencias ni correlaciones\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /tendencia|correlaci[oó]n|evoluci[oó]n|alcista|bajista/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: no incluye recomendaciones adicionales\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /recomendaci[oó]n|vender|esperar|decisi[oó]n estrat[eé]gica|acciones sugeridas|desabastecimiento/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: respuesta breve y directa\", function () {\r",
+              "    const cantidadPalabras = texto.split(/\\s+/).filter(Boolean).length;\r",
+              "\r",
+              "    pm.expect(cantidadPalabras).to.be.below(60);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-05: responde en menos de 30 segundos\", function () {\r",
+              "    pm.expect(pm.response.responseTime).to.be.below(30000);\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"volumen-02\",\r\n  \"pregunta\": \"¿Cuál fue el volumen de ingreso de zanahoria?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-006 - Consulta de ingreso con producto inexistente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = {};\r",
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    json = pm.response.json();\r",
+              "\r",
+              "    respuesta =\r",
+              "        json.respuesta ||\r",
+              "        json.text ||\r",
+              "        json.output ||\r",
+              "        \"\";\r",
+              "} catch (error) {\r",
+              "    respuesta = \"\";\r",
+              "}\r",
+              "\r",
+              "const texto = String(respuesta)\r",
+              "    .replace(/\\*\\*/g, \"\")\r",
+              "    .replace(/\\u202f/g, \" \")\r",
+              "    .replace(/\\s+/g, \" \")\r",
+              "    .trim();\r",
+              "\r",
+              "console.log(\"RESPUESTA VALIDADA:\", texto);\r",
+              "\r",
+              "pm.test(\"CP-API-017: estado 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: respuesta JSON válida\", function () {\r",
+              "    pm.response.to.be.json;\r",
+              "    pm.expect(texto).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: menciona el producto XYZ999\", function () {\r",
+              "    pm.expect(texto.toUpperCase()).to.include(\"XYZ999\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: informa que no existen datos\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /no\\s+encontr[eé]|no\\s+existe|no\\s+est[aá]\\s+disponible|no\\s+hay|sin\\s+datos|no\\s+registrado|datos\\s+no\\s+disponibles/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: se refiere al volumen de ingreso\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /volumen|cantidad|ingreso|ingresaron|toneladas/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: no inventa una cantidad de volumen\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /\\b\\d+(?:[.,]\\d+)?\\s*(?:toneladas?|tn|t|kilogramos?|kilos?|kg)\\b/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: no solicita información innecesaria\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /se\\s+requieren\\s+los\\s+siguientes\\s+datos|con\\s+esa\\s+informaci[oó]n\\s+podr[eé]|datos\\s+de\\s+carga\\s+hist[oó]rica/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: no incluye precios ni tendencias\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /precio\\s+hist[oó]rico|precio\\s+actual|tendencia|s\\/\\.?\\s*\\d+|alcista|bajista/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: no incluye información climática\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /clim[aá]tic|precipitaci[oó]n|temperatura|sequ[ií]a|lluvia|evapotranspiraci[oó]n/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: no incluye recomendaciones\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /recomendaci[oó]n|vender|esperar|desabastecimiento|ajustes\\s+de\\s+riego/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: respuesta breve y directa\", function () {\r",
+              "    const cantidadPalabras = texto.split(/\\s+/).filter(Boolean).length;\r",
+              "\r",
+              "    pm.expect(cantidadPalabras).to.be.below(45);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-017: responde en menos de 30 segundos\", function () {\r",
+              "    pm.expect(pm.response.responseTime).to.be.below(30000);\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"volumen-03\",\r\n  \"pregunta\": \"¿Cuántas toneladas ingresaron del producto XYZ999?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-007 - Tendencia de  precios",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let json = {};\r",
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    json = pm.response.json();\r",
+              "\r",
+              "    respuesta =\r",
+              "        json.respuesta ||\r",
+              "        json.text ||\r",
+              "        json.output ||\r",
+              "        \"\";\r",
+              "} catch (error) {\r",
+              "    respuesta = \"\";\r",
+              "}\r",
+              "\r",
+              "const texto = String(respuesta)\r",
+              "    .replace(/\\*\\*/g, \"\")\r",
+              "    .replace(/\\u202f/g, \" \")\r",
+              "    .replace(/\\s+/g, \" \")\r",
+              "    .trim();\r",
+              "\r",
+              "pm.test(\"CP-API-018: estado 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-018: respuesta JSON\", function () {\r",
+              "    pm.response.to.be.json;\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-018: contiene una respuesta válida\", function () {\r",
+              "    pm.expect(respuesta).to.be.a(\"string\");\r",
+              "    pm.expect(texto).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-018: responde sobre precios\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /precio|precios|mercado/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-018: contiene análisis de tendencia\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /tendencia|proyecci[oó]n|pron[oó]stico|estimaci[oó]n|evoluci[oó]n/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-018: indica la dirección de los precios\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /alza|alcista|subir|aumentar|incremento|baja|bajista|disminuir|ca[ií]da|estable|estabilidad/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-018: hace referencia a un periodo futuro\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /pr[oó]ximo\\s+mes|siguiente\\s+mes|pr[oó]ximas\\s+semanas|pr[oó]ximos\\s+30\\s+d[ií]as|pr[oó]ximas\\s+4\\s+semanas/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-018: incluye productos o información del mercado\", function () {\r",
+              "    pm.expect(texto).to.match(\r",
+              "        /mercado|producto|aj[ií]|ajo|albahaca|papa|cebolla|zanahoria/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-018: no presenta un error interno\", function () {\r",
+              "    pm.expect(texto).not.to.match(\r",
+              "        /internal server error|stack trace|syntaxerror|exception|error interno/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-018: responde en menos de 30 segundos\", function () {\r",
+              "    pm.expect(pm.response.responseTime).to.be.below(30000);\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"tendencia-01\",\r\n  \"pregunta\": \"¿Cuál será la tendencia de los precios para el próximo mes?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-008 - Precio de Papa Yungai",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    const datos = pm.response.json();\r",
+              "\r",
+              "    if (typeof datos === \"string\") {\r",
+              "        respuesta = datos;\r",
+              "    } else {\r",
+              "        respuesta =\r",
+              "            datos.respuesta ||\r",
+              "            datos.output ||\r",
+              "            datos.text ||\r",
+              "            \"\";\r",
+              "    }\r",
+              "} catch (error) {\r",
+              "    respuesta = pm.response.text();\r",
+              "}\r",
+              "\r",
+              "pm.test(\"CP-API-001: estado HTTP 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-001: devuelve una respuesta\", function () {\r",
+              "    pm.expect(respuesta).to.be.a(\"string\");\r",
+              "    pm.expect(respuesta.trim()).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-001: menciona Papa Yungay\", function () {\r",
+              "    pm.expect(respuesta).to.match(/papa\\s+yungay/i);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-001: contiene información del precio\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /precio|cuesta|valor|vale/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-001: contiene un precio numérico\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /\\d+(?:[.,]\\d+)?/\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-001: utiliza moneda peruana\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /s\\s*\\/\\s*\\.?|sol(?:es)?/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-001: indica la unidad en kilogramos\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /kilogramos?|\\bkilos?\\b|\\bkg\\b/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-001: indica que es un precio actual\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /actual|hoy|últimos?\\s+registros?/i\r",
+              "    );\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"precio-04\",\r\n  \"pregunta\": \"¿A cuánto está la papa Yungay hoy?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-009 - Ingreso de Papa Yungai",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    const datos = pm.response.json();\r",
+              "\r",
+              "    if (typeof datos === \"string\") {\r",
+              "        respuesta = datos;\r",
+              "    } else {\r",
+              "        respuesta =\r",
+              "            datos.respuesta ||\r",
+              "            datos.output ||\r",
+              "            datos.text ||\r",
+              "            \"\";\r",
+              "    }\r",
+              "} catch (error) {\r",
+              "    respuesta = pm.response.text();\r",
+              "}\r",
+              "\r",
+              "pm.test(\"CP-API-002: estado HTTP 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-002: devuelve una respuesta\", function () {\r",
+              "    pm.expect(respuesta).to.be.a(\"string\");\r",
+              "    pm.expect(respuesta.trim()).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-002: menciona Papa Yungay\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /papa\\s+yungay/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-002: contiene información de ingreso\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /ingreso|ingresaron|volumen|registrado/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-002: responde en toneladas\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /toneladas?|\\btn\\b/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-002: muestra la equivalencia en kilogramos\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /kilogramos?|\\bkilos?\\b|\\bkg\\b/i\r",
+              "    );\r",
+              "\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /653[.,\\s]?000/\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-002: menciona la unidad comercial\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /unidad\\s+comercial/i\r",
+              "    );\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"volumen-04\",\r\n  \"pregunta\": \"¿Cuántas toneladas de papa Yungay ingresaron?\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-010 - Venta de Papa Yungai",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    const datos = pm.response.json();\r",
+              "\r",
+              "    if (typeof datos === \"string\") {\r",
+              "        respuesta = datos;\r",
+              "    } else {\r",
+              "        respuesta =\r",
+              "            datos.respuesta ||\r",
+              "            datos.output ||\r",
+              "            datos.text ||\r",
+              "            \"\";\r",
+              "    }\r",
+              "} catch (error) {\r",
+              "    respuesta = pm.response.text();\r",
+              "}\r",
+              "\r",
+              "pm.test(\"CP-API-003: estado HTTP 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-003: devuelve una respuesta\", function () {\r",
+              "    pm.expect(respuesta).to.be.a(\"string\");\r",
+              "    pm.expect(respuesta.trim()).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-003: menciona Papa Yungay\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /papa\\s+yungay/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-003: contiene un análisis logístico\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /análisis\\s+logístico|volumen|ingreso/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-003: analiza la tendencia del precio\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /tendencia|precio|alcista|bajista|subir|bajar/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-003: contiene una recomendación\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /recomendación|decisión|conviene|estrategia/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-003: considera el periodo solicitado\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /semana|días|inmediato|ahora/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-003: incluye acciones sugeridas\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /acciones?\\s+sugeridas?|monitorear|coordinar|reservar/i\r",
+              "    );\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"tendencia-02\",\r\n  \"pregunta\": \"¿Conviene vender papa Yungay esta semana o esperar?\"\r\n}"
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-011 - Clima en Junin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    const datos = pm.response.json();\r",
+              "\r",
+              "    if (typeof datos === \"string\") {\r",
+              "        respuesta = datos;\r",
+              "    } else {\r",
+              "        respuesta =\r",
+              "            datos.respuesta ||\r",
+              "            datos.output ||\r",
+              "            datos.text ||\r",
+              "            \"\";\r",
+              "    }\r",
+              "} catch (error) {\r",
+              "    respuesta = pm.response.text();\r",
+              "}\r",
+              "\r",
+              "pm.test(\"CP-API-004: estado HTTP 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-004: devuelve una respuesta\", function () {\r",
+              "    pm.expect(respuesta).to.be.a(\"string\");\r",
+              "    pm.expect(respuesta.trim()).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-004: menciona la región Junín\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /jun[ií]n/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-004: contiene información meteorológica\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /clima|climáticas?|meteorológic[oa]|agrometeorológic[oa]/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-004: informa la temperatura\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /temperatura|°c|grados/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "\r",
+              "pm.test(\"CP-API-004: contiene valores numéricos\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /\\d+(?:[.,]\\d+)?/\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-004: indica el periodo analizado\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /periodo|fecha|septiembre|hoy|pronóstico/i\r",
+              "    );\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"clima-01\",\r\n  \"pregunta\": \"¿Cómo están las condiciones climáticas en Junín?\"\r\n}"
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-012 - Analisis Satelital de Papa",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"satelital-01\",\r\n  \"pregunta\": \"Quiero un análisis satelital de Junín para el cultivo de papa.\"\r\n}"
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CP-API-013 - Informacion relevante de un producto",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let respuesta = \"\";\r",
+              "\r",
+              "try {\r",
+              "    const datos = pm.response.json();\r",
+              "\r",
+              "    if (typeof datos === \"string\") {\r",
+              "        respuesta = datos;\r",
+              "    } else {\r",
+              "        respuesta =\r",
+              "            datos.respuesta ||\r",
+              "            datos.output ||\r",
+              "            datos.text ||\r",
+              "            \"\";\r",
+              "    }\r",
+              "} catch (error) {\r",
+              "    respuesta = pm.response.text();\r",
+              "}\r",
+              "\r",
+              "pm.test(\"CP-API-006: estado HTTP 200\", function () {\r",
+              "    pm.response.to.have.status(200);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-006: devuelve una respuesta\", function () {\r",
+              "    pm.expect(respuesta).to.be.a(\"string\");\r",
+              "    pm.expect(respuesta.trim()).not.to.eql(\"\");\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-006: menciona información de boletines agrícolas\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /boletines?|agr[ií]colas?|informaci[oó]n\\s+almacenada/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-006: contiene información sobre la papa\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /\\bpapa\\b/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-006: informa sobre precios\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /precios?|valor|cotizaci[oó]n/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-006: menciona variedades de papa\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /yungay|canch[aá]n|[uú]nica|perricholi|amarilla|huayro|huamantanga/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-006: contiene valores numéricos\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /\\d+(?:[.,]\\d+)?/\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-006: indica la unidad del precio\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /kilogramos?|\\bkg\\b|por\\s+kilo/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-006: incluye disponibilidad o comportamiento del mercado\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /disponibilidad|mercado|oferta|demanda|comercial/i\r",
+              "    );\r",
+              "});\r",
+              "\r",
+              "pm.test(\"CP-API-006: presenta una comparación o tendencia\", function () {\r",
+              "    pm.expect(respuesta).to.match(\r",
+              "        /estable|incremento|disminuci[oó]n|variaci[oó]n|tendencia|comparaci[oó]n/i\r",
+              "    );\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"session_id\": \"boletines-006\",\r\n  \"pregunta\": \"¿Qué información relevante sobre la papa aparece en los boletines agrícolas almacenados?\"\r\n}"
+        },
+        "url": {
+          "raw": "https://agrosmart-n8n.onrender.com/webhook/v1/query",
+          "protocol": "https",
+          "host": [
+            "agrosmart-n8n",
+            "onrender",
+            "com"
+          ],
+          "path": [
+            "webhook",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": ""
+    }
+  ]
+}
