@@ -109,21 +109,20 @@
     },
     {
       "parameters": {
-        "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-        "options": {}
+        "modelName": "models/gemini-embedding-001"
       },
-      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
       "typeVersion": 1,
       "position": [
         -48,
         352
       ],
       "id": "d2fffd9c-0c4a-4078-8c17-7354f901182a",
-      "name": "Embeddings HuggingFace Inference",
+      "name": "Embeddings Google Gemini",
       "credentials": {
-        "huggingFaceApi": {
-          "id": "Sq9dIhrw5s7bdC26",
-          "name": "Hugging Face account"
+        "googlePalmApi": {
+          "id": "HZApfmkMQgagxfYZ",
+          "name": "Google Gemini(PaLM) Api account"
         }
       }
     },
@@ -403,7 +402,7 @@
         ]
       ]
     },
-    "Embeddings HuggingFace Inference": {
+    "Embeddings Google Gemini": {
       "ai_embedding": [
         [
           {
