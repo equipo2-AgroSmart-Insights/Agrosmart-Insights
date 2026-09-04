@@ -255,7 +255,7 @@ export default function MonitoreoSatelital() {
               </p>
             </div>
             <div className="rounded-xl bg-surface p-4">
-              <p className="font-label-md text-label-md text-on-surface-variant">Riesgo</p>
+              <p className="font-label-md text-label-md text-on-surface-variant">Déficit Hídrico</p>
               <p className={`font-body-md text-body-md mt-2 ${loading ? "text-on-surface-variant" : data?.summary?.risk?.tone}`}>
                 {loading ? "—" : data?.summary?.risk?.label}
               </p>
