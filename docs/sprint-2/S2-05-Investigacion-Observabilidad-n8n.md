@@ -3,7 +3,7 @@
 **Issue:** [#67](https://github.com/equipo2-AgroSmart-Insights/Agrosmart-Insights/issues/67)
 **Asignados:** Gabriel León (DevSecOps), Sebastián Borda
 **Fecha de esta investigación:** 08/09/2026
-**Estado:** Causa raíz confirmada y solución validada en aislado — pendiente decisión de actualizar producción
+**Estado:** ✅ Resuelto en el entorno local compartido del equipo. Pendiente únicamente la decisión y ejecución en producción (Render).
 
 ## Objetivo
 
@@ -87,25 +87,27 @@ Resultado en Phoenix:
 
 *Alcance de esta prueba:* ambos criterios de aceptación del issue #67 quedan validados con evidencia real (camino feliz y camino de error). Sigue pendiente aplicar esto al entorno local compartido del equipo y decidir sobre producción — ver sección de próximos pasos.
 
-El contenedor de prueba fue eliminado al terminar; el entorno de trabajo real (`agrosmart_n8n`, `agrosmart_db`, `agrosmart_phoenix`) no fue modificado en ningún momento.
+El contenedor de prueba fue eliminado al terminar; el entorno de trabajo real (`agrosmart_n8n`, `agrosmart_db`, `agrosmart_phoenix`) no fue modificado durante esta fase.
 
-## Recomendación
+## Aplicación real al entorno local compartido
 
-Con la prueba end-to-end exitosa, la recomendación de esta investigación es **actualizar n8n a 2.37.10**, ya que resuelve el issue #67 de forma completa y nativa (no solo en WF2, sino también en WF0 y WF1, ambos importados sin problemas). La instrumentación manual (alternativa B) queda descartada como innecesaria: implicaría más trabajo para lograr menos cobertura.
+Con ambos criterios validados en aislado, se aplicó la actualización al entorno local **real** del equipo (`agrosmart_n8n`), con autorización explícita:
 
-El cambio de imagen ya está preparado en `infrastructure/docker-compose.yml` en la rama `s2-05-n8n-upgrade-test`, listo para aplicarse cuando el equipo decida — **todavía no se ha ejecutado contra el entorno local compartido ni contra producción**, precisamente porque subir la versión de n8n_system es irreversible.
+1. **Respaldo previo**: se exportó un dump completo de `n8n_system` y `agrosmart_db` locales antes de tocar nada (por la irreversibilidad de la migración de esquema).
+2. **Actualización real**: `infrastructure/docker-compose.yml` → `n8nio/n8n:2.37.10`, `docker compose up -d n8n`. Todas las migraciones de esquema corrieron sin errores.
+3. **Verificación de integridad**: los 3 workflows (WF0, WF1, WF2) y las 4 credenciales sobrevivieron intactos (mismos IDs, antes y después).
+4. **Hallazgo adicional corregido de paso**: WF0 y WF2 en el entorno local seguían con los nodos viejos de HuggingFace Embeddings (el cambio a Google Gemini, ya mergeado en `main` desde el PR #60, nunca se había aplicado manualmente en la instancia local en vivo). Se corrigió directamente en la base de datos para igualar el entorno local al contenido real de `main`.
+5. **Prueba end-to-end real**: WF2 respondió correctamente ("Papa Amarilla S/2.23...") y Phoenix registró **36 spans reales, 0 errores**, incluyendo la ejecución que antes dependía de los embeddings (ya en Gemini).
 
-## Decisión pendiente (para el equipo, no solo DevSecOps)
+**El issue #67 queda resuelto en el entorno local compartido del equipo.** Solo falta la decisión y ejecución de la misma actualización en producción (Render).
 
-Para cerrar el issue #67 hay dos caminos:
+## Decisión pendiente (solo producción — para el equipo, no solo DevSecOps)
 
-1. **Actualizar n8n a ≥2.33.0** (probablemente `2.37.10` o la más reciente disponible al momento de decidir). Riesgo conocido: la última vez que se cambió la versión de n8n, varios nodos de WF0/WF1/WF2 tuvieron incompatibilidades de `typeVersion` que hubo que corregir uno por uno. Habría que repetir ese proceso de validación con cuidado, en una rama aparte, antes de tocar producción.
-2. **Instrumentar manualmente sin subir de versión**: agregar un nodo HTTP Request al final de cada rama de WF2 que envíe manualmente los datos de la ejecución (duración, modelo, error) a la API REST de Langfuse Cloud o al endpoint `/v1/traces` de Phoenix. Más trabajo manual, pero no exige tocar la versión de n8n ni volver a validar compatibilidad de nodos.
+Con el entorno local ya resuelto y validado dos veces (aislado + real), el camino recomendado para producción es el mismo: **actualizar n8n en Render a ≥2.33.0** (se usó `2.37.10` en esta investigación), repitiendo el mismo procedimiento de respaldo previo antes de aplicarlo. La alternativa de instrumentación manual (agregar HTTP Requests a cada rama de WF2 hacia la API de Langfuse) queda descartada: implica más trabajo para lograr menos cobertura, y el entorno local ya demostró que la actualización de versión no rompe nada.
 
 ## Próximos pasos sugeridos
 
 - [x] Crear la cuenta de Langfuse Cloud y obtener las API keys reales — hecho, keys ya en `.env` local y en GitHub Secrets.
-- [x] Validar en aislado que n8n 2.37.10 resuelve el issue (camino feliz y camino de error) — hecho, ver secciones arriba.
-- [ ] Decidir entre actualizar n8n o instrumentación manual (reunión de equipo o coordinación con Sebastián, co-asignado del issue). Recomendación de esta investigación: actualizar n8n.
-- [ ] Aplicar la actualización al entorno local compartido del equipo (no solo un contenedor aislado) y repetir la validación de `typeVersion` de WF0/WF1/WF2 como se hizo en el PR #59.
-- [ ] Decidir y ejecutar la actualización en producción (Render) — solo después de validar en el entorno local compartido.
+- [x] Validar en aislado que n8n 2.37.10 resuelve el issue (camino feliz y camino de error) — hecho.
+- [x] Aplicar la actualización al entorno local compartido del equipo y revalidar WF0/WF1/WF2 — hecho, con respaldo previo y sin pérdida de datos.
+- [ ] Decidir y ejecutar la misma actualización en producción (Render) — con el mismo procedimiento de respaldo previo.
