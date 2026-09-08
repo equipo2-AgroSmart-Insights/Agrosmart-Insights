@@ -69,7 +69,23 @@ Y en Phoenix, consultando su API GraphQL inmediatamente después:
 
 **Las trazas llegaron correctamente**, con un span de workflow y uno por cada nodo ejecutado (Webhook → If validación de sesión → Respond to Webhook). Esto confirma que n8n 2.37.10 resuelve el problema por completo con el WF2 real del proyecto, no solo con un workflow de juguete.
 
-*Alcance de esta prueba:* se validó el camino feliz (traza de ejecución exitosa). No se probó todavía el criterio de aceptación sobre errores 5xx de un LLM (requiere credenciales reales de Groq/Gemini); queda como siguiente paso antes de dar el issue por cerrado.
+## Prueba del criterio de error (sin filtrar credenciales)
+
+Se repitió la prueba en un tercer contenedor aislado, esta vez configurando a propósito una credencial de Groq inválida (`gsk_FAKE_INVALID_KEY...`) para forzar un fallo real. Al disparar una pregunta real, el nodo que realmente falló primero fue "Embeddings Google Gemini" (por falta de credencial de Gemini en ese contenedor de prueba, no relacionado con la key falsa de Groq) — de todas formas, esto generó el mismo tipo de escenario que pide el criterio de aceptación: un fallo real durante el procesamiento.
+
+Resultado en Phoenix:
+
+```json
+{
+  "name": "node.execute",
+  "statusCode": "ERROR",
+  "events": [{"name": "exception", "message": "Credential with ID \"HZApfmkMQgagxfYZ\" does not exist for type \"googlePalmApi\"."}]
+}
+```
+
+**Confirmado:** el span queda marcado `ERROR`, con un mensaje de diagnóstico útil (incluye el *ID* de la credencial, que es solo un identificador interno, no un secreto). Se revisaron todos los `attributes` de los spans de error y los logs completos del contenedor de n8n buscando la key falsa (`FAKE_INVALID_KEY`) — **no aparece en ningún lado**. El criterio de aceptación sobre no exponer credenciales en el log queda validado.
+
+*Alcance de esta prueba:* ambos criterios de aceptación del issue #67 quedan validados con evidencia real (camino feliz y camino de error). Sigue pendiente aplicar esto al entorno local compartido del equipo y decidir sobre producción — ver sección de próximos pasos.
 
 El contenedor de prueba fue eliminado al terminar; el entorno de trabajo real (`agrosmart_n8n`, `agrosmart_db`, `agrosmart_phoenix`) no fue modificado en ningún momento.
 
@@ -88,7 +104,8 @@ Para cerrar el issue #67 hay dos caminos:
 
 ## Próximos pasos sugeridos
 
-- [ ] Decidir entre las dos opciones de arriba (reunión de equipo o coordinación con Sebastián, co-asignado del issue).
-- [ ] Si se opta por actualizar n8n: hacerlo primero en una rama aislada, reimportar WF0/WF1/WF2 y repetir la validación de `typeVersion` como se hizo en el PR #59.
-- [ ] Si se opta por instrumentación manual: diseñar el payload exacto que se envía a Langfuse/Phoenix por rama de WF2, verificando que nunca incluya credenciales ni valores de `.env`.
-- [ ] En cualquier caso: crear la cuenta de Langfuse Cloud (gratuita) y obtener las API keys reales — paso que requiere acceso personal/correo, pendiente de que Gabriel lo haga directamente.
+- [x] Crear la cuenta de Langfuse Cloud y obtener las API keys reales — hecho, keys ya en `.env` local y en GitHub Secrets.
+- [x] Validar en aislado que n8n 2.37.10 resuelve el issue (camino feliz y camino de error) — hecho, ver secciones arriba.
+- [ ] Decidir entre actualizar n8n o instrumentación manual (reunión de equipo o coordinación con Sebastián, co-asignado del issue). Recomendación de esta investigación: actualizar n8n.
+- [ ] Aplicar la actualización al entorno local compartido del equipo (no solo un contenedor aislado) y repetir la validación de `typeVersion` de WF0/WF1/WF2 como se hizo en el PR #59.
+- [ ] Decidir y ejecutar la actualización en producción (Render) — solo después de validar en el entorno local compartido.
