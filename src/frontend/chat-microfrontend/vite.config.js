@@ -9,17 +9,18 @@ export default defineConfig({
     react(),
     tailwindcss(),
     federation({
-      name: 'shell',
-      remotes: {
-        // El microfrontend de chat debe estar corriendo en :5174 (npm run build + npm run preview)
-        // En desarrollo local, ejecuta primero: cd ../chat-microfrontend && npm run build && npm run preview
-        chat: 'http://localhost:5174/assets/remoteEntry.js',
+      name: 'chat',
+      filename: 'remoteEntry.js',
+      exposes: {
+        // Componente raíz expuesto al shell
+        './ChatApp': './src/ChatApp.jsx',
       },
       shared: ['react', 'react-dom'],
     }),
   ],
   build: {
-    // esnext para compatibilidad con top-level await de Module Federation
+    // esnext elimina los warnings de top-level await de Module Federation
     target: 'esnext',
+    minify: false,
   },
 })

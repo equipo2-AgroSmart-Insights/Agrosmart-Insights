@@ -1,0 +1,19 @@
+{
+  "name": "agrosmart-frontend-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Orquestador de microfrontends de AgroSmart Insights",
+  "scripts": {
+    "dev:shell":  "cd agrosmart-frontend && npm run dev",
+    "dev:chat":   "cd chat-microfrontend && npm run dev",
+
+    "build:chat":    "cd chat-microfrontend && npm run build",
+    "preview:chat":  "cd chat-microfrontend && npm run preview",
+    "build:shell":   "cd agrosmart-frontend && npm run build",
+
+    "dev:integrated": "npm run build:chat && npm run preview:chat & cd agrosmart-frontend && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
