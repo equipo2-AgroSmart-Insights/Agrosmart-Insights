@@ -4,9 +4,7 @@
 # Frontend → Vercel (src/frontend/agrosmart-frontend)
 # Backend  → Render (n8n + Postgres)
 #
-# Plan free: ~512 MB RAM. n8n 2.37.10 validado en local (docker-compose):
-# ~355 MB en reposo sin carga — vigilar el uso real en Render tras el deploy,
-# por si hay que ajustar NODE_OPTIONS.
+# Plan free: ~512 MB RAM — n8n latest requiere ajustes de memoria.
 
 databases:
   - name: agrosmart-postgres
@@ -20,7 +18,7 @@ services:
     name: agrosmart-n8n
     runtime: image
     image:
-      url: docker.io/n8nio/n8n:2.37.10
+      url: docker.io/n8nio/n8n:1.83.2
     plan: free
     healthCheckPath: /healthz
     envVars:
@@ -36,6 +34,8 @@ services:
         sync: false
       - key: N8N_WEBHOOK_URL
         sync: false
+      - key: N8N_RUNNERS_ENABLED
+        value: "false"
       - key: NODE_OPTIONS
         value: "--max-old-space-size=384"
       - key: DB_TYPE
@@ -74,11 +74,3 @@ services:
         sync: false
       - key: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
         value: "true"
-      - key: N8N_OTEL_ENABLED
-        value: "true"
-      - key: N8N_AGENTS_TRACING_ENABLED
-        value: "true"
-      - key: N8N_OTEL_EXPORTER_OTLP_ENDPOINT
-        value: "https://cloud.langfuse.com/api/public/otel"
-      - key: N8N_OTEL_EXPORTER_OTLP_HEADERS
-        sync: false # pegar en el panel de Render: Authorization=Basic <base64 pub:secret>,x-langfuse-ingestion-version=4
