@@ -1,0 +1,45 @@
+name: Backup Automático de PostgreSQL (Producción)
+# Origen: la base de Render (plan Free) no ofrece backups nativos y
+# expira si no se actualiza a un plan pago. Este workflow saca un
+# respaldo semanal sin depender de que alguien se acuerde de hacerlo
+# a mano.
+#
+# Requiere el secret RENDER_DATABASE_URL (cadena de conexión externa
+# de Render → Connect → External Connection String). No configurado
+# todavía: este workflow queda en el repo listo para activarse en
+# cuanto se agregue ese secret.
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # lunes 08:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: pg_dump de producción
+    runs-on: ubuntu-latest
+    container:
+      image: postgres:18 # misma versión mayor que Render, evita el mismatch de pg_dump
+    steps:
+      - name: Avisar si falta el secret
+        if: ${{ secrets.RENDER_DATABASE_URL == '' }}
+        run: |
+          echo "::warning::RENDER_DATABASE_URL no está configurado todavía — se omite el backup. Agrégalo en Settings → Secrets para activarlo."
+
+      - name: Generar el dump
+        if: ${{ secrets.RENDER_DATABASE_URL != '' }}
+        env:
+          DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+        run: |
+          pg_dump "$DATABASE_URL" --no-owner --no-privileges -f backup-render-postgres.sql
+
+      - name: Subir el backup como artefacto
+        if: ${{ secrets.RENDER_DATABASE_URL != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-render-postgres-${{ github.run_id }}
+          path: backup-render-postgres.sql
+          retention-days: 30
