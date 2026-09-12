@@ -2,9 +2,10 @@
 # Cada línea = un fingerprint real reportado por gitleaks detect.
 # Formato: commit:archivo:regla:línea
 
-# Falsos positivos: "sessionKey": "sesion_prueba_123" — un ID de sesión de
-# prueba hardcodeado a propósito (ver nota en los propios workflows: "cambiarlo
-# a {{ $json.session_id }}" antes de producción real). No es un secreto.
+# Falsos positivos: el campo sessionKey de los nodos Simple Memory trae un
+# identificador de sesión de prueba hardcodeado a propósito (ver nota en los
+# propios workflows: cambiarlo por el session_id real antes de producción).
+# No es un secreto real.
 1e4e2684830ca5080517ebf9ac068165d8879ce0:src/n8n-workflows/templates/wf2-api-chat-analisis-predictivo1.json:generic-api-key:80
 1e4e2684830ca5080517ebf9ac068165d8879ce0:src/n8n-workflows/templates/wf2-api-chat-analisis-predictivo1.json:generic-api-key:795
 7b7fba76da9b2538a2af5b5a35bb58d25be6f50a:src/n8n-workflows/production/wf2-api-chat-analisis-predictivo.json:generic-api-key:79
