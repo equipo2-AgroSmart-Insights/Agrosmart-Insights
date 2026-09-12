@@ -3,7 +3,7 @@
 **Issue:** [#67](https://github.com/equipo2-AgroSmart-Insights/Agrosmart-Insights/issues/67)
 **Asignados:** Gabriel León (DevSecOps), Sebastián Borda
 **Fecha de esta investigación:** 08/09/2026
-**Estado:** ✅ Resuelto en el entorno local compartido del equipo. Pendiente únicamente la decisión y ejecución en producción (Render).
+**Estado:** ✅ Resuelto en el entorno local compartido del equipo. ❌ Intentado en producción el 11/09/2026 — **revertido tras un incidente real de memoria** (ver sección final). Producción sigue en n8n 1.83.2, sin observabilidad, hasta resolver el límite de RAM del plan Free.
 
 ## Objetivo
 
@@ -110,13 +110,29 @@ Con la cuenta de Langfuse ya creada, se conectó como destino activo de las traz
 - **Gotcha real encontrado**: n8n lee `N8N_OTEL_EXPORTER_OTLP_ENDPOINT` primero desde `.env` (usado por Docker Compose para sustitución de variables), no solo desde el valor por defecto en `docker-compose.yml`. Si la variable ya existe en `.env` (como en este caso, apuntando a Phoenix desde el trabajo anterior), el valor por defecto del `docker-compose.yml` nunca se aplica — hay que actualizar `.env` explícitamente.
 - **Validación real**: se disparó una consulta real a WF2 y se confirmó vía la API pública de Langfuse (`GET /api/public/traces`) que la traza llegó, con 13 observaciones anidadas (una por nodo ejecutado), todas en nivel `DEFAULT` (sin errores).
 
-## Decisión pendiente (solo producción — para el equipo, no solo DevSecOps)
+## Intento en producción y reversión (11/09/2026)
 
-Con el entorno local ya resuelto y validado dos veces (aislado + real), el camino recomendado para producción es el mismo: **actualizar n8n en Render a ≥2.33.0** (se usó `2.37.10` en esta investigación), repitiendo el mismo procedimiento de respaldo previo antes de aplicarlo. La alternativa de instrumentación manual (agregar HTTP Requests a cada rama de WF2 hacia la API de Langfuse) queda descartada: implica más trabajo para lograr menos cobertura, y el entorno local ya demostró que la actualización de versión no rompe nada.
+Con el entorno local resuelto y validado dos veces (aislado + real), se aplicó la misma actualización a producción vía `render.yaml` (PR #74): imagen de n8n a `2.37.10` + variables de Langfuse. El backup previo de producción sí se hizo (99.99 MB, fresco, antes del deploy).
+
+**El deploy "tuvo éxito" según Render (health check inicial pasó), pero el servicio quedó inestable después:**
+
+```
+Instance failed: nk2rs
+Ran out of memory (used over 512MB) while running your code.
+```
+
+Repetido varias veces (eventos "Instance failed" / "Service recovered" alternándose cada 1-2 minutos en la pestaña Events de Render) — un ciclo real de caída y reinicio por falta de memoria, no un problema de esquema ni de conexión (los mensajes de "Database connection timed out" en los logs eran consecuencia del reinicio, no la causa).
+
+**Causa real:** la prueba de memoria hecha en la sección "Prueba adicional" de este documento (355 MB en reposo, sin carga) **no fue representativa de producción**: sin Postgres real conectado, sin ejecuciones reales, y sin las conexiones adicionales que abren el Task Broker y las tablas nuevas de agentes de n8n 2.x. Bajo carga real, el proceso supera los 512 MB del plan Free de Render.
+
+**Acción tomada:** se revirtió `render.yaml` a n8n `1.83.2` (mismo estado exacto previo al PR #74, incluyendo restaurar `N8N_RUNNERS_ENABLED=false`). Producción quedó estable de nuevo. Ningún dato se perdió — las migraciones de esquema ya aplicadas no afectan a la versión anterior (no las usa, no las necesita).
+
+**Lo que esto NO invalida:** la validación en el entorno local (PRs #71 y #72) sigue siendo válida — demuestra que la integración n8n↔Langfuse funciona técnicamente. El problema encontrado es de **capacidad de infraestructura** (RAM del plan Free), no un defecto de la implementación.
 
 ## Próximos pasos sugeridos
 
-- [x] Crear la cuenta de Langfuse Cloud y obtener las API keys reales — hecho, keys ya en `.env` local y en GitHub Secrets.
+- [x] Crear la cuenta de Langfuse Cloud y obtener las API keys reales — hecho.
 - [x] Validar en aislado que n8n 2.37.10 resuelve el issue (camino feliz y camino de error) — hecho.
 - [x] Aplicar la actualización al entorno local compartido del equipo y revalidar WF0/WF1/WF2 — hecho, con respaldo previo y sin pérdida de datos.
-- [ ] Decidir y ejecutar la misma actualización en producción (Render) — con el mismo procedimiento de respaldo previo.
+- [x] ~~Decidir y ejecutar la misma actualización en producción~~ — intentado, revertido por falta de memoria (ver arriba).
+- [ ] **Decisión de equipo**: conseguir un plan de Render con más RAM (pago) antes de reintentar la actualización en producción, o medir el consumo real bajo carga en un entorno que sí lo permita antes de decidir.
