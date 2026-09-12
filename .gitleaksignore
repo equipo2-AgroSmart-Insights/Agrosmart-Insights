@@ -1,21 +1,20 @@
-# Hallazgos revisados y reconocidos explícitamente — no se ignoran a ciegas.
-# Cada línea = un fingerprint real reportado por gitleaks detect.
-# Formato: commit:archivo:regla:línea
+# Reconocidos explícitamente — no se ignoran a ciegas.
+# El pipeline secret-scan.yml escanea el ESTADO ACTUAL del código
+# (--no-git), no el historial completo, así que el fingerprint aquí
+# es solo archivo:regla:línea (sin hash de commit).
 
-# Falsos positivos: el campo sessionKey de los nodos Simple Memory trae un
-# identificador de sesión de prueba hardcodeado a propósito (ver nota en los
-# propios workflows: cambiarlo por el session_id real antes de producción).
-# No es un secreto real.
-1e4e2684830ca5080517ebf9ac068165d8879ce0:src/n8n-workflows/templates/wf2-api-chat-analisis-predictivo1.json:generic-api-key:80
-1e4e2684830ca5080517ebf9ac068165d8879ce0:src/n8n-workflows/templates/wf2-api-chat-analisis-predictivo1.json:generic-api-key:795
-7b7fba76da9b2538a2af5b5a35bb58d25be6f50a:src/n8n-workflows/production/wf2-api-chat-analisis-predictivo.json:generic-api-key:79
+# Falso positivo: el campo sessionKey de los nodos Simple Memory trae un
+# identificador de sesión de prueba hardcodeado a propósito (ver nota en
+# los propios workflows: cambiarlo por el session_id real antes de
+# producción). No es un secreto real.
+src/n8n-workflows/production/wf2-api-chat-analisis-predictivo.json:generic-api-key:89
+src/n8n-workflows/production/wf2-api-chat-analisis-predictivo.json:generic-api-key:681
+src/n8n-workflows/templates/wf2-api-chat-analisis-predictivo1.json:generic-api-key:80
+src/n8n-workflows/templates/wf2-api-chat-analisis-predictivo1.json:generic-api-key:795
 
-# Hallazgo REAL: API key de MapTiler hardcodeada en un commit histórico
-# (7b7fba7, 25/08/2026). El archivo actual en main ya no la tiene (se
-# reemplazó por {{ $env.MAPTILER_API_KEY }}), pero el valor sigue visible en
-# el historial de git — no es viable reescribir el historial de un repo
-# compartido por 6 personas en esta etapa del proyecto. Mitigación real:
-# la key fue rotada en el dashboard de MapTiler, dejando inútil el valor
-# expuesto aquí.
-7b7fba76da9b2538a2af5b5a35bb58d25be6f50a:src/n8n-workflows/production/wf2-api-chat-analisis-predictivo.json:generic-api-key:644
-7b7fba76da9b2538a2af5b5a35bb58d25be6f50a:src/n8n-workflows/production/wf2-api-chat-analisis-predictivo.json:generic-api-key:787
+# Nota histórica (no requiere entrada aquí, no aplica en modo --no-git):
+# el 25/08/2026 (commit 7b7fba7) se detectó una API key de MapTiler
+# hardcodeada en este mismo archivo. El archivo actual ya no la tiene
+# (reemplazada por {{ $env.MAPTILER_API_KEY }}); la key real fue rotada
+# en el dashboard de MapTiler porque el valor sigue visible en el
+# historial de git de todas formas.
