@@ -101,6 +101,15 @@ Con ambos criterios validados en aislado, se aplicó la actualización al entorn
 
 **El issue #67 queda resuelto en el entorno local compartido del equipo.** Solo falta la decisión y ejecución de la misma actualización en producción (Render).
 
+## Conexión real con Langfuse Cloud (11/09/2026)
+
+Con la cuenta de Langfuse ya creada, se conectó como destino activo de las trazas, reemplazando a Phoenix como backend principal (Phoenix sigue disponible localmente como alternativa, ver `.env.example`):
+
+- Endpoint: `N8N_OTEL_EXPORTER_OTLP_ENDPOINT=https://cloud.langfuse.com/api/public/otel`.
+- Autenticación: `N8N_OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <base64(public_key:secret_key)>,x-langfuse-ingestion-version=4`. El valor base64 se calcula una sola vez y se guarda en `LANGFUSE_OTEL_AUTH_HEADER` dentro de `.env` (nunca en git).
+- **Gotcha real encontrado**: n8n lee `N8N_OTEL_EXPORTER_OTLP_ENDPOINT` primero desde `.env` (usado por Docker Compose para sustitución de variables), no solo desde el valor por defecto en `docker-compose.yml`. Si la variable ya existe en `.env` (como en este caso, apuntando a Phoenix desde el trabajo anterior), el valor por defecto del `docker-compose.yml` nunca se aplica — hay que actualizar `.env` explícitamente.
+- **Validación real**: se disparó una consulta real a WF2 y se confirmó vía la API pública de Langfuse (`GET /api/public/traces`) que la traza llegó, con 13 observaciones anidadas (una por nodo ejecutado), todas en nivel `DEFAULT` (sin errores).
+
 ## Decisión pendiente (solo producción — para el equipo, no solo DevSecOps)
 
 Con el entorno local ya resuelto y validado dos veces (aislado + real), el camino recomendado para producción es el mismo: **actualizar n8n en Render a ≥2.33.0** (se usó `2.37.10` en esta investigación), repitiendo el mismo procedimiento de respaldo previo antes de aplicarlo. La alternativa de instrumentación manual (agregar HTTP Requests a cada rama de WF2 hacia la API de Langfuse) queda descartada: implica más trabajo para lograr menos cobertura, y el entorno local ya demostró que la actualización de versión no rompe nada.
