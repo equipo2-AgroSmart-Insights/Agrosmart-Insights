@@ -33,7 +33,10 @@ export default function SuggestedQueries({ onSelect }) {
         <div className="h-px bg-earth-brown/10 flex-1" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+      <div
+        className="grid gap-6 w-full"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}
+      >
         {SUGGESTIONS.map((item) => (
           <button
             key={item.title}

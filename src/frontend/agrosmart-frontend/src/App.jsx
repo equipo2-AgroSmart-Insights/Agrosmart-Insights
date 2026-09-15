@@ -1,14 +1,13 @@
 import { useState, Suspense, lazy } from "react";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
-import MonitoreoSatelital from "./components/monitoreo/MonitoreoSatelital";
 import CalendarioAgricola from "./components/calendario/CalendarioAgricola";
 import ComingSoon from "./components/shared/ComingSoon";
 import MicrofrontendErrorBoundary from "./components/shared/MicrofrontendErrorBoundary";
 
-// Carga el microfrontend de chat vía Module Federation.
-// El remote "chat" está configurado en vite.config.js y corre en :5174.
+// Carga de microfrontends remotos vía Module Federation
 const ChatApp = lazy(() => import("chat/ChatApp"));
+const MonitoreoSatelital = lazy(() => import("monitoreo/MonitoreoSatelital"));
 
 const VIEWS = {
   "nueva-consulta": ChatApp,
