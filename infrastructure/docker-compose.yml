@@ -48,7 +48,8 @@ services:
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
       - N8N_OTEL_ENABLED=${N8N_OTEL_ENABLED:-true}
       - N8N_AGENTS_TRACING_ENABLED=${N8N_AGENTS_TRACING_ENABLED:-true}
-      - N8N_OTEL_EXPORTER_OTLP_ENDPOINT=${N8N_OTEL_EXPORTER_OTLP_ENDPOINT:-http://phoenix:6006}
+      - N8N_OTEL_EXPORTER_OTLP_ENDPOINT=${N8N_OTEL_EXPORTER_OTLP_ENDPOINT:-https://cloud.langfuse.com/api/public/otel}
+      - N8N_OTEL_EXPORTER_OTLP_HEADERS=Authorization=${LANGFUSE_OTEL_AUTH_HEADER:-},x-langfuse-ingestion-version=4
       - N8N_OTEL_TRACES_PRODUCTION_ONLY=false
     depends_on:
       postgres:
