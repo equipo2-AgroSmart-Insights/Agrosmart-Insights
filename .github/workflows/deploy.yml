@@ -110,6 +110,47 @@ jobs:
             exit 1
           }
 
+  deploy-microfrontends:
+    name: Desplegar Microfrontends (chat + monitoreo)
+    runs-on: ubuntu-latest
+    needs: validate-before-deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VITE_N8N_WEBHOOK_URL: ${{ secrets.VITE_N8N_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Vercel CLI
+        run: npm install -g vercel@59
+
+      - name: Deploy chat-microfrontend
+        working-directory: src/frontend/chat-microfrontend
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_CHAT }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "ℹ️ Configura VERCEL_PROJECT_ID_CHAT en GitHub Secrets — se omite este deploy."
+            exit 0
+          fi
+          npm ci
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
+            --build-env VITE_N8N_WEBHOOK_URL="$VITE_N8N_WEBHOOK_URL"
+
+      - name: Deploy monitoreo-microfrontend
+        working-directory: src/frontend/monitoreo-microfrontend
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_MONITOREO }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "ℹ️ Configura VERCEL_PROJECT_ID_MONITOREO en GitHub Secrets — se omite este deploy."
+            exit 0
+          fi
+          npm ci
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
+            --build-env VITE_N8N_WEBHOOK_URL="$VITE_N8N_WEBHOOK_URL"
+
   deploy-render:
     name: Disparar deploy Render (n8n)
     runs-on: ubuntu-latest
