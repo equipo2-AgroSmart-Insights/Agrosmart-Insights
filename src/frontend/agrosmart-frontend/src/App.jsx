@@ -1,14 +1,16 @@
-import { useState } from "react";
-import { QueryProvider } from "./context/QueryContext";
+import { useState, Suspense, lazy } from "react";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
-import NLQHome from "./components/chat/NLQHome";
-import MonitoreoSatelital from "./components/monitoreo/MonitoreoSatelital";
 import CalendarioAgricola from "./components/calendario/CalendarioAgricola";
 import ComingSoon from "./components/shared/ComingSoon";
+import MicrofrontendErrorBoundary from "./components/shared/MicrofrontendErrorBoundary";
+
+// Carga de microfrontends remotos vía Module Federation
+const ChatApp = lazy(() => import("chat/ChatApp"));
+const MonitoreoSatelital = lazy(() => import("monitoreo/MonitoreoSatelital"));
 
 const VIEWS = {
-  "nueva-consulta": NLQHome,
+  "nueva-consulta": ChatApp,
   "monitoreo-satelital": MonitoreoSatelital,
   "calendario-agricola": CalendarioAgricola,
 };
@@ -18,14 +20,23 @@ export default function App() {
   const CurrentView = VIEWS[view];
 
   return (
-    <QueryProvider>
+    <>
       <Sidebar activeView={view} onNavigate={setView} />
       <div className="pl-72">
         <Header />
         <main className="relative pt-20 min-h-screen bg-background">
-          {CurrentView ? <CurrentView /> : <ComingSoon title="Mercados MIDAGRI" />}
+          <MicrofrontendErrorBoundary key={view}>
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-[calc(100vh-80px)] text-on-surface-variant font-label-md text-label-md">
+                Cargando chat…
+              </div>
+            }>
+              {CurrentView ? <CurrentView /> : <ComingSoon title="Mercados MIDAGRI" />}
+            </Suspense>
+          </MicrofrontendErrorBoundary>
         </main>
       </div>
-    </QueryProvider>
+    </>
   );
 }
+
