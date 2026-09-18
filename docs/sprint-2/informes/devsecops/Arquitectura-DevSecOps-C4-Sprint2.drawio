@@ -1,0 +1,303 @@
+<mxfile host="app.diagrams.net" agent="AgroSmart Insights - DevSecOps" version="24.7.5">
+  <diagram id="c4-contexto" name="C4 - Contexto">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1050" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="2" value="AgroSmart Insights &#8212; C4 Nivel 1: Diagrama de Contexto" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="40" y="0" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="3" value="&lt;b&gt;Agricultor / Usuario&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Persona]&lt;/i&gt;&lt;br&gt;Consulta datos agr&#237;colas en lenguaje natural desde el navegador" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427b;strokeColor=#052e56;fontColor=#ffffff;arcSize=25;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="4" value="&lt;b&gt;Equipo de Desarrollo&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Persona]&lt;/i&gt;&lt;br&gt;C&#233;lula 2 &#8212; construye y opera el sistema (incluye el rol DevSecOps)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427b;strokeColor=#052e56;fontColor=#ffffff;arcSize=25;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="260" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="5" value="&lt;b&gt;Groq / Gemini / HuggingFace&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistemas externos]&lt;/i&gt;&lt;br&gt;Modelos de lenguaje (LLM) usados por los workflows de n8n" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="460" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="6" value="&lt;b&gt;AgroSmart Insights&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistema de Software]&lt;/i&gt;&lt;br&gt;Plataforma de insights agr&#237;colas con consultas en lenguaje natural (NLQ) sobre datos geoespaciales, orquestada con IA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;strokeColor=#0b4884;fontColor=#ffffff;arcSize=8;fontSize=12;fontStyle=1;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="380" y="180" width="280" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="7" value="&lt;b&gt;Langfuse Cloud&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistema externo]&lt;/i&gt;&lt;br&gt;Observabilidad y trazas (OTEL) de las ejecuciones de IA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="380" y="460" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="8" value="&lt;b&gt;MapTiler&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistema externo]&lt;/i&gt;&lt;br&gt;Servicio de mapas y teselas geoespaciales" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="640" y="580" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="9" value="&lt;b&gt;GitHub&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistema externo]&lt;/i&gt;&lt;br&gt;Repositorio, revisi&#243;n de c&#243;digo, CI/CD (Actions) y control de acceso" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="780" y="60" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="10" value="&lt;b&gt;Vercel&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistema externo]&lt;/i&gt;&lt;br&gt;Hosting y despliegue del frontend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="780" y="220" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="11" value="&lt;b&gt;Render&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistema externo]&lt;/i&gt;&lt;br&gt;Hosting de n8n y PostgreSQL (backend)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="780" y="380" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="12" value="&lt;b&gt;Leyenda&lt;/b&gt;&lt;br&gt;Azul oscuro = Persona&lt;br&gt;Azul = Sistema (AgroSmart Insights)&lt;br&gt;Gris = Sistema externo&lt;br&gt;L&#237;nea punteada = relaci&#243;n de hosting" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#666666;fillColor=#f5f5f5;fontColor=#333333;fontSize=10;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="620" width="280" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="usa (HTTPS)" edge="1" parent="1" source="3" target="6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="push / Pull Requests" edge="1" parent="1" source="4" target="9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="consultas LLM (API)" edge="1" parent="1" source="6" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="mapas (API)" edge="1" parent="1" source="6" target="8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="trazas OTEL" edge="1" parent="1" source="6" target="7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="CI/CD: deploy frontend" edge="1" parent="1" source="9" target="10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="CI/CD: deploy backend (Blueprint)" edge="1" parent="1" source="9" target="11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="37" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;dashed=1;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="aloja el frontend" edge="1" parent="1" source="10" target="6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="38" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;dashed=1;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="aloja backend (n8n + DB)" edge="1" parent="1" source="11" target="6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="c4-contenedores" name="C4 - Contenedores">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1180" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="2" value="AgroSmart Insights &#8212; C4 Nivel 2: Diagrama de Contenedores" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="40" y="0" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="3" value="AgroSmart Insights [L&#237;mite del sistema]" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;strokeColor=#666666;fillColor=none;verticalAlign=top;align=left;fontColor=#666666;fontStyle=2;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="760" height="560" as="geometry" />
+        </mxCell>
+
+        <mxCell id="4" value="&lt;b&gt;Frontend NLQ&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Contenedor: React, Vercel]&lt;/i&gt;&lt;br&gt;Interfaz web de consulta en lenguaje natural y visualizaci&#243;n geoespacial" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438dd5;strokeColor=#2e6295;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="80" y="120" width="240" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="5" value="&lt;b&gt;n8n&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Contenedor: Node.js, Docker, Render]&lt;/i&gt;&lt;br&gt;Workflows de orquestaci&#243;n IA (WF0/WF1/WF2), l&#243;gica de negocio y NLQ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438dd5;strokeColor=#2e6295;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="400" y="120" width="260" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="6" value="&lt;b&gt;GitHub Actions&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Contenedor: Pipelines CI/CD]&lt;/i&gt;&lt;br&gt;Build, tests, SAST (CodeQL), secret-scan (Gitleaks) y despliegue automatizado" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438dd5;strokeColor=#2e6295;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="80" y="320" width="240" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="7" value="&lt;b&gt;Base de Datos&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Contenedor: PostgreSQL 16 + pgvector, Render]&lt;/i&gt;&lt;br&gt;Datos agr&#237;colas, embeddings vectoriales y estado interno de n8n" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#438dd5;strokeColor=#2e6295;fontColor=#ffffff;fontSize=11;boundedLbl=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="320" width="260" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="8" value="&lt;b&gt;Langfuse Cloud&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistema externo]&lt;/i&gt;&lt;br&gt;Observabilidad OTEL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="880" y="120" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="9" value="&lt;b&gt;Groq / Gemini / HuggingFace&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistemas externos]&lt;/i&gt;&lt;br&gt;Proveedores de LLM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="880" y="260" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="10" value="&lt;b&gt;MapTiler&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sistema externo]&lt;/i&gt;&lt;br&gt;Mapas y teselas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="880" y="400" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="HTTPS / Webhook (JSON)" edge="1" parent="1" source="4" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="SQL (pgvector)" edge="1" parent="1" source="5" target="7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="API (prompts)" edge="1" parent="1" source="5" target="9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="API (mapas)" edge="1" parent="1" source="5" target="10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="OTEL / HTTPS (trazas)" edge="1" parent="1" source="5" target="8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="deploy (Vercel)" edge="1" parent="1" source="6" target="4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="deploy (Render Blueprint)" edge="1" parent="1" source="6" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="37" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;dashed=1;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="backup semanal (pg_dump)" edge="1" parent="1" source="6" target="7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="flujo-devsecops" name="Flujo DevSecOps (CI-CD-Seguridad)">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1650" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="2" value="Flujo DevSecOps &#8212; CI/CD y Seguridad (Sprint 2, rol DevSecOps)" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="40" y="0" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="3" value="Dev crea rama + push" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="60" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="4" value="Pull Request &#8594; main" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="160" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="5" value="Checks requeridos en el PR (paralelo &#8212; bloquean el merge si fallan)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;strokeColor=#666666;fillColor=none;verticalAlign=top;align=left;fontColor=#666666;fontStyle=2;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="260" width="1160" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="6" value="n8n-validate-ci&lt;br&gt;JSON v&#225;lido + sin credenciales expuestas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="310" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="frontend-ci&lt;br&gt;ESLint + build del microfrontend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="280" y="310" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="8" value="ai-testing-ci&lt;br&gt;Flake8 + Black + PyTest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="500" y="310" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="CodeQL&lt;br&gt;SAST (Python + JavaScript/TypeScript)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="720" y="310" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="10" value="Gitleaks&lt;br&gt;Secret-scan de todo el repositorio" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="940" y="310" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="11" value="&#191;Checks OK + aprobaci&#243;n CODEOWNERS?&lt;br&gt;&lt;i&gt;(Cristhian y Gabriel se aprueban mutuamente, sin autoaprobaci&#243;n)&lt;/i&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="430" y="460" width="260" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="12" value="Dev corrige y actualiza el PR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="780" y="480" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="13" value="Merge a main" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="460" y="630" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="14" value="deploy.yml" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="460" y="730" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="15" value="deploy-vercel &#8594; Frontend (Vercel) + 3 microfrontends (chat, monitoreo, mercados)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="260" y="830" width="260" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="16" value="deploy-render &#8594; Render Blueprint sync (render.yaml)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="560" y="830" width="260" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="17" value="Producci&#243;n: Frontend + n8n + PostgreSQL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;strokeColor=#0b4884;fontColor=#ffffff;arcSize=6;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="940" width="340" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="18" value="n8n emite trazas OTEL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="1060" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="19" value="&lt;b&gt;Langfuse Cloud&lt;/b&gt;&lt;br&gt;Observabilidad de las ejecuciones de IA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6b6b6b;fontColor=#ffffff;arcSize=6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="1160" width="300" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="20" value="Operaci&#243;n continua (fuera del flujo de PR &#8212; disparada por cron)" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;strokeColor=#666666;fillColor=none;verticalAlign=top;align=left;fontColor=#666666;fontStyle=2;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="60" width="320" height="780" as="geometry" />
+        </mxCell>
+
+        <mxCell id="21" value="scheduled-health-check.yml&lt;br&gt;Cada 6h &#8212; healthcheck a producci&#243;n (n8n + frontend)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="100" width="280" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="22" value="backup-postgres.yml&lt;br&gt;Semanal (lunes) &#8212; pg_dump &#8594; artefacto (30 d&#237;as)&lt;br&gt;&lt;i&gt;activo (secret RENDER_DATABASE_URL configurado y probado)&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="230" width="280" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="23" value="codeql-analysis.yml&lt;br&gt;Semanal + cada push/PR a main &#8212; SAST" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="370" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="24" value="secret-scan.yml (Gitleaks)&lt;br&gt;Semanal + cada PR &#8212; repositorio completo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="490" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="25" value="dependabot.yml&lt;br&gt;Semanal &#8212; actualiza npm, pip y GitHub Actions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="610" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="26" value="Base de datos (Render)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#438dd5;strokeColor=#2e6295;fontColor=#ffffff;fontSize=10;boundedLbl=1;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="740" width="280" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="" edge="1" parent="1" source="3" target="4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="dispara CI" edge="1" parent="1" source="4" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="resultados" edge="1" parent="1" source="5" target="11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#d79b00;fontColor=#d79b00;fontSize=10;fontStyle=1;" value="No" edge="1" parent="1" source="11" target="12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;dashed=1;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="corrige y vuelve a subir" edge="1" parent="1" source="12" target="4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#82b366;fontColor=#82b366;fontSize=10;fontStyle=1;" value="S&#237;" edge="1" parent="1" source="11" target="13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="" edge="1" parent="1" source="13" target="14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="37" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="" edge="1" parent="1" source="14" target="15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="38" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="" edge="1" parent="1" source="14" target="16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="39" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="" edge="1" parent="1" source="15" target="17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="" edge="1" parent="1" source="16" target="17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="" edge="1" parent="1" source="17" target="18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="" edge="1" parent="1" source="18" target="19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="43" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;dashed=1;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="GET /healthz" edge="1" parent="1" source="21" target="17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="44" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;elbow=vertical;dashed=1;strokeColor=#666666;fontColor=#666666;fontSize=10;" value="pg_dump" edge="1" parent="1" source="22" target="26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
