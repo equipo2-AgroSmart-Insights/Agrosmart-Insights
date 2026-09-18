@@ -83,6 +83,7 @@ jobs:
           # Sin configurar, el build cae al default de desarrollo (localhost).
           VITE_CHAT_REMOTE_URL: ${{ secrets.VITE_CHAT_REMOTE_URL }}
           VITE_MONITOREO_REMOTE_URL: ${{ secrets.VITE_MONITOREO_REMOTE_URL }}
+          VITE_MERCADOS_REMOTE_URL: ${{ secrets.VITE_MERCADOS_REMOTE_URL }}
         run: |
           if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
             echo "ℹ️ Configura VERCEL_TOKEN, VERCEL_ORG_ID y VERCEL_PROJECT_ID en GitHub Secrets."
@@ -92,7 +93,8 @@ jobs:
           vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
             --build-env VITE_N8N_WEBHOOK_URL="$VITE_N8N_WEBHOOK_URL" \
             --build-env VITE_CHAT_REMOTE_URL="$VITE_CHAT_REMOTE_URL" \
-            --build-env VITE_MONITOREO_REMOTE_URL="$VITE_MONITOREO_REMOTE_URL"
+            --build-env VITE_MONITOREO_REMOTE_URL="$VITE_MONITOREO_REMOTE_URL" \
+            --build-env VITE_MERCADOS_REMOTE_URL="$VITE_MERCADOS_REMOTE_URL"
 
       - name: Health check frontend (post-deploy)
         env:
@@ -111,7 +113,7 @@ jobs:
           }
 
   deploy-microfrontends:
-    name: Desplegar Microfrontends (chat + monitoreo)
+    name: Desplegar Microfrontends (chat + monitoreo + mercados)
     runs-on: ubuntu-latest
     needs: validate-before-deploy
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -145,6 +147,19 @@ jobs:
         run: |
           if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
             echo "ℹ️ Configura VERCEL_PROJECT_ID_MONITOREO en GitHub Secrets — se omite este deploy."
+            exit 0
+          fi
+          npm ci
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
+            --build-env VITE_N8N_WEBHOOK_URL="$VITE_N8N_WEBHOOK_URL"
+
+      - name: Deploy mercados-microfrontend
+        working-directory: src/frontend/mercados-microfrontend
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_MERCADOS }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "ℹ️ Configura VERCEL_PROJECT_ID_MERCADOS en GitHub Secrets — se omite este deploy."
             exit 0
           fi
           npm ci
