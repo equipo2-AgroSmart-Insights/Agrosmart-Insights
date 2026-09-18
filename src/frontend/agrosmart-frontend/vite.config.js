@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const chatRemoteUrl = env.VITE_CHAT_REMOTE_URL || 'http://localhost:5174/assets/remoteEntry.js'
   const monitoreoRemoteUrl = env.VITE_MONITOREO_REMOTE_URL || 'http://localhost:5175/assets/remoteEntry.js'
+  const mercadosRemoteUrl = env.VITE_MERCADOS_REMOTE_URL || 'http://localhost:5176/assets/remoteEntry.js'
 
   return {
     plugins: [
@@ -19,6 +20,7 @@ export default defineConfig(({ mode }) => {
         remotes: {
           chat: chatRemoteUrl,
           monitoreo: monitoreoRemoteUrl,
+          mercados: mercadosRemoteUrl,
         },
         shared: ['react', 'react-dom'],
       }),

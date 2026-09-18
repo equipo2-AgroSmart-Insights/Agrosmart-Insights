@@ -8,9 +8,11 @@ import MicrofrontendErrorBoundary from "./components/shared/MicrofrontendErrorBo
 // Carga de microfrontends remotos vía Module Federation
 const ChatApp = lazy(() => import("chat/ChatApp"));
 const MonitoreoSatelital = lazy(() => import("monitoreo/MonitoreoSatelital"));
+const MercadosMIDAGRI = lazy(() => import("mercados/MercadosMIDAGRI"));
 
 const VIEWS = {
   "nueva-consulta": ChatApp,
+  "mercados-midagri": MercadosMIDAGRI,
   "monitoreo-satelital": MonitoreoSatelital,
   "calendario-agricola": CalendarioAgricola,
 };
@@ -28,10 +30,10 @@ export default function App() {
           <MicrofrontendErrorBoundary key={view}>
             <Suspense fallback={
               <div className="flex items-center justify-center h-[calc(100vh-80px)] text-on-surface-variant font-label-md text-label-md">
-                Cargando chat…
+                Cargando módulo…
               </div>
             }>
-              {CurrentView ? <CurrentView /> : <ComingSoon title="Mercados MIDAGRI" />}
+              {CurrentView ? <CurrentView /> : <ComingSoon title="Sección no disponible" />}
             </Suspense>
           </MicrofrontendErrorBoundary>
         </main>
