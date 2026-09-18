@@ -1,0 +1,352 @@
+[
+  {
+    "id": 1,
+    "pregunta": "¿A cuánto está el atado de Acelga?",
+    "producto": "Acelga",
+    "precio_esperado": 4.5,
+    "unidad": "Atado"
+  },
+  {
+    "id": 2,
+    "pregunta": "¿A cuánto está la Alverja Verde Americana?",
+    "producto": "Alverja verde americana",
+    "precio_esperado": 3.8,
+    "unidad": "Kg"
+  },
+  {
+    "id": 3,
+    "pregunta": "¿A cuánto está la Alverja Verde Serrana?",
+    "producto": "Alverja verde serrana",
+    "precio_esperado": 2.9,
+    "unidad": "Kg"
+  },
+  {
+    "id": 4,
+    "pregunta": "¿A cuánto está el atado de Apio?",
+    "producto": "Apio",
+    "precio_esperado": 19.25,
+    "unidad": "Atado"
+  },
+  {
+    "id": 5,
+    "pregunta": "¿A cuánto está el atado de Beterraga?",
+    "producto": "Beterraga",
+    "precio_esperado": 1.75,
+    "unidad": "Atado"
+  },
+  {
+    "id": 6,
+    "pregunta": "¿A cuánto está la Camote amarillo?",
+    "producto": "Camote amarillo",
+    "precio_esperado": 1.2,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 7,
+    "pregunta": "¿A cuánto está la Camote morado?",
+    "producto": "Camote morado",
+    "precio_esperado": 1.2,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 8,
+    "pregunta": "¿A cuánto está la Cebolla blanca?",
+    "producto": "Cebolla blanca",
+    "precio_esperado": 1.85,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 9,
+    "pregunta": "¿A cuánto está la Cebolla china?",
+    "producto": "Cebolla china",
+    "precio_esperado": 1.85,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 10,
+    "pregunta": "¿A cuánto está la Cebolla roja?",
+    "producto": "Cebolla roja",
+    "precio_esperado": 1.85,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 11,
+    "pregunta": "¿A cuánto está el ciento de Choclo tipo cusco?",
+    "producto": "Choclo tipo cusco",
+    "precio_esperado": 225,
+    "unidad": "Ciento"
+  },
+  {
+    "id": 12,
+    "pregunta": "¿A cuánto está la docena de Coliflor?",
+    "producto": "Coliflor",
+    "precio_esperado": 40,
+    "unidad": "Docena"
+  },
+  {
+    "id": 13,
+    "pregunta": "¿A cuánto está la Espinaca?",
+    "producto": "Espinaca",
+    "precio_esperado": 1.38,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 14,
+    "pregunta": "¿A cuánto está la Haba verde serrana?",
+    "producto": "Haba verde serrana",
+    "precio_esperado": 1.2,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 15,
+    "pregunta": "¿A cuánto está la Limon sutil?",
+    "producto": "Limon sutil",
+    "precio_esperado": 67.5,
+    "unidad": "Bolsa"
+  },
+  {
+    "id": 16,
+    "pregunta": "¿A cuánto está la Mandarina Satsuma?",
+    "producto": "Mandarina satsuma",
+    "precio_esperado": 2.6,
+    "unidad": "Kg"
+  },
+  {
+    "id": 17,
+    "pregunta": "¿A cuánto está la Manzana delicia?",
+    "producto": "Manzana delicia",
+    "precio_esperado": 4.25,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 18,
+    "pregunta": "¿A cuánto está la Naranja Valencia?",
+    "producto": "Naranja valencia",
+    "precio_esperado": 1.9,
+    "unidad": "Kg"
+  },
+  {
+    "id": 19,
+    "pregunta": "¿A cuánto está la Olluco largo?",
+    "producto": "Olluco largo",
+    "precio_esperado": 3.88,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 20,
+    "pregunta": "¿A cuánto está la Palta Fuerte?",
+    "producto": "Palta fuerte",
+    "precio_esperado": 6.4,
+    "unidad": "Kg"
+  },
+  {
+    "id": 21,
+    "pregunta": "¿A cuánto está la Palta Hass?",
+    "producto": "Palta hass",
+    "precio_esperado": 5.8,
+    "unidad": "Kg"
+  },
+  {
+    "id": 22,
+    "pregunta": "¿A cuánto está la Papa amarilla tumbay?",
+    "producto": "Papa amarilla tumbay",
+    "precio_esperado": 2.9,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 23,
+    "pregunta": "¿A cuánto está la Papa canchan?",
+    "producto": "Papa canchan",
+    "precio_esperado": 2.9,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 24,
+    "pregunta": "¿A cuánto está la Papa huamantanga?",
+    "producto": "Papa huamantanga",
+    "precio_esperado": 2.9,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 25,
+    "pregunta": "¿A cuánto está la Papa huayro?",
+    "producto": "Papa huayro",
+    "precio_esperado": 2.9,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 26,
+    "pregunta": "¿A cuánto está la Papa negra andina?",
+    "producto": "Papa negra andina",
+    "precio_esperado": 2.9,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 27,
+    "pregunta": "¿A cuánto está la Papa perricholi?",
+    "producto": "Papa perricholi",
+    "precio_esperado": 2.9,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 28,
+    "pregunta": "¿A cuánto está la Papa unica?",
+    "producto": "Papa unica",
+    "precio_esperado": 2.9,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 29,
+    "pregunta": "¿A cuánto está la Papa yungay?",
+    "producto": "Papa yungay",
+    "precio_esperado": 2.9,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 30,
+    "pregunta": "¿A cuánto está la Papaya Selva?",
+    "producto": "Papaya selva",
+    "precio_esperado": 2.8,
+    "unidad": "Kg"
+  },
+  {
+    "id": 31,
+    "pregunta": "¿A cuánto está la docena de Pepinillo?",
+    "producto": "Pepinillo",
+    "precio_esperado": 14,
+    "unidad": "Docena"
+  },
+  {
+    "id": 32,
+    "pregunta": "¿A cuánto está el atado de Perejil?",
+    "producto": "Perejil",
+    "precio_esperado": 2.63,
+    "unidad": "Atado"
+  },
+  {
+    "id": 33,
+    "pregunta": "¿A cuánto está la Piña golden?",
+    "producto": "Piña golden",
+    "precio_esperado": 1.38,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 34,
+    "pregunta": "¿A cuánto está el Plátano Bellaco?",
+    "producto": "Platano bellaco",
+    "precio_esperado": 2.5,
+    "unidad": "Kg"
+  },
+  {
+    "id": 35,
+    "pregunta": "¿A cuánto está el atado de Poro?",
+    "producto": "Poro",
+    "precio_esperado": 10.63,
+    "unidad": "Atado"
+  },
+  {
+    "id": 36,
+    "pregunta": "¿A cuánto está el Rocoto Serrano?",
+    "producto": "Vicho rocoto",
+    "precio_esperado": 5.2,
+    "unidad": "Kg"
+  },
+  {
+    "id": 37,
+    "pregunta": "¿A cuánto está el cajón de Tomate katia?",
+    "producto": "Tomate katia",
+    "precio_esperado": 125,
+    "unidad": "Cajon Chico"
+  },
+  {
+    "id": 38,
+    "pregunta": "¿A cuánto está la Vainita americana?",
+    "producto": "Vainita americana",
+    "precio_esperado": 2.88,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 39,
+    "pregunta": "¿A cuánto está la Yuca amarilla?",
+    "producto": "Yuca amarilla",
+    "precio_esperado": 1.68,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 40,
+    "pregunta": "¿A cuánto está el saco de Zanahoria?",
+    "producto": "Zanahoria",
+    "precio_esperado": 85,
+    "unidad": "Saco Chico"
+  },
+  {
+    "id": 41,
+    "pregunta": "¿A cuánto está la docena de Zapallo macre?",
+    "producto": "Zapallo macre",
+    "precio_esperado": 23.5,
+    "unidad": "Docena"
+  },
+  {
+    "id": 42,
+    "pregunta": "¿A cuánto está la Aji amarillo?",
+    "producto": "Aji amarillo",
+    "precio_esperado": 14.38,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 43,
+    "pregunta": "¿A cuánto está la Ajo criollo?",
+    "producto": "Ajo criollo",
+    "precio_esperado": 4.5,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 44,
+    "pregunta": "¿A cuánto está la Ajo napuri?",
+    "producto": "Ajo napuri",
+    "precio_esperado": 4.5,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 45,
+    "pregunta": "¿A cuánto está el Brócoli?",
+    "producto": "Broculi",
+    "precio_esperado": 2.8,
+    "unidad": "Kg"
+  },
+  {
+    "id": 46,
+    "pregunta": "¿A cuánto está el cajón de Caigua (selva)?",
+    "producto": "Caigua (selva)",
+    "precio_esperado": 61.25,
+    "unidad": "Cajon"
+  },
+  {
+    "id": 47,
+    "pregunta": "¿A cuánto está la Kion?",
+    "producto": "Kion",
+    "precio_esperado": 3.33,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 48,
+    "pregunta": "¿A cuánto está la docena de Lechuga americana?",
+    "producto": "Lechuga americana",
+    "precio_esperado": 10,
+    "unidad": "Docena"
+  },
+  {
+    "id": 49,
+    "pregunta": "¿A cuánto está la Papa mariva?",
+    "producto": "Papa mariva",
+    "precio_esperado": 2.9,
+    "unidad": "Kilogramo"
+  },
+  {
+    "id": 50,
+    "pregunta": "¿A cuánto está el Mango Edward?",
+    "producto": "Mango edward",
+    "precio_esperado": 4.2,
+    "unidad": "Kg"
+  }
+]
