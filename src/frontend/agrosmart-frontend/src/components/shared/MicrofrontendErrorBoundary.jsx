@@ -16,16 +16,35 @@ export default class MicrofrontendErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
+      const errStr = String(this.state.error?.message || "");
+      let mfeName;
+      let mfeDir;
+      let mfePort;
+
+      if (errStr.includes("monitoreo") || errStr.includes("5175")) {
+        mfeName = "monitoreo satelital";
+        mfeDir = "src/frontend/monitoreo-microfrontend";
+        mfePort = "5175";
+      } else if (errStr.includes("mercados") || errStr.includes("5176")) {
+        mfeName = "mercados MIDAGRI";
+        mfeDir = "src/frontend/mercados-microfrontend";
+        mfePort = "5176";
+      } else {
+        mfeName = "chat";
+        mfeDir = "src/frontend/chat-microfrontend";
+        mfePort = "5174";
+      }
+
       return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
           <div className="bg-error-container/20 border border-error/30 text-error rounded-2xl p-6 max-w-lg shadow-sm">
             <h3 className="text-lg font-bold mb-2">Microfrontend no disponible</h3>
             <p className="text-sm text-on-surface-variant mb-4">
-              No se pudo cargar el microfrontend de chat desde <code className="bg-surface-container-high px-1.5 py-0.5 rounded text-xs">http://localhost:5174</code>.
+              No se pudo cargar el microfrontend de {mfeName} desde <code className="bg-surface-container-high px-1.5 py-0.5 rounded text-xs">http://localhost:{mfePort}</code>.
             </p>
             <div className="text-left text-xs bg-surface-container-lowest p-3 rounded-lg border border-outline-variant font-mono space-y-1">
               <p className="font-semibold text-on-surface">Para solucionarlo, abre otra terminal y ejecuta:</p>
-              <p className="text-primary">cd src/frontend/chat-microfrontend</p>
+              <p className="text-primary">cd {mfeDir}</p>
               <p className="text-primary">npm run build</p>
               <p className="text-primary">npm run preview</p>
             </div>
