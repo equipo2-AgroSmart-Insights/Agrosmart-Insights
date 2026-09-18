@@ -1,10 +1,9 @@
 name: Frontend CI Pipeline
 
 on:
-  pull_request:
-    paths:
-      - 'src/frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+  # Sin filtro de paths en pull_request: este job es required check en main.
+  # Si no corre en un PR, GitHub queda en "Expected — Waiting for status".
+  pull_request: {}
   push:
     branches:
       - main
@@ -39,8 +38,12 @@ jobs:
 
       - name: Instalar dependencias y validar sintaxis (si aplica package.json)
         run: |
-          if [ -f "src/frontend/package.json" ]; then
-            cd src/frontend
+          FRONTEND_DIR="src/frontend/agrosmart-frontend"
+          if [ ! -f "$FRONTEND_DIR/package.json" ] && [ -f "src/frontend/package.json" ]; then
+            FRONTEND_DIR="src/frontend"
+          fi
+          if [ -f "$FRONTEND_DIR/package.json" ]; then
+            cd "$FRONTEND_DIR"
             npm ci
             npm run lint --if-present
             npm run build --if-present

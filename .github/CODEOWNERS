@@ -1,0 +1,26 @@
+# CODEOWNERS — AgroSmart Insights, Célula 2
+#
+# Referencia de responsables por área. No reemplaza la regla de aprobación
+# cruzada del equipo (nadie aprueba su propio PR; el Arquitecto aprueba los
+# del Líder DevSecOps; el Líder DevSecOps aprueba los del resto del equipo),
+# documentada en Cierre-DevSecOps-Sprint1.md — GitHub CODEOWNERS no puede
+# expresar esa excepción por autor.
+
+# DevSecOps: gobernanza, pipelines, infraestructura
+/.github/                      @GabouLC
+/infrastructure/               @GabouLC
+/render.yaml                   @GabouLC
+/SECURITY.md                   @GabouLC
+
+# Backend / IA: workflows de n8n y base de datos
+/src/n8n-workflows/            @Fiorella-Nieves @GabouLC
+/src/database/                 @Fiorella-Nieves
+
+# Frontend
+/src/frontend/                 @21lenn
+
+# QA / Prompt Engineering
+/src/ia-ops/                   @Sebastian-Josue-Borda-Astoray
+
+# Arquitectura de software
+/docs/sprint-1/informes/arquitectura/  @Cristhian0520

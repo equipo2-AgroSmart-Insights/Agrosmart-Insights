@@ -1,20 +1,19 @@
-# Database (PostgreSQL + pgvector)
+# Base de datos — PostgreSQL + pgvector
 
-**Owner:** Arquitecto (firma de esquema) + Backend (uso en n8n)  
-**Sprint 0:** migración base para levantar el entorno local.
+## Migraciones (`migrations/`)
 
-## Estructura
-```
-src/database/
-├── migrations/   # DDL versionado (se monta en docker-compose)
-├── seeders/      # Datos de prueba / Open Data local
-└── README.md
-```
+| Archivo | Contenido |
+|---|---|
+| `001_schema.sql` | Tablas `precios_diarios`, `clima_diario`, `documentos_rag` + extensión vector |
+| `002_indexes.sql` | Índices B-Tree para consultas frecuentes |
 
-## Arranque local
-`infrastructure/docker-compose.yml` monta `migrations/` en `/docker-entrypoint-initdb.d` del contenedor Postgres.
+Montadas automáticamente en Docker init (`infrastructure/docker-compose.yml`).
 
-## Reglas
-- Toda tabla nueva = nueva migración numerada.
-- Sin credenciales en SQL.
-- Extensión `vector` (pgvector) habilitada desde `001_init_schema.sql`.
+## Seeders (`seeders/`)
+
+Datos demo GMML — ver `seeders/README.md` (carga manual).
+
+## Stack
+
+- Imagen: `pgvector/pgvector:pg16`
+- Consumido por: WF0 (RAG), WF1 (ingesta), WF2 (chat/predicción)

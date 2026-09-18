@@ -1,0 +1,536 @@
+{
+  "name": "WF1: Ingesta Diaria Precios y Clima",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\n// Obtener todos los items entrantes del nodo anterior\nconst items = $input.all();\nconst result = [];\n\nfor (const item of items) {\n  const data = item.json;\n\n  // Construir el nuevo objeto normalizado\n  // Accedemos al índice [0] de los arreglos en 'daily'\n  const normalizedData = {\n    fecha: data.daily.time[0],\n    ubicacion: \"Lima\", // Valor fijo por ahora, puedes hacerlo dinámico si lo necesitas\n    latitud: data.latitude,\n    longitud: data.longitude,\n    temperatura: data.daily.temperature_2m_mean[0],\n    precipitacion: data.daily.precipitation_sum[0],\n    humedad: data.daily.relative_humidity_2m_mean[0],\n    evapotranspiracion: data.daily.et0_fao_evapotranspiration[0]\n  };\n\n  // N8n requiere que la estructura de salida esté dentro de una propiedad 'json'\n  result.push({ json: normalizedData });\n}\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        224
+      ],
+      "id": "c8db57d0-3355-46c4-92b1-b74c6ea5063a",
+      "name": "Normaliza datos climáticos - Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -288,
+        96
+      ],
+      "id": "f39837f8-93d2-4aec-9135-df8637d7efca",
+      "name": "Schedule Trigger 10:00 am"
+    },
+    {
+      "parameters": {
+        "url": "https://siea.midagri.gob.pe/publicaciones/datos-y-estadisticas-agrarias/boletines-diarios/ingreso-y-precios-en-el-gran-mercado-mayorista-de-lima",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "884815fe-24d3-45d4-8d2f-d0ec26c7def9",
+      "name": "HTTP Request 1 MIDAGRI",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "url": "=https://archive-api.open-meteo.com/v1/archive",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "-12.0464"
+            },
+            {
+              "name": "longitude",
+              "value": "-77.0428"
+            },
+            {
+              "name": "daily",
+              "value": "temperature_2m_mean,precipitation_sum,relative_humidity_2m_mean,et0_fao_evapotranspiration"
+            },
+            {
+              "name": "timezone",
+              "value": "America/Lima"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        224
+      ],
+      "id": "622c941a-c6ad-4f2b-bb00-92e8ecd1ae33",
+      "name": "HTTP Request 2 Open Meteo",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        592,
+        0
+      ],
+      "id": "43a54b2c-e1b7-47e1-bfd0-dd292b2d8a03",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\n\n// 1. Calculamos la fecha de hoy en Perú (Lima)\nconst now = new Date(new Date().toLocaleString(\"en-US\", {timeZone: \"America/Lima\"}));\nconst year = now.getFullYear(); // 2026\nconst month = String(now.getMonth() + 1).padStart(2, '0'); // 08\nconst day = String(now.getDate()).padStart(2, '0'); // 13\nconst shortYear = String(year).slice(-2); // 26\n\nconst meses = [\"ene\", \"feb\", \"mar\", \"abr\", \"may\", \"jun\", \"jul\", \"ago\", \"set\", \"oct\", \"nov\", \"dic\"];\nconst monthName = meses[now.getMonth()]; // \"ago\"\n\n// El patrón exacto que buscamos para hoy: \"13ago26.pdf\"\nconst patronHoy = `${day}${monthName}${shortYear}.pdf`;\n\n// 2. Buscamos en el HTML si existe un enlace con ese patrón\nconst regex = new RegExp(`href=\"([^\"]*${patronHoy})\"`, \"i\");\nconst match = html.match(regex);\n\nlet pdfUrl = \"\";\n\nif (match) {\n    // ¡Lo encontró en la página web!\n    pdfUrl = match[1];\n    if (!pdfUrl.startsWith('http')) {\n        pdfUrl = 'https://siea.midagri.gob.pe' + pdfUrl;\n    }\n} else {\n    // Si no está en el HTML (MIDAGRI a veces tarda en actualizar la web), \n    // pero sabemos cómo estructuran sus carpetas, lo \"adivinamos\" y lo armamos nosotros:\n    pdfUrl = `https://siea.midagri.gob.pe/files/datos_estadisticas/diarias/mml/${year}/${month}/sisap-ingreso-gmml-${patronHoy}`;\n}\n\nreturn [{ json: { url_pdf: pdfUrl } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ed4fd92b-5501-484d-b569-6e7df5262c9c",
+      "name": "Code in JavaScript - identificar pdf de hoy",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url_pdf }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "9ceaa704-0e2e-49b9-991e-18f0e5fd7b95",
+      "name": "HTTP Request - descargar pdf",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "clima_diario",
+          "mode": "list",
+          "cachedResultName": "clima_diario"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "fecha",
+            "ubicacion"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ubicacion",
+              "displayName": "ubicacion",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "latitud",
+              "displayName": "latitud",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "longitud",
+              "displayName": "longitud",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "temperatura",
+              "displayName": "temperatura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "precipitacion",
+              "displayName": "precipitacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "humedad",
+              "displayName": "humedad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "evapotranspiracion",
+              "displayName": "evapotranspiracion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "outputColumns": [
+            "*"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        416,
+        224
+      ],
+      "id": "96b53203-aa5e-4651-8937-9b2a80675ef0",
+      "name": "Insert rows in a table1",
+      "credentials": {
+        "postgres": {
+          "id": "z5Bw6umHMcuiQp4V",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  if (!item.json.text) continue;\n  \n  const text = item.json.text;\n  const lines = text.split('\\n').map(line => line.trim()).filter(line => line !== '');\n  \n  let fechaHistorica = new Date().toISOString().split('T')[0];\n  \n  if (item.json.info && item.json.info.CreationDate) {\n      const rawDate = item.json.info.CreationDate;\n      const year = rawDate.substring(2, 6);\n      const month = rawDate.substring(6, 8);\n      const day = rawDate.substring(8, 10);\n      fechaHistorica = `${year}-${month}-${day}`;\n  }\n\n  for (let i = 0; i < lines.length - 3; i++) {\n    const unidad = lines[i+2];\n    \n    if ([\"Kilogramo\", \"Atado\", \"Cajon\", \"Cajón\", \"Saco\", \"Bolsa\", \"Mano\", \"Docena\", \"Ciento\"].includes(unidad)) {\n      const producto = lines[i];\n      const volumenRaw = lines[i+1];\n      const preciosRaw = lines[i+3];\n      \n      const preciosArr = preciosRaw.split(' ').filter(p => p.trim() !== '');\n      \n      // PRECIOS: Corregido. \"Hoy\" es el índice 2.\n      let precioFinal = 0;\n      if (preciosArr.length > 2 && preciosArr[2] !== ':') {\n          precioFinal = parseFloat(preciosArr[2]);\n      } else if (preciosArr.length > 1 && preciosArr[1] !== ':') {\n          precioFinal = parseFloat(preciosArr[1]); // Respaldo: Ayer\n      }\n\n      const volumenesArr = volumenRaw.split(' ').filter(v => v.trim() !== '');\n      // VOLÚMENES: \"Hoy\" es el índice 1.\n      let volumenFinal = 0;\n      if (volumenesArr.length > 1 && volumenesArr[1] !== ':') {\n          volumenFinal = parseFloat(volumenesArr[1]);\n      } else if (volumenesArr.length > 0 && volumenesArr[0] !== ':') {\n          volumenFinal = parseFloat(volumenesArr[0]); // Respaldo: Ayer\n      }\n\n      if (!isNaN(precioFinal)) {\n          results.push({\n            json: {\n              fecha: fechaHistorica,\n              producto: producto,\n              mercado: \"GMML\",\n              precio: precioFinal,\n              volumen: volumenFinal,\n              unidad: unidad\n            }\n          });\n      }\n      i += 3; \n    }\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        0
+      ],
+      "id": "b4bc542a-7515-4c7e-befc-5d1530991fda",
+      "name": "Code in JavaScript limpia los datos"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "precios_diarios",
+          "mode": "list",
+          "cachedResultName": "precios_diarios"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "precio": "={{ $json.precio }}",
+            "volumen": "={{ $json.volumen }}",
+            "mercado": "={{ $json.mercado }}",
+            "producto": "={{ $json.producto }}",
+            "fecha": "={{ $json.fecha }}",
+            "unidad": "={{ $json.unidad }}"
+          },
+          "matchingColumns": [
+            "fecha",
+            "producto",
+            "mercado"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "producto",
+              "displayName": "producto",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "mercado",
+              "displayName": "mercado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "precio",
+              "displayName": "precio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "volumen",
+              "displayName": "volumen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "unidad",
+              "displayName": "unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        976,
+        0
+      ],
+      "id": "b1c7f123-26df-4b85-8418-ecec58f39079",
+      "name": "Insert or update rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "z5Bw6umHMcuiQp4V",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Normaliza datos climáticos - Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger 10:00 am": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request 2 Open Meteo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request 1 MIDAGRI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request 2 Open Meteo": {
+      "main": [
+        [
+          {
+            "node": "Normaliza datos climáticos - Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request 1 MIDAGRI": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript - identificar pdf de hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript limpia los datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript - identificar pdf de hoy": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - descargar pdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - descargar pdf": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript limpia los datos": {
+      "main": [
+        [
+          {
+            "node": "Insert or update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9aecfb05-e9bd-4ec4-9947-43fca18c0b02",
+  "meta": {
+    "instanceId": "faec0db16fa1967a212b8a151276e8610be4c33101520a30c4176faa46ef65ff"
+  },
+  "nodeGroups": [],
+  "id": "dG46t9XSYr8xFROD",
+  "tags": []
+}
