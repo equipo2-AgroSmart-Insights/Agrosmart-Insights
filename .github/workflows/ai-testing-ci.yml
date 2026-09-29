@@ -38,18 +38,16 @@ jobs:
         run: |
           python -m black --check src/ia-ops
 
-      - name: Ejecutar PyTest sobre Prompts
+      - name: Ejecutar PyTest unitario
         working-directory: src/ia-ops
         run: |
-          pytest tests/ -v --tb=short
-
+          python -m pytest tests/ -v --tb=short \
+            --ignore=tests/test_wf2_integration.py
 
   prompt-security-integration:
     name: Pruebas Prompt Injection contra Render
     runs-on: ubuntu-latest
 
-    # Evitamos ejecutar las pruebas contra Render en PRs
-    # provenientes de forks, donde los secrets no están disponibles.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
 
     steps:
@@ -85,7 +83,7 @@ jobs:
 
           payload = {
               "session_id": str(uuid.uuid4()),
-              "pregunta": "¿Cuál es el precio de la papa en Lima?"
+              "pregunta": "¿Cuál es el precio de la papa en Lima? "
           }
 
           for attempt in range(1, 5):
@@ -96,9 +94,7 @@ jobs:
                       timeout=60,
                   )
 
-                  print(
-                      f"Intento {attempt}: HTTP {response.status_code}"
-                  )
+                  print(f"Intento {attempt}: HTTP {response.status_code}")
 
                   if response.status_code == 200:
                       print("AgroSmart está disponible.")
