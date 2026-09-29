@@ -2,17 +2,20 @@ name: AI Ops & Prompt Security Testing
 
 on:
   pull_request: {}
+
   push:
     branches:
       - main
+      - BordaAstoray
     paths:
       - 'src/ia-ops/**'
       - '.github/workflows/ai-testing-ci.yml'
 
 jobs:
   prompt-security-tests:
-    name: Pruebas Unitarias de IA
+    name: Pruebas de Seguridad de IA
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -27,17 +30,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r src/ia-ops/tests/requirements.txt flake8 black
 
-      - name: Flake8 (src/ia-ops)
-        run: python -m flake8 src/ia-ops --max-line-length=100 --exclude=__pycache__
-
-      - name: Black --check (src/ia-ops)
-        run: python -m black --check src/ia-ops
-
-      - name: Ejecutar PyTest sobre Prompts
-        working-directory: src/ia-ops
+      - name: Flake8
         run: |
-          if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
-            pytest tests/ -v --tb=short
-          else
-            echo "Directorio tests vacío."
-          fi
+          python -m flake8 src/ia-ops \
+            --max-line-length=100 \
+            --exclude=__pycache__
+
+      - name: Black --check
+        run: |
+          python -m black --check src/ia-ops
+
+      - name: Ejecutar pruebas Prompt Injection
+        working-directory: src/ia-ops/tests
+        run: |
+          python -m pytest -v -s test_prompt_injections.py
