@@ -1,7 +1,6 @@
 import re
 import unicodedata
 
-
 MAX_QUERY_LENGTH = 2000
 
 
@@ -47,8 +46,7 @@ def analyze_nlq_security(user_input: str) -> dict:
     forbidden_patterns = [
         # Prompt Injection
         (
-            r"ignora\s+(todas\s+)?las\s+"
-            r"(instrucciones|pol[ií]ticas)",
+            r"ignora\s+(todas\s+)?las\s+" r"(instrucciones|pol[ií]ticas)",
             "INYECCIÓN DE PROMPT",
             "Intento de ignorar instrucciones o políticas.",
         ),
@@ -62,7 +60,6 @@ def analyze_nlq_security(user_input: str) -> dict:
             "INYECCIÓN DE PROMPT",
             "Intento de eliminar las restricciones del asistente.",
         ),
-
         # Manipulación del sistema
         (
             r"\bsystem\s*:",
@@ -74,7 +71,6 @@ def analyze_nlq_security(user_input: str) -> dict:
             "INFORMACIÓN SENSIBLE",
             "Intento de obtener las instrucciones internas del sistema.",
         ),
-
         # Información sensible
         (
             r"\bapi[\s_-]?keys?\b",
@@ -101,7 +97,6 @@ def analyze_nlq_security(user_input: str) -> dict:
             "INFORMACIÓN SENSIBLE",
             "Solicitud de credenciales.",
         ),
-
         # SQL Injection
         (
             r"\bdrop\s+table\b",
@@ -118,7 +113,6 @@ def analyze_nlq_security(user_input: str) -> dict:
             "INYECCIÓN SQL",
             "Intento de modificar datos mediante SQL.",
         ),
-
         # Ejecución de comandos
         (
             r"\bexec(?:ute)?\s*\(",
