@@ -1,6 +1,6 @@
 import pytest
 
-from nlq_security import validate_nlq_security, analyze_nlq_security
+from nlq_security import analyze_nlq_security
 
 MALICIOUS_INPUTS = [
     # Pruebas que ya tenía test_prompt_injections.py
