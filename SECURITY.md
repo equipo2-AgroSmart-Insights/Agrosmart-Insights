@@ -18,7 +18,10 @@ Este proyecto es un trabajo académico (curso Taller de Proyectos, USMP). No man
 | Análisis estático de código (SAST) | CodeQL (`.github/workflows/codeql-analysis.yml`), Python y JavaScript/TypeScript |
 | Escaneo de dependencias vulnerables | Dependabot (`.github/dependabot.yml`), npm/pip/GitHub Actions |
 | Bloqueo de credenciales hardcodeadas en workflows de n8n | `.github/workflows/n8n-validate-ci.yml` |
-| Branch protection en `main` | 1 aprobación obligatoria + 3 checks obligatorios, sin autoaprobación |
+| Escaneo de secretos en todo el repositorio | Gitleaks (`.github/workflows/secret-scan.yml`), en cada PR y semanalmente |
+| Verificación de salud de producción | `.github/workflows/scheduled-health-check.yml`, cada 6h |
+| Pruebas E2E de humo (flujo real de usuario) | Playwright (`.github/workflows/e2e-playwright.yml`), cada 6h |
+| Branch protection en `main` | 1 aprobación obligatoria + 5 checks obligatorios, sin autoaprobación |
 
 ## Manejo de secretos
 
