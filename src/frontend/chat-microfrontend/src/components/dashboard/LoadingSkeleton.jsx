@@ -42,8 +42,8 @@ export default function LoadingSkeleton() {
       </div>
 
       {/* KPI Cards Skeleton */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        {[1, 2, 3].map((i) => (
           <div
             key={i}
             className="p-4 rounded-xl bg-surface-container-low/70 border border-outline-variant/20 space-y-2"
@@ -93,7 +93,7 @@ export default function LoadingSkeleton() {
         </div>
       </div>
 
-      <span className="sr-only">Cargando datos analíticos de n8n...</span>
+      <span className="sr-only">Cargando consulta...</span>
     </div>
   );
 }
