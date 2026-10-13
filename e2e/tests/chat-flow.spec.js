@@ -15,11 +15,14 @@ test('el chat responde de punta a punta a una consulta real', async ({ page }) =
 
   // Confirma que el estado de carga realmente aparece (si no aparece nunca,
   // es señal de que el click no disparó nada).
-  await expect(page.getByText(/Analizando tu consulta/i)).toBeVisible({ timeout: 10_000 });
+  // Texto exacto del badge de estado (no el genérico role="status": PR #99
+  // agregó un segundo elemento con ese rol para el esqueleto del gráfico).
+  const loadingIndicator = page.getByText('Consultando base de datos y endpoints analíticos de n8n', { exact: false });
+  await expect(loadingIndicator).toBeVisible({ timeout: 10_000 });
 
   // El plan free de Render puede tardar 50s+ en despertar más el tiempo
   // real del LLM — por eso el timeout generoso, no es un test lento a propósito.
-  await expect(page.getByText(/Analizando tu consulta/i)).toBeHidden({ timeout: 140_000 });
+  await expect(loadingIndicator).toBeHidden({ timeout: 140_000 });
 
   // No validamos el contenido exacto de la respuesta (depende del LLM y
   // de datos que cambian a diario) — validamos que haya una respuesta real
