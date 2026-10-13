@@ -1,24 +1,24 @@
 const SUGGESTIONS = [
   {
-    icon: "trending_up",
+    icon: "insights",
     iconBg: "bg-primary-fixed",
     iconColor: "text-on-primary-fixed",
-    title: "Tendencias de Precio",
-    text: "¿Cuál es la proyección de precio del maíz amarillo duro en Lima para el próximo mes?",
+    title: "Gráficos de Mercado",
+    text: "Dame un gráfico con los precios y volumen de la papa blanca de esta semana",
   },
   {
-    icon: "water_drop",
-    iconBg: "bg-tertiary-fixed",
-    iconColor: "text-on-tertiary-fixed",
-    title: "Riesgo Climático",
-    text: "¿Hay riesgo de heladas en la región de Puno para esta semana de cosecha?",
+    icon: "trending_up",
+    iconBg: "bg-wheat-gold/30",
+    iconColor: "text-forest-green",
+    title: "Tendencias de Limón Sutil",
+    text: "Ver gráfico de dispersión y volumen de limón sutil en Piura",
   },
   {
     icon: "local_shipping",
     iconBg: "bg-secondary-fixed",
     iconColor: "text-on-secondary-fixed",
-    title: "Logística",
-    text: "Comparar costos de transporte de Ica al mercado mayorista de Santa Anita hoy.",
+    title: "Márgenes en Origen",
+    text: "Comparar precio en chacra vs mercado mayorista de cebolla roja en Arequipa",
   },
 ];
 
