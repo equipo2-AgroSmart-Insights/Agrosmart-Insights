@@ -306,7 +306,7 @@ export default function PriceChart({ result, query = "" }) {
             </h3>
           </div>
           <p className="font-body-md text-sm text-on-surface-variant">
-            Datos transmitidos desde n8n / Base de Datos Postgres • {records.length} registros cargados dinámicamente
+            Tendencias y fluctuaciones de precios del mercado agrícola
           </p>
         </div>
 
@@ -316,14 +316,14 @@ export default function PriceChart({ result, query = "" }) {
             type="button"
             onClick={handleRefreshFromN8n}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center gap-1.5 transition-colors border border-outline-variant/30 cursor-pointer"
-            title="Sincronizar directamente con el endpoint analítico de n8n"
+            title="Actualizar datos del mercado"
           >
             <span className="material-symbols-outlined text-[16px] text-forest-green">sync</span>
-            Sincronizar n8n
+            Actualizar datos
           </button>
           <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary-fixed text-on-primary-fixed border border-primary-fixed-dim/40 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-forest-green animate-pulse" />
-            Live Data
+            En vivo
           </span>
         </div>
       </div>
@@ -385,7 +385,7 @@ export default function PriceChart({ result, query = "" }) {
               <span className="material-symbols-outlined text-[16px] text-forest-green">analytics</span>
               Vista Analítica
             </span>
-            <div className="grid grid-cols-3 gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30">
+            <div className="grid grid-cols-2 gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30">
               <button
                 type="button"
                 onClick={() => setChartType("timeSeries")}
@@ -398,19 +398,6 @@ export default function PriceChart({ result, query = "" }) {
               >
                 <span className="material-symbols-outlined text-[15px]">show_chart</span>
                 <span>Series</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setChartType("volume")}
-                className={`py-1.5 px-2 rounded-md text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
-                  chartType === "volume"
-                    ? "bg-forest-green text-on-primary shadow-xs"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-                title="Volumen de Mercado"
-              >
-                <span className="material-symbols-outlined text-[15px]">bar_chart</span>
-                <span>Volumen</span>
               </button>
               <button
                 type="button"
@@ -491,7 +478,7 @@ export default function PriceChart({ result, query = "" }) {
 
       {/* Tarjetas KPI Calculadas Dinámicamente */}
       {kpis && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <div className="bg-surface-container-low/70 border border-outline-variant/20 rounded-xl p-3.5 flex flex-col justify-between">
             <span className="text-xs text-on-surface-variant font-medium">Precio Actual</span>
             <div className="flex items-baseline gap-1 mt-1">
@@ -530,22 +517,9 @@ export default function PriceChart({ result, query = "" }) {
           </div>
 
           <div className="bg-surface-container-low/70 border border-outline-variant/20 rounded-xl p-3.5 flex flex-col justify-between">
-            <span className="text-xs text-on-surface-variant font-medium">Volumen Total</span>
+            <span className="text-xs text-on-surface-variant font-medium">Registros Analizados</span>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xl font-bold text-forest-green">
-                {kpis.totalVolume.toLocaleString()}
-              </span>
-              <span className="text-xs text-outline font-medium">{kpis.unit}</span>
-            </div>
-            <div className="mt-2 text-xs text-on-surface-variant">
-              Suma de registros filtrados
-            </div>
-          </div>
-
-          <div className="bg-surface-container-low/70 border border-outline-variant/20 rounded-xl p-3.5 flex flex-col justify-between">
-            <span className="text-xs text-on-surface-variant font-medium">Muestreo Dinámico</span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-xl font-bold text-amber-700">
                 {kpis.totalRecords}
               </span>
               <span className="text-xs text-outline font-medium">puntos</span>
@@ -559,28 +533,11 @@ export default function PriceChart({ result, query = "" }) {
 
       {/* Contenedor del Lienzo de Chart.js */}
       <div className="relative w-full h-[360px] md:h-[400px] bg-surface-container-lowest rounded-xl p-3 border border-outline-variant/20 shadow-inner">
-        {chartType === "timeSeries" && (
+        {chartType === "scatter" ? (
+          <Scatter key={`scatter-${selectedProduct}-${selectedRegion}-${startDate}-${endDate}`} data={scatterData} options={scatterOptions} />
+        ) : (
           <Line key={`timeSeries-${selectedProduct}-${selectedRegion}-${startDate}-${endDate}`} data={timeSeriesData} options={commonOptions} />
         )}
-
-        {chartType === "volume" && (
-          <Bar key={`volume-${selectedProduct}-${selectedRegion}-${startDate}-${endDate}`} data={volumeData} options={commonOptions} />
-        )}
-
-        {chartType === "scatter" && (
-          <Scatter key={`scatter-${selectedProduct}-${selectedRegion}-${startDate}-${endDate}`} data={scatterData} options={scatterOptions} />
-        )}
-      </div>
-
-      {/* Indicador de accesibilidad y fuente */}
-      <div className="mt-4 pt-3 border-t border-outline-variant/15 flex flex-wrap items-center justify-between text-xs text-on-surface-variant gap-2">
-        <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[15px] text-forest-green">accessibility_new</span>
-          Paleta accesible de alto contraste (WCAG 2.1 AA/AAA) con diferenciación por formas geométricas
-        </span>
-        <span className="font-medium text-forest-green">
-          Origen: n8n Workflow 2 + Postgres SQL
-        </span>
       </div>
     </div>
   );
