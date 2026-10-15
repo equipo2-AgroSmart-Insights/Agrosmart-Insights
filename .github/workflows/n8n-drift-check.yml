@@ -1,0 +1,77 @@
+name: Chequeo de Sincronización n8n <-> git
+# Origen: esta sprint se encontraron 3 veces workflows corriendo en
+# producción (editados directo en el editor de n8n) que ya no coincidían
+# con lo versionado en src/n8n-workflows/production/ — en un caso, un
+# workflow activo no tenía ninguna copia en git. Este chequeo lo detecta
+# solo, en vez de depender de que alguien lo note de casualidad.
+
+on:
+  schedule:
+    - cron: '0 12 * * *' # diario, mediodía UTC (7am America/Lima)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift-check:
+    name: Comparar producción (Render Postgres) vs git
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias
+        run: pip install psycopg2-binary
+
+      - name: Avisar si falta el secret
+        if: ${{ secrets.RENDER_DATABASE_URL == '' }}
+        run: |
+          echo "::warning::RENDER_DATABASE_URL no está configurado — se omite el chequeo de drift."
+
+      - name: Ejecutar chequeo de drift
+        id: drift
+        if: ${{ secrets.RENDER_DATABASE_URL != '' }}
+        env:
+          RENDER_DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+        run: |
+          python .github/scripts/check_n8n_drift.py | tee drift-report.txt
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Abrir o actualizar issue si hay drift crítico
+        if: ${{ steps.drift.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label n8n-drift --state open --json number --jq '.[0].number')
+          BODY="Detectado por \`n8n-drift-check.yml\` el $(date -u +%Y-%m-%d) a las $(date -u +%H:%M) UTC.
+
+          \`\`\`
+          $(cat drift-report.txt)
+          \`\`\`
+
+          Revisar si el cambio en producción es intencional (y resincronizar \`src/n8n-workflows/production/\`) o si es un workflow que se quedó corriendo sin su copia en git."
+
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Drift detectado entre n8n (producción) y git" --label n8n-drift --body "$BODY"
+          fi
+
+      - name: Cerrar issue de drift si ya quedó todo sincronizado
+        if: ${{ steps.drift.outcome == 'success' && secrets.RENDER_DATABASE_URL != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label n8n-drift --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "Resuelto: la corrida del $(date -u +%Y-%m-%d) confirma que todo quedó sincronizado."
+            gh issue close "$EXISTING" --repo "$GITHUB_REPOSITORY"
+          fi
