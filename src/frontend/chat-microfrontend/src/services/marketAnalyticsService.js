@@ -138,52 +138,49 @@ export function extractDynamicRecords(result) {
 }
 
 /**
- * Calcula una secuencia de fechas dinámica retroactiva (últimos N días)
- * a partir de una fecha de referencia obtenida de n8n o la fecha actual del sistema.
- * 100% dinámico, sin fechas quemadas.
+ * Parsea un texto de fecha en lenguaje natural ("9 de octubre de 2026") o ISO
+ * y devuelve una etiqueta corta legible para el eje X del gráfico.
  */
-function calculateDynamicDateSequence(dateText, count = 7) {
-  let baseDate = new Date();
+function parseDateText(dateText) {
+  if (!dateText || typeof dateText !== "string") return null;
 
-  if (dateText && typeof dateText === "string") {
-    const monthMap = {
-      enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
-      julio: 6, agosto: 7, septiembre: 8, setiembre: 8, octubre: 9,
-      noviembre: 10, diciembre: 11
-    };
+  const monthMap = {
+    enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+    julio: 6, agosto: 7, septiembre: 8, setiembre: 8, octubre: 9,
+    noviembre: 10, diciembre: 11
+  };
 
-    // Formato lenguaje natural: "9 de octubre de 2026" o "9 de octubre"
-    const textMatch = dateText.match(/(\d{1,2})\s+de\s+([A-Za-z]+)(?:\s+de\s+(\d{4}))?/i);
-    if (textMatch) {
-      const day = parseInt(textMatch[1], 10);
-      const monthName = textMatch[2].toLowerCase();
-      const month = monthMap[monthName] !== undefined ? monthMap[monthName] : baseDate.getMonth();
-      const year = textMatch[3] ? parseInt(textMatch[3], 10) : baseDate.getFullYear();
-      const parsed = new Date(year, month, day);
-      if (!isNaN(parsed.getTime())) baseDate = parsed;
-    } else {
-      // Formato numérico ISO o estándar
-      const parsed = new Date(dateText);
-      if (!isNaN(parsed.getTime())) baseDate = parsed;
+  const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun",
+    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+  // Formato lenguaje natural: "9 de octubre de 2026" o "9 de octubre"
+  const textMatch = dateText.match(/(\d{1,2})\s+de\s+([A-Za-z]+)(?:\s+de\s+(\d{4}))?/i);
+  if (textMatch) {
+    const day = parseInt(textMatch[1], 10);
+    const monthName = textMatch[2].toLowerCase();
+    const month = monthMap[monthName] !== undefined ? monthMap[monthName] : null;
+    if (month !== null) {
+      return `${String(day).padStart(2, "0")} ${monthNames[month]}`;
     }
   }
 
-  const sequence = [];
-  for (let i = count - 1; i >= 0; i--) {
-    const d = new Date(baseDate);
-    d.setDate(baseDate.getDate() - i);
-    const dayStr = String(d.getDate()).padStart(2, "0");
-    const monthStr = d.toLocaleDateString("es-PE", { month: "short" }).replace(".", "");
-    const formatted = `${dayStr} ${monthStr.charAt(0).toUpperCase() + monthStr.slice(1)}`;
-    sequence.push(formatted);
+  // Formato ISO: "2026-10-09"
+  const isoMatch = dateText.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const month = parseInt(isoMatch[2], 10) - 1;
+    const day = parseInt(isoMatch[3], 10);
+    return `${String(day).padStart(2, "0")} ${monthNames[month]}`;
   }
-  return sequence;
+
+  // Si no se puede parsear, devolver el texto tal cual
+  return dateText.trim();
 }
 
 /**
  * Analizador especializado para reportes de evaluación comercial emitidos por n8n / IA.
- * Extrae producto, precios (actual, anterior, promedios) y volúmenes (actual, promedios)
- * para reconstruir los puntos reales analizados en Series de tiempo y Dispersión (Scatter).
+ * SOLO extrae datos reales explícitamente mencionados en la respuesta del chat.
+ * No inventa ni interpola datos. Si el chat menciona 1 precio, se muestra 1 punto;
+ * si menciona 2, se muestran 2, y así sucesivamente.
  */
 function parseStructuredN8nEvaluation(text) {
   if (!text || typeof text !== "string") return [];
@@ -199,11 +196,6 @@ function parseStructuredN8nEvaluation(text) {
     if (headerMatch[2]) mercado = headerMatch[2].trim();
   }
 
-  // 2. Extraer último precio y fecha
-  const ultPrecioMatch = text.match(/Último precio:\s*S\/\s*([\d,.]+)(?:[^\(\n]*\(([^)]+)\))?/i);
-  const ultPrecio = ultPrecioMatch ? parseFloat(ultPrecioMatch[1].replace(",", ".")) : null;
-  const ultPrecioFecha = ultPrecioMatch && ultPrecioMatch[2] ? ultPrecioMatch[2].trim() : "";
-
   // Extraer unidad si se menciona: "por Kilogramo" o "por kg"
   const unidadMatch = text.match(/por\s+([A-Za-z]+)/i);
   if (unidadMatch) {
@@ -211,67 +203,56 @@ function parseStructuredN8nEvaluation(text) {
     unidad = u.includes("kilo") ? "kg" : u;
   }
 
-  // 3. Extraer precio anterior
+  const prodName = producto || "Producto Consultado";
+  const records = [];
+
+  // 2. Extraer último precio y su fecha — dato real explícito de n8n
+  const ultPrecioMatch = text.match(/[UÚuú]ltimo precio:\s*S\/\s*([\d,.]+)(?:[^\(\n]*\(([^)]+)\))?/i);
+  const ultPrecio = ultPrecioMatch ? parseFloat(ultPrecioMatch[1].replace(",", ".")) : null;
+  const ultPrecioFechaRaw = ultPrecioMatch && ultPrecioMatch[2] ? ultPrecioMatch[2].trim() : "";
+
+  // 3. Extraer último volumen y su fecha — dato real explícito de n8n
+  const ultVolMatch = text.match(/[UÚuú]ltimo volumen(?: registrado)?:\s*([\d,.]+)\s*(?:toneladas|TM|kg)(?:[^\(\n]*\(([^)]+)\))?/i);
+  const ultVol = ultVolMatch ? parseFloat(ultVolMatch[1].replace(",", ".")) : 0;
+  const ultVolFechaRaw = ultVolMatch && ultVolMatch[2] ? ultVolMatch[2].trim() : "";
+
+  // 4. Extraer precio anterior — dato real mencionado en la respuesta
   const precioAntMatch = text.match(/precio anterior\s*\((?:S\/\s*)?([\d,.]+)\)/i);
   const precioAnterior = precioAntMatch ? parseFloat(precioAntMatch[1].replace(",", ".")) : null;
 
-  // 4. Extraer promedios de precio (7 y 30)
-  const prom7PrecioMatch = text.match(/Promedio de 7 registros de precio:\s*S\/\s*([\d,.]+)/i);
-  const prom7Precio = prom7PrecioMatch ? parseFloat(prom7PrecioMatch[1].replace(",", ".")) : null;
+  // Si no hay ningún dato real explícito, no generar registros
+  if (ultPrecio === null && precioAnterior === null) return [];
 
-  // 5. Extraer volúmenes (último y promedios)
-  const ultVolMatch = text.match(/Último volumen(?: registrado)?:\s*([\d,.]+)\s*(?:toneladas|TM|kg)/i);
-  const ultVol = ultVolMatch ? parseFloat(ultVolMatch[1].replace(",", ".")) : null;
+  // 5. Construir registros SOLO con datos explícitos del chat
 
-  const prom7VolMatch = text.match(/Promedio de 7 registros de volumen:\s*([\d,.]+)\s*(?:toneladas|TM)/i);
-  const prom7Vol = prom7VolMatch ? parseFloat(prom7VolMatch[1].replace(",", ".")) : null;
-
-  // Si encontramos al menos el último precio o volumen de este formato
-  if (ultPrecio !== null || ultVol !== null) {
-    const currentPrice = ultPrecio || prom7Precio || 1;
-    const currentVol = ultVol || prom7Vol || 40;
-    const prevPrice = precioAnterior || prom7Precio || currentPrice;
-    const avgPrice = prom7Precio || ((currentPrice + prevPrice) / 2);
-    const avgVol = prom7Vol || currentVol;
-    const prodName = producto || "Producto Consultado";
-
-    // Generar serie cronológica dinámica calculada a partir de la fecha de n8n
-    const daysLabels = calculateDynamicDateSequence(ultPrecioFecha, 7);
-
-    // Variaciones coherentes de precios y volúmenes alrededor de avgPrice y avgVol
-    // que respetan la ley de oferta/demanda y concluyen exactamente en prevPrice y currentPrice
-    const priceDeltas = [-0.15, -0.08, -0.02, +0.05, (prevPrice - avgPrice), -0.05, (currentPrice - avgPrice)];
-    const volDeltas = [-8, -4, 0, +5, -2, +8, (currentVol - avgVol)];
-
-    const records = [];
-    for (let i = 0; i < 7; i++) {
-      const p =
-        i === 6
-          ? currentPrice
-          : i === 4 && precioAnterior
-          ? precioAnterior
-          : Number((avgPrice + priceDeltas[i]).toFixed(2));
-
-      const v =
-        i === 6
-          ? currentVol
-          : Number(Math.max(5, (avgVol + volDeltas[i])).toFixed(1));
-
-      records.push({
-        fecha: daysLabels[i],
-        producto: prodName,
-        precio: p,
-        volumen: v,
-        mercado: mercado,
-        region: mercado,
-        unidad: unidad
-      });
-    }
-
-    return records;
+  // Agregar precio anterior si fue mencionado explícitamente en la respuesta
+  if (precioAnterior !== null) {
+    records.push({
+      fecha: "Reg. anterior",
+      producto: prodName,
+      precio: precioAnterior,
+      volumen: 0,
+      mercado,
+      region: mercado,
+      unidad
+    });
   }
 
-  return [];
+  // Agregar último precio (dato más reciente con fecha explícita)
+  if (ultPrecio !== null) {
+    const fechaLabel = parseDateText(ultPrecioFechaRaw) || new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "short" });
+    records.push({
+      fecha: fechaLabel,
+      producto: prodName,
+      precio: ultPrecio,
+      volumen: ultVol,
+      mercado,
+      region: mercado,
+      unidad
+    });
+  }
+
+  return records;
 }
 
 /**
@@ -306,7 +287,7 @@ function parseTextForMarketNumbers(text) {
 
   // Buscar si en todo el texto hay una mención global de volumen
   const globalVolMatch = text.match(/([\d,.]+)\s*(?:toneladas|TM)/i);
-  const defaultVol = globalVolMatch ? parseFloat(globalVolMatch[1].replace(",", ".")) : 30;
+  const defaultVol = globalVolMatch ? parseFloat(globalVolMatch[1].replace(",", ".")) : 0;
 
   for (const line of lines) {
     const priceMatch = line.match(/(?:S\/|S\/\.|\$)\s*([\d,.]+)/i);
