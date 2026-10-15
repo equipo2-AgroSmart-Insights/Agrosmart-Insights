@@ -242,7 +242,7 @@ export default function PriceChart({ result, query = "" }) {
           callbacks: {
             label: function (ctx) {
               const pt = ctx.raw;
-              return `${ctx.dataset.label}: Vol ${pt.x} → Precio S/ ${pt.y} (${pt.fecha})`;
+              return ` ${pt.producto || "Registro"} (${pt.fecha}): ${pt.x} TM → S/ ${Number(pt.y).toFixed(2)}/kg`;
             }
           }
         }
@@ -252,22 +252,25 @@ export default function PriceChart({ result, query = "" }) {
           type: "linear",
           title: {
             display: true,
-            text: `Volumen Registrado (${kpis?.unit || "TM"})`,
-            color: "#1e293b",
-            font: { size: 12, weight: 600 }
-          },
-          ticks: { color: "#334155" }
-        },
-        y: {
-          title: {
-            display: true,
-            text: "Precio de Mercado (S/)",
+            text: "Volumen de Ingreso al Mercado (Toneladas - TM)",
             color: "#1e293b",
             font: { size: 12, weight: 600 }
           },
           ticks: {
             color: "#334155",
-            callback: (v) => `S/ ${v}`
+            callback: (v) => `${v} TM`
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: "Precio Mayorista (S/ por kg)",
+            color: "#1e293b",
+            font: { size: 12, weight: 600 }
+          },
+          ticks: {
+            color: "#334155",
+            callback: (v) => `S/ ${Number(v).toFixed(2)}`
           }
         }
       }
