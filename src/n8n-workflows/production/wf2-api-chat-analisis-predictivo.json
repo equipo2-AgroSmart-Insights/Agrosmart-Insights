@@ -110,7 +110,7 @@
     },
     {
       "parameters": {
-        "url": "=https://api.maptiler.com/geocoding/{{ JSON.parse($json.output).lugar }}.json?key=MNBb9jDN39U4XjDftOQF",
+        "url": "=https://api.maptiler.com/geocoding/{{ JSON.parse($json.output).lugar }}.json?key={{MAPTILER_API_KEY_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
