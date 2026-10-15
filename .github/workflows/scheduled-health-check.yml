@@ -1,0 +1,27 @@
+name: Health Check Programado (Producción)
+# Corre solo, sin depender de que alguien lo dispare a mano.
+# Reutiliza infrastructure/scripts/health-check.sh (mismo script del deploy).
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # cada 6 horas
+  workflow_dispatch: {} # permite dispararlo manual desde la pestaña Actions
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    name: Verificar producción (n8n + frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Ejecutar health-check.sh contra producción
+        env:
+          N8N_URL: ${{ secrets.N8N_HEALTH_URL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_HEALTH_URL }}
+        run: |
+          chmod +x infrastructure/scripts/health-check.sh
+          ./infrastructure/scripts/health-check.sh

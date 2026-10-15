@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@originjs/vite-plugin-federation": "^1.4.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",

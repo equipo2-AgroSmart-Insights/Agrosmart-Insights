@@ -26,7 +26,7 @@
         }
       },
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
+      "typeVersion": 4.2,
       "position": [
         -416,
         192
@@ -71,7 +71,7 @@
         "options": {}
       },
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
+      "typeVersion": 2,
       "position": [
         -192,
         192
@@ -109,21 +109,20 @@
     },
     {
       "parameters": {
-        "modelName": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-        "options": {}
+        "modelName": "models/gemini-embedding-001"
       },
-      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
       "typeVersion": 1,
       "position": [
         -48,
         352
       ],
       "id": "d2fffd9c-0c4a-4078-8c17-7354f901182a",
-      "name": "Embeddings HuggingFace Inference",
+      "name": "Embeddings Google Gemini",
       "credentials": {
-        "huggingFaceApi": {
-          "id": "Sq9dIhrw5s7bdC26",
-          "name": "Hugging Face account"
+        "googlePalmApi": {
+          "id": "HZApfmkMQgagxfYZ",
+          "name": "Google Gemini(PaLM) Api account"
         }
       }
     },
@@ -134,7 +133,7 @@
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
-      "typeVersion": 1.3,
+      "typeVersion": 1,
       "position": [
         64,
         176
@@ -160,7 +159,7 @@
         }
       },
       "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.3,
+      "typeVersion": 1.1,
       "position": [
         -880,
         192
@@ -174,7 +173,7 @@
         "options": {}
       },
       "type": "n8n-nodes-base.extractFromFile",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         0,
         0
@@ -312,7 +311,7 @@
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
+      "typeVersion": 2.4,
       "position": [
         384,
         0
@@ -403,7 +402,7 @@
         ]
       ]
     },
-    "Embeddings HuggingFace Inference": {
+    "Embeddings Google Gemini": {
       "ai_embedding": [
         [
           {
