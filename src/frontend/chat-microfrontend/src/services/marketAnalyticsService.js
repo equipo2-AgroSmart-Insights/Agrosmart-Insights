@@ -176,6 +176,53 @@ function parseDateText(dateText) {
   return dateText.trim();
 }
 
+function getSortableDate(dateText) {
+  if (!dateText || typeof dateText !== "string") return null;
+
+  const monthMap = {
+    ene: 0, enero: 0, feb: 1, febrero: 1, mar: 2, marzo: 2,
+    abr: 3, abril: 3, may: 4, mayo: 4, jun: 5, junio: 5,
+    jul: 6, julio: 6, ago: 7, agosto: 7, sep: 8, sept: 8,
+    septiembre: 8, setiembre: 8, oct: 9, octubre: 9, nov: 10,
+    noviembre: 10, dic: 11, diciembre: 11
+  };
+  const normalized = dateText.trim().normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\.$/, "");
+
+  const toTimestamp = (year, month, day) => {
+    const timestamp = Date.UTC(year, month, day);
+    const date = new Date(timestamp);
+    return date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month &&
+      date.getUTCDate() === day
+      ? timestamp
+      : null;
+  };
+
+  let match = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (match) {
+    return toTimestamp(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
+  match = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (match) {
+    const year = Number(match[3]);
+    return toTimestamp(year < 100 ? 2000 + year : year, Number(match[2]) - 1, Number(match[1]));
+  }
+
+  match = normalized.match(/^(\d{1,2})\s+de\s+([a-z]+)(?:\s+de\s+(\d{4}))?$/);
+  if (!match) {
+    match = normalized.match(/^(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?$/);
+  }
+  if (!match) return null;
+
+  const month = monthMap[match[2]];
+  if (month === undefined) return null;
+  return toTimestamp(match[3] ? Number(match[3]) : 2000, month, Number(match[1]));
+}
+
 /**
  * Analizador especializado para reportes de evaluación comercial emitidos por n8n / IA.
  * SOLO extrae datos reales explícitamente mencionados en la respuesta del chat.
@@ -243,6 +290,7 @@ function parseStructuredN8nEvaluation(text) {
     const fechaLabel = parseDateText(ultPrecioFechaRaw) || new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "short" });
     records.push({
       fecha: fechaLabel,
+      fechaOrden: ultPrecioFechaRaw || fechaLabel,
       producto: prodName,
       precio: ultPrecio,
       volumen: ultVol,
@@ -401,8 +449,28 @@ export function buildChartDatasetsFromRecords({
     filtered = [...records];
   }
 
-  // Ordenar por fecha cronológica si las fechas son comparables
-  filtered.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+  // El registro anterior no tiene una fecha exacta; mantenerlo antes de los
+  // registros fechados y ordenar estos cronológicamente, no por su etiqueta.
+  const previousRecord = (record) =>
+    /^(?:reg(?:istro)?\.?\s*anterior)$/i.test(String(record.fecha).trim());
+  filtered = filtered
+    .map((record, index) => ({
+      record,
+      index,
+      timestamp: getSortableDate(record.fechaOrden || record.fecha)
+    }))
+    .sort((a, b) => {
+      if (previousRecord(a.record) !== previousRecord(b.record)) {
+        return previousRecord(a.record) ? -1 : 1;
+      }
+      if (a.timestamp !== null && b.timestamp !== null) {
+        return a.timestamp - b.timestamp || a.index - b.index;
+      }
+      if (a.timestamp !== null) return 1;
+      if (b.timestamp !== null) return -1;
+      return a.index - b.index;
+    })
+    .map(({ record }) => record);
 
   // Extraer etiquetas de fechas únicas
   const labels = filtered.map((r) => r.fecha);
