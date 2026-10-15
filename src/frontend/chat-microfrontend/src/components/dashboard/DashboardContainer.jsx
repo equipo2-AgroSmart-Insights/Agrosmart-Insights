@@ -56,7 +56,7 @@ export default function DashboardContainer() {
                 </h3>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px] text-forest-green">check_circle</span>
-                  Datos de n8n / SQL procesados
+                  Análisis completado
                 </span>
               </div>
               <div className="font-body-md text-base text-on-surface leading-relaxed whitespace-pre-line space-y-3">
