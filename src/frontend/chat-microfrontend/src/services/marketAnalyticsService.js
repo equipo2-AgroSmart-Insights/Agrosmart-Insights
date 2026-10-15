@@ -373,8 +373,6 @@ export function buildChartDatasetsFromRecords({
       availableProducts: [],
       availableRegions: [],
       timeSeriesData: { labels: [], datasets: [] },
-      volumeData: { labels: [], datasets: [] },
-      scatterData: { datasets: [] },
       kpis: null,
       isEmpty: true
     };
@@ -474,62 +472,9 @@ export function buildChartDatasetsFromRecords({
     datasets: timeSeriesDatasets
   };
 
-  // 2. DATASET DE VOLUMEN (Barras de Ingreso)
-  const volumeData = {
-    labels,
-    datasets: [
-      {
-        type: "bar",
-        label: `Volumen de Mercado (${filtered[0]?.unidad || "TM"})`,
-        data: volumeValues,
-        backgroundColor: sapphire.fill,
-        borderColor: sapphire.stroke,
-        borderWidth: 1.5,
-        borderRadius: 6,
-        barPercentage: 0.65
-      }
-    ]
-  };
+  // 2. DATASET DE VOLUMEN Y DISPERSIÓN - eliminados (ya no se usan en el componente)
 
-  // 3. DATASET DE DISPERSIÓN (Scatter: Volumen vs Precio)
-  // Agrupar por región para generar series con distintas formas y colores accesibles
-  const scatterRegionGroups = {};
-  const regionPaletteList = [sapphire, amber, emerald, crimson, purple, teal];
-
-  filtered.forEach((r) => {
-    const regKey = r.region || r.mercado || "Mercado";
-    if (!scatterRegionGroups[regKey]) {
-      scatterRegionGroups[regKey] = [];
-    }
-    scatterRegionGroups[regKey].push({
-      x: r.volumen,
-      y: r.precio,
-      fecha: r.fecha,
-      producto: r.producto,
-      region: regKey
-    });
-  });
-
-  const scatterDatasets = Object.keys(scatterRegionGroups).map((regKey, idx) => {
-    const colorObj = regionPaletteList[idx % regionPaletteList.length];
-    return {
-      label: `Región / Mercado: ${regKey}`,
-      data: scatterRegionGroups[regKey],
-      borderColor: colorObj.stroke,
-      backgroundColor: colorObj.fill,
-      pointRadius: 7,
-      pointHoverRadius: 10,
-      pointBorderWidth: 2,
-      pointBorderColor: "#ffffff",
-      pointStyle: colorObj.pointStyle
-    };
-  });
-
-  const scatterData = {
-    datasets: scatterDatasets
-  };
-
-  // 4. CÁLCULO DE KPIS DINÁMICOS
+  // 3. CÁLCULO DE KPIS DINÁMICOS
   const validPrices = priceValues.filter((p) => p > 0);
   const avgPrice =
     validPrices.length > 0
@@ -542,20 +487,15 @@ export function buildChartDatasetsFromRecords({
   const pctChange =
     initialPrice > 0 ? Number(((priceDiff / initialPrice) * 100).toFixed(1)) : 0;
 
-  const totalVolume = volumeValues.reduce((acc, v) => acc + v, 0);
-
   return {
     availableProducts,
     availableRegions,
     timeSeriesData,
-    volumeData,
-    scatterData,
     kpis: {
       currentPrice: Number(currentPrice.toFixed(2)),
       avgPrice: Number(avgPrice.toFixed(2)),
       pctChange,
       isUp: pctChange >= 0,
-      totalVolume: Number(totalVolume.toFixed(1)),
       unit: filtered[0]?.unidad || "kg",
       totalRecords: filtered.length,
       sampleProduct: filtered[0]?.producto || "General"
