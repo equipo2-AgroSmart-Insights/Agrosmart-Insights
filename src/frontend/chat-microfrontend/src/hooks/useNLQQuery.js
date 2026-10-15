@@ -2,9 +2,10 @@ import { sendNLQQuery } from "../services/n8nClient";
 import { useQueryContext } from "../context/QueryContext";
 
 export function useNLQQuery() {
-  const { setStatus, setResult, setError } = useQueryContext();
+  const { setStatus, setResult, setError, setQuery } = useQueryContext();
 
   async function runQuery(query) {
+    if (setQuery) setQuery(query);
     setStatus("loading");
     setError(null);
     try {
