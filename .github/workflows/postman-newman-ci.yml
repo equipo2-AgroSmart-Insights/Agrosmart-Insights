@@ -1,0 +1,52 @@
+name: Pruebas de integracion con Postman y Newman
+
+on:
+  push:
+    paths:
+      - "src/frontend/agrosmart-frontend/src/test/postman/**"
+      - ".github/workflows/postman-newman-ci.yml"
+
+  pull_request:
+    paths:
+      - "src/frontend/agrosmart-frontend/src/test/postman/**"
+      - ".github/workflows/postman-newman-ci.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas-api:
+    name: Ejecutar colección de Postman
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.x"
+
+      - name: Instalar Newman
+        run: npm install --global newman
+
+      - name: Comprobar configuración
+        env:
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+        run: |
+          if [ -z "$N8N_WEBHOOK_URL" ]; then
+            echo "No se configuró el secreto N8N_WEBHOOK_URL"
+            exit 1
+          fi
+
+      - name: Ejecutar pruebas de Postman
+        env:
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+        run: |
+          newman run "src/frontend/agrosmart-frontend/src/test/postman/agrosmart-api.postman_collection.json" \
+            --env-var "webhook_url=$N8N_WEBHOOK_URL" \
+            --timeout-request 120000 \
+            --reporters cli
