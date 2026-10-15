@@ -34,7 +34,8 @@ Guías: `docs/sprint-1/SETUP-VERCEL-RENDER.md` y `docs/sprint-1/SECRETS-GITHUB-S
 
 | Workflow | Frecuencia | Qué hace |
 |---|---|---|
-| `scheduled-health-check.yml` | Cada 6 horas | Verifica que producción (n8n + frontend) responda, usando `infrastructure/scripts/health-check.sh`. |
-| `backup-postgres.yml` | Semanal (lunes) | `pg_dump` de la base de Render, subido como artefacto (30 días de retención). **Requiere el secret `RENDER_DATABASE_URL`** — sin configurar todavía, el workflow queda en no-op hasta que se agregue. |
+| `scheduled-health-check.yml` | Cada 6 horas | Verifica que producción (n8n + frontend) responda, usando `infrastructure/scripts/health-check.sh`. Solo mira HTTP 200 — no navega ni ejecuta nada. |
+| `backup-postgres.yml` | Semanal (lunes) | `pg_dump` de la base de Render, subido como artefacto (30 días de retención). Secret `RENDER_DATABASE_URL` configurado y probado. |
+| `e2e-playwright.yml` | Cada 6 horas | Prueba el flujo real de un usuario en un navegador de verdad (Playwright): carga la página, manda una consulta al chat, espera la respuesta real del LLM, y revisa que el microfrontend de Monitoreo cargue. Es la capa que el healthcheck no cubre. No bloquea merges (depende de LLMs reales y de que producción esté "despierta"). |
 
-Ambos también se pueden disparar manualmente desde la pestaña Actions (`workflow_dispatch`).
+Los tres también se pueden disparar manualmente desde la pestaña Actions (`workflow_dispatch`).
