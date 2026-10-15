@@ -1,0 +1,53 @@
+name: Pruebas E2E (Playwright)
+# Prueba el flujo real de un usuario en el navegador, de punta a punta:
+# frontend -> microfrontends -> webhook de n8n -> LLM -> respuesta en pantalla.
+# No reemplaza al healthcheck (que solo mira HTTP 200) ni a los tests de
+# Vitest/Postman de QA (que prueban componentes y la API por separado) —
+# es la capa que faltaba: la experiencia completa, en un navegador real.
+#
+# Corre por horario, no en cada PR: depende de LLMs reales y del estado de
+# producción (que puede estar "dormida" por el plan free de Render), así
+# que no es confiable como gate obligatorio de merge.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # cada 6h, igual que el healthcheck
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Pruebas de humo E2E contra producción
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar navegadores de Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Ejecutar pruebas E2E
+        run: npx playwright test --project=chromium
+
+      - name: Subir reporte (si falló algo)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 14
