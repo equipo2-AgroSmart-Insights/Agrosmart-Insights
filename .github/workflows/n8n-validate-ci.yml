@@ -47,7 +47,7 @@ jobs:
               # keys reales con formato alfanumérico simple) — esto detecta
               # el patrón estructural (key= en la propia URL) sin importar el
               # formato de la key.
-              (re.compile(r'maptiler\.com[^"]*?[?&]key=[a-zA-Z0-9_-]{10,}'), 'API Key de MapTiler en query string'),
+              (re.compile(r'maptiler\.com[^\x22]*?[?&]key=[a-zA-Z0-9_-]{10,}'), 'API Key de MapTiler en query string'),
           ]
 
           errors = 0
