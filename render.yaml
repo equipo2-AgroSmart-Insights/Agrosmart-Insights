@@ -5,6 +5,14 @@
 # Backend  → Render (n8n + Postgres)
 #
 # Plan free: ~512 MB RAM — n8n latest requiere ajustes de memoria.
+#
+# INCIDENTE (11/09/2026): se intentó actualizar a n8n 2.37.10 para
+# observabilidad (Langfuse/OTEL) — validado sin problemas en entorno local,
+# pero en Render causó un loop de reinicios reales por "Ran out of memory
+# (used over 512MB)" (confirmado en Events del dashboard). Revertido a
+# 1.83.2. Antes de reintentar la actualización en producción: conseguir más
+# RAM (plan pago) o medir el consumo real bajo carga, no solo en reposo.
+# Detalle completo: docs/sprint-2/S2-05-Investigacion-Observabilidad-n8n.md
 
 databases:
   - name: agrosmart-postgres
