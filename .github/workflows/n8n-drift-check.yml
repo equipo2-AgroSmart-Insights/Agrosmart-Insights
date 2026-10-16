@@ -18,6 +18,13 @@ jobs:
   drift-check:
     name: Comparar producción (Render Postgres) vs git
     runs-on: ubuntu-latest
+    env:
+      # `secrets.X` directo dentro de un `if:` falla la validación del
+      # workflow en cualquier disparador (confirmado: 50/50 corridas
+      # fallidas en 0s — GitHub no reconoce el contexto `secrets` ahí).
+      # Se indirecciona por `env:` a nivel de job, que sí está soportado
+      # en `if:`.
+      HAS_DB_SECRET: ${{ secrets.RENDER_DATABASE_URL != '' }}
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -31,13 +38,13 @@ jobs:
         run: pip install psycopg2-binary
 
       - name: Avisar si falta el secret
-        if: ${{ secrets.RENDER_DATABASE_URL == '' }}
+        if: ${{ env.HAS_DB_SECRET == 'false' }}
         run: |
           echo "::warning::RENDER_DATABASE_URL no está configurado — se omite el chequeo de drift."
 
       - name: Ejecutar chequeo de drift
         id: drift
-        if: ${{ secrets.RENDER_DATABASE_URL != '' }}
+        if: ${{ env.HAS_DB_SECRET == 'true' }}
         env:
           RENDER_DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
         run: |
@@ -66,7 +73,7 @@ jobs:
           fi
 
       - name: Cerrar issue de drift si ya quedó todo sincronizado
-        if: ${{ steps.drift.outcome == 'success' && secrets.RENDER_DATABASE_URL != '' }}
+        if: ${{ steps.drift.outcome == 'success' && env.HAS_DB_SECRET == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
