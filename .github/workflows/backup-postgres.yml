@@ -28,21 +28,29 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: postgres:18 # misma versión mayor que Render, evita el mismatch de pg_dump
+    env:
+      # `secrets.X` directo dentro de un `if:` falla la validación del
+      # workflow en cualquier disparador (confirmado: 50/50 corridas
+      # fallidas en 0s desde el 13/10, también en backup-postgres.yml,
+      # no solo en archivos nuevos) — GitHub no reconoce el contexto
+      # `secrets` ahí. Se indirecciona por `env:` a nivel de job, que sí
+      # está soportado en `if:`.
+      HAS_DB_SECRET: ${{ secrets.RENDER_DATABASE_URL != '' }}
     steps:
       - name: Avisar si falta el secret
-        if: ${{ secrets.RENDER_DATABASE_URL == '' }}
+        if: ${{ env.HAS_DB_SECRET == 'false' }}
         run: |
           echo "::warning::RENDER_DATABASE_URL no está configurado todavía — se omite el backup. Agrégalo en Settings → Secrets para activarlo."
 
       - name: Generar el dump
-        if: ${{ secrets.RENDER_DATABASE_URL != '' }}
+        if: ${{ env.HAS_DB_SECRET == 'true' }}
         env:
           DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
         run: |
           pg_dump "$DATABASE_URL" --no-owner --no-privileges -f backup-render-postgres.sql
 
       - name: Subir el backup como artefacto
-        if: ${{ secrets.RENDER_DATABASE_URL != '' }}
+        if: ${{ env.HAS_DB_SECRET == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: backup-render-postgres-${{ github.run_id }}
