@@ -1,0 +1,978 @@
+{
+  "name": "WF0: Ingesta Histórica MIDAGRI MMF2",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst resultado = [];\n\nconst regiones = $items(\"Code in JavaScript Regiones productoras\");\n\nfor (const item of items) {\n\n  const clima = item.json;\n\n  if (!clima.daily?.time) {\n    continue;\n  }\n\n  // Buscar la región más cercana a las coordenadas\n  let regionEncontrada = null;\n  let menorDistancia = Infinity;\n\n  for (const r of regiones) {\n\n    const region = r.json;\n\n    const distancia =\n      Math.abs(Number(clima.latitude) - Number(region.latitud)) +\n      Math.abs(Number(clima.longitude) - Number(region.longitud));\n\n    if (distancia < menorDistancia) {\n      menorDistancia = distancia;\n      regionEncontrada = region;\n    }\n  }\n\n  if (!regionEncontrada) {\n    continue;\n  }\n\n  // Crear una fila por cada día histórico\n  for (let i = 0; i < clima.daily.time.length; i++) {\n\n    resultado.push({\n      json: {\n\n        fecha:\n          clima.daily.time[i],\n\n        ubicacion:\n          regionEncontrada.region,\n\n        region_id:\n          regionEncontrada.region_id,\n\n        ciudad_referencia:\n          regionEncontrada.ciudad_referencia,\n\n        latitud:\n          Number(regionEncontrada.latitud),\n\n        longitud:\n          Number(regionEncontrada.longitud),\n\n        temperatura:\n          clima.daily.temperature_2m_mean?.[i] ?? null,\n\n        precipitacion:\n          clima.daily.precipitation_sum?.[i] ?? null,\n\n        humedad:\n          clima.daily.relative_humidity_2m_mean?.[i] ?? null,\n\n        evapotranspiracion:\n          clima.daily.et0_fao_evapotranspiration?.[i] ?? null,\n\n        tipo_dato:\n          \"historico\"\n      }\n    });\n  }\n}\n\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        832
+      ],
+      "id": "fc179766-a9a7-4fe9-9f17-1cb8c48cfea9",
+      "name": "Normaliza datos climáticos - Code in JavaScript",
+      "alwaysOutputData": false,
+      "retryOnFail": false,
+      "executeOnce": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const anioTarget = 2026;\nconst mesTarget = 3;\n\n// Hora de Lima\nconst ahoraLima = new Date(\n  new Date().toLocaleString(\"en-US\", {\n    timeZone: \"America/Lima\"\n  })\n);\n\n// Para histórico usamos hasta ayer,\n// porque el día actual todavía puede estar incompleto.\nconst ayer = new Date(ahoraLima);\nayer.setDate(ayer.getDate() - 1);\n\nconst inicioMes =\n  new Date(anioTarget, mesTarget - 1, 1);\n\nconst finMes =\n  new Date(anioTarget, mesTarget, 0);\n\n// Elegimos el menor:\n// fin del mes o ayer.\nconst finReal =\n  finMes < ayer\n    ? finMes\n    : ayer;\n\nfunction formatoFecha(d) {\n  const y = d.getFullYear();\n\n  const m =\n    String(d.getMonth() + 1)\n      .padStart(2, \"0\");\n\n  const dia =\n    String(d.getDate())\n      .padStart(2, \"0\");\n\n  return `${y}-${m}-${dia}`;\n}\n\n// Si intentaras cargar un mes futuro,\n// no mandamos nada a Open-Meteo.\nif (inicioMes > finReal) {\n  return [];\n}\n\nreturn [{\n  json: {\n    start_date: formatoFecha(inicioMes),\n    end_date: formatoFecha(finReal)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        832
+      ],
+      "id": "2a73602e-2b7c-4eb4-acfb-47733477f1ec",
+      "name": "Code in JavaScript Mes1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const original = item.json.producto || '';\n\n  const normalizado = original\n    .replace(/\\s+[12]\\/$/, '')\n    .trim();\n\n  return {\n    json: {\n      ...item.json,\n      producto_original: original,\n      producto: normalizado\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2768,
+        16
+      ],
+      "id": "e9fbffdc-84e0-4c51-981a-ff1ce2077cfb",
+      "name": "Code in JavaScript Normalizar nombre producto"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    $1::text AS producto_original,\n    p.id AS producto_id,\n    p.nombre_canonico\nFROM (SELECT 1) AS base\nLEFT JOIN public.productos_maestro p\n    ON p.nombre_normalizado =\n       LOWER(UNACCENT(TRIM($1::text)))\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [$json.producto] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2944,
+        16
+      ],
+      "id": "2de6f604-701e-4bdd-b4e5-ad0ae49302c5",
+      "name": "Execute a SQL query Buscar producto_id",
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst maestros = $input.all();\n\nconst originales = $items(\n  \"Code in JavaScript Normalizar nombre producto\"\n);\n\nif (maestros.length !== originales.length) {\n  throw new Error(\n    `Cantidad diferente: ${maestros.length} resultados SQL y ${originales.length} productos`\n  );\n}\n\nreturn maestros.map((maestro, index) => {\n  const original = originales[index].json;\n  const encontrado = maestro.json;\n\n  const normalizar = s => String(s ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .trim()\n    .toLowerCase();\n\n  if (\n    normalizar(original.producto) !==\n    normalizar(encontrado.producto_original)\n  ) {\n    throw new Error(\n      `Mapeo incorrecto: ${original.producto} / ${encontrado.producto_original}`\n    );\n  }\n\n  if (!encontrado.producto_id) {\n    throw new Error(\n      `Producto sin ID maestro: ${original.producto}`\n    );\n  }\n\n  return {\n    json: {\n      ...original,\n      producto_id: Number(encontrado.producto_id),\n      producto: encontrado.nombre_canonico\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3136,
+        16
+      ],
+      "id": "39c47280-4b7f-417b-a982-ccafb3fcf6c5",
+      "name": "Code in JavaScript Unir producto maestro"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      region_id: 1,\n      region: \"Junín\",\n      ciudad_referencia: \"Huancayo\",\n      latitud: -12.0651,\n      longitud: -75.2049\n    }\n  },\n  {\n    json: {\n      region_id: 2,\n      region: \"Ica\",\n      ciudad_referencia: \"Ica\",\n      latitud: -14.0678,\n      longitud: -75.7286\n    }\n  },\n  {\n    json: {\n      region_id: 3,\n      region: \"La Libertad\",\n      ciudad_referencia: \"Trujillo\",\n      latitud: -8.1116,\n      longitud: -79.0287\n    }\n  },\n  {\n    json: {\n      region_id: 4,\n      region: \"Huánuco\",\n      ciudad_referencia: \"Huánuco\",\n      latitud: -9.9306,\n      longitud: -76.2422\n    }\n  },\n  {\n    json: {\n      region_id: 5,\n      region: \"Ayacucho\",\n      ciudad_referencia: \"Ayacucho\",\n      latitud: -13.1631,\n      longitud: -74.2236\n    }\n  },\n  {\n    json: {\n      region_id: 6,\n      region: \"Arequipa\",\n      ciudad_referencia: \"Arequipa\",\n      latitud: -16.4090,\n      longitud: -71.5375\n    }\n  },\n  {\n    json: {\n      region_id: 7,\n      region: \"Áncash\",\n      ciudad_referencia: \"Huaraz\",\n      latitud: -9.5278,\n      longitud: -77.5278\n    }\n  },\n  {\n    json: {\n      region_id: 8,\n      region: \"Cajamarca\",\n      ciudad_referencia: \"Cajamarca\",\n      latitud: -7.1617,\n      longitud: -78.5128\n    }\n  },\n  {\n    json: {\n      region_id: 9,\n      region: \"Piura\",\n      ciudad_referencia: \"Piura\",\n      latitud: -5.1945,\n      longitud: -80.6328\n    }\n  },\n  {\n    json: {\n      region_id: 10,\n      region: \"Lima\",\n      ciudad_referencia: \"Huaral\",\n      latitud: -11.4950,\n      longitud: -77.2078\n    }\n  },\n  {\n    json: {\n      region_id: 11,\n      region: \"Cusco\",\n      ciudad_referencia: \"Cusco\",\n      latitud: -13.5319,\n      longitud: -71.9675\n    }\n  },\n  {\n    json: {\n      region_id: 12,\n      region: \"Apurímac\",\n      ciudad_referencia: \"Abancay\",\n      latitud: -13.6339,\n      longitud: -72.8814\n    }\n  },\n  {\n    json: {\n      region_id: 13,\n      region: \"Pasco\",\n      ciudad_referencia: \"Cerro de Pasco\",\n      latitud: -10.6864,\n      longitud: -76.2625\n    }\n  },\n  {\n    json: {\n      region_id: 14,\n      region: \"Lambayeque\",\n      ciudad_referencia: \"Chiclayo\",\n      latitud: -6.7714,\n      longitud: -79.8409\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        832
+      ],
+      "id": "576e0db6-dcc8-4aea-8f36-34295f98a1c9",
+      "name": "Code in JavaScript Regiones productoras"
+    },
+    {
+      "parameters": {
+        "url": "=https://archive-api.open-meteo.com/v1/archive",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $json.latitud }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $json.longitud }}"
+            },
+            {
+              "name": "daily",
+              "value": "temperature_2m_mean,precipitation_sum,relative_humidity_2m_mean,et0_fao_evapotranspiration"
+            },
+            {
+              "name": "timezone",
+              "value": "America/Lima"
+            },
+            {
+              "name": "start_date",
+              "value": "={{ $('Code in JavaScript Mes1').item.json.start_date }}"
+            },
+            {
+              "name": "end_date",
+              "value": "={{ $('Code in JavaScript Mes1').item.json.end_date }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1648,
+        832
+      ],
+      "id": "75c675f5-99fa-455a-a1dc-ea22ba45f1f2",
+      "name": "HTTP Request 2 Open Meteo Historico",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "\n/*\n AgroSmart Insights - WF0\n Generar fechas para la ingesta historica MIDAGRI MMF2\n\n Permite:\n - Procesar un mes completo.\n - Probar una fecha especifica.\n - Saltar sabados y domingos.\n - Mantener la fecha dinamica.\n*/\n\nconst anioTarget = 2026;\nconst mesTarget = 3;\n\n\nconst resultados = [];\n\n// Validar año y mes.\nif (\n  !Number.isInteger(anioTarget) ||\n  !Number.isInteger(mesTarget) ||\n  mesTarget < 1 ||\n  mesTarget > 12\n) {\n  throw new Error('Año o mes invalido');\n}\n\nconst ultimoDia = new Date(\n  Date.UTC(anioTarget, mesTarget, 0)\n).getUTCDate();\n\n// Generar fechas.\nfor (let dia = 1; dia <= ultimoDia; dia++) {\n\n  const fecha = new Date(\n    Date.UTC(anioTarget, mesTarget - 1, dia)\n  );\n\n  const fechaTexto =\n    fecha.toISOString().slice(0, 10);\n\n  const diaSemana = fecha.getUTCDay();\n\n  // Saltar sabados y domingos.\n  if (diaSemana === 0 || diaSemana === 6) {\n    continue;\n  }\n\n\n  resultados.push({\n    json: {\n      fecha_objetivo: fechaTexto,\n      anio: anioTarget,\n      mes: mesTarget\n    }\n  });\n}\n\n// Verificar que exista al menos una fecha.\nif (resultados.length === 0) {\n  throw new Error(\n    'No se generaron fechas. Revisa el mes, año y fechaPrueba.'\n  );\n}\n\nconsole.log(\n  'Fechas generadas:',\n  resultados.map(x => x.json.fecha_objetivo)\n);\nreturn resultados;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        240
+      ],
+      "name": "Generar URLs del Mes",
+      "id": "045b05d7-bb37-434c-8e2a-27715658f27b"
+    },
+    {
+      "parameters": {
+        "url": "https://sliding-babied-rendering.ngrok-free.dev/pdf",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "date",
+              "value": "={{ $json.fecha_objetivo }}"
+            },
+            {
+              "name": "mercado",
+              "value": "MMF2"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Bridge-Token",
+              "value": "{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}"
+            },
+            {
+              "name": "ngrok-skip-browser-warning",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        256
+      ],
+      "name": "Descargar PDFs",
+      "id": "3de9eca9-dd52-4d13-892b-df5c318ed32c",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1008,
+        240
+      ],
+      "name": "Schedule Trigger Mensual",
+      "id": "280c239b-0ed6-491a-95fb-b30811ce6a11"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2272,
+        16
+      ],
+      "id": "a0968d07-2dc0-4d33-8bb8-ecfaddc952df",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "content": "## I'm a note \ncambiar el campo \nconst mesTarget = 2;     // Cambia esto al mes que quieras (1 = Enero, 2 = Febrero, 3 = Marzo...)\n",
+        "height": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "d2340649-c4f6-43c7-b044-4df5e25f3138",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public",
+          "cachedResultName": "public",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "precios_diarios",
+          "mode": "list",
+          "cachedResultName": "precios_diarios"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "producto_id": "={{ $json.producto_id }}",
+            "mercado": "={{ $json.mercado }}",
+            "fecha": "={{ $json.fecha }}",
+            "producto": "={{ $json.producto }}",
+            "precio": "={{ $json.precio }}",
+            "volumen": "={{ $json.volumen_t }}",
+            "unidad": "={{ $json.unidad }}",
+            "volumen_t": "={{ $json.volumen_t }}",
+            "volumen_kg": "={{ $json.volumen_kg }}",
+            "equivalencia_kg": "={{ $json.equivalencia_kg }}"
+          },
+          "matchingColumns": [
+            "producto_id",
+            "fecha",
+            "mercado"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "producto",
+              "displayName": "producto",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mercado",
+              "displayName": "mercado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "precio",
+              "displayName": "precio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "volumen",
+              "displayName": "volumen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "unidad",
+              "displayName": "unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "volumen_t",
+              "displayName": "volumen_t",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "volumen_kg",
+              "displayName": "volumen_kg",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "equivalencia_kg",
+              "displayName": "equivalencia_kg",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "producto_id",
+              "displayName": "producto_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        3568,
+        16
+      ],
+      "id": "1d300c2a-1c0b-48c6-93f3-816c2d82e8fc",
+      "name": "Insert or update rows in a table2",
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1456,
+        240
+      ],
+      "id": "28053c2c-a2b1-4f81-a538-82c6ccaf723d",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "643198ca-0dc9-4670-9888-7712abfa44c3",
+              "leftValue": "={{ $binary.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "77bb7df9-0a69-4e41-93a6-162b403f0aa6",
+              "leftValue": "={{ $binary.data.mimeType }}",
+              "rightValue": "application/pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1888,
+        256
+      ],
+      "id": "2a5f2ddb-8949-4031-9b50-915f97656559",
+      "name": "If PDF válido"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4016,
+        576
+      ],
+      "id": "e7d046ad-65cf-483b-b0d9-17ba3656f004",
+      "name": "Wait 3s",
+      "webhookId": "0c1836f2-0790-4df8-ad5e-4a4c1bbed976"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        416
+      ],
+      "id": "7a88f3ec-b5be-4faf-a022-ec2cc9f80897",
+      "name": "Wait 2s",
+      "webhookId": "f94ba672-5f50-4bd7-9528-8b5157c8fb74"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3856,
+        224
+      ],
+      "id": "5fbff1cc-f508-4d6e-b668-fd75eb4c3be3",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2128,
+        240
+      ],
+      "id": "2e720f4f-bbe7-411c-b096-90dfaf6fc60d",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.jina.ai/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{SECRETO_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  model: \"jina-embeddings-v3\",\n  task: \"retrieval.passage\",\n  dimensions: 384,\n  input: $json.chunks\n} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2864,
+        240
+      ],
+      "id": "905fa140-9f35-4c8e-9d55-3c1faa8fc9c9",
+      "name": "HTTP Request - Jina Embeddings"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $json.text ?? \"\";\n\nif (!text.trim()) {\n  return [];\n}\n\nconst TAMANO = 1200;\nconst SOLAPAMIENTO = 200;\n\nconst chunks = [];\n\nlet inicio = 0;\n\nwhile (inicio < text.length) {\n\n  const fin = Math.min(inicio + TAMANO, text.length);\n\n  const fragmento = text\n    .slice(inicio, fin)\n    .trim();\n\n  if (fragmento) {\n    chunks.push(fragmento);\n  }\n\n  if (fin >= text.length) {\n    break;\n  }\n\n  inicio = fin - SOLAPAMIENTO;\n}\n\n\nreturn [{\n  json: {\n    chunks,\n    cantidad_chunks: chunks.length,\n    fuente: \"MIDAGRI\",\n    tipo_documento: \"boletin_diario\",\n    mercado: \"MMF2\",\n    fecha: $(\"Loop Over Items\").item.json.fecha_objetivo\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        240
+      ],
+      "id": "9f1746e0-fca0-4e0f-8c2b-a0ee10cef38f",
+      "name": "Code - Preparar chunks Jina"
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuesta = $json;\n\nconst origen = $(\"Code - Preparar chunks Jina\").item.json;\n\nconst chunks = origen.chunks ?? [];\nconst embeddings = respuesta.data ?? [];\n\nconst resultado = [];\n\nfor (let i = 0; i < embeddings.length; i++) {\n\n  if (!chunks[i] || !embeddings[i]?.embedding) {\n    continue;\n  }\n\n  resultado.push({\n    json: {\n      texto: chunks[i],\n\n      embedding: embeddings[i].embedding,\n\n      metadata: {\n        fuente: \"MIDAGRI\",\n        mercado: origen.mercado,\n        tipo_documento: \"boletin_diario\",\n        fecha: origen.fecha,\n        chunk: i + 1,\n        total_chunks: chunks.length,\n        modelo_embedding: \"jina-embeddings-v3\",\n        dimensiones: 384\n      }\n    }\n  });\n}\n\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3136,
+        240
+      ],
+      "id": "03e11b60-362d-4d80-b9d2-424914ab1de7",
+      "name": "Code - Unir chunks + embeddings"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "\nINSERT INTO documentos_rag (\n    text,\n    metadata,\n    embedding\n)\nSELECT\n    $1::text,\n    $2::jsonb,\n    $3::vector\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM documentos_rag\n    WHERE metadata->>'fuente' = 'MIDAGRI'\n      AND metadata->>'fecha' = $4::text\n      AND metadata->>'mercado' = $6::text\n      AND metadata->>'chunk' = $5::text\n      AND metadata->>'modelo_embedding' = 'jina-embeddings-v3'\n);\n",
+        "options": {
+          "queryReplacement": "=\n{{ [\n  $json.texto,\n  JSON.stringify($json.metadata),\n  JSON.stringify($json.embedding),\n  $json.metadata.fecha,\n  String($json.metadata.chunk),\n  $json.metadata.mercado\n] }}\n"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        3424,
+        240
+      ],
+      "id": "c26d9707-8d2a-4f3b-896f-8b8a99a5b585",
+      "name": "Postgres - Insertar RAG Jina",
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO clima_diario (\n    fecha,\n    ubicacion,\n    region_id,\n    ciudad_referencia,\n    latitud,\n    longitud,\n    temperatura,\n    precipitacion,\n    humedad,\n    evapotranspiracion,\n    tipo_dato\n)\nVALUES (\n    $1::date,\n    $2::text,\n    $3::int,\n    $4::text,\n    $5::numeric,\n    $6::numeric,\n    $7::numeric,\n    $8::numeric,\n    $9::numeric,\n    $10::numeric,\n    $11::text\n)\nON CONFLICT (fecha, ubicacion, tipo_dato)\nDO UPDATE SET\n    region_id = EXCLUDED.region_id,\n    ciudad_referencia = EXCLUDED.ciudad_referencia,\n    latitud = EXCLUDED.latitud,\n    longitud = EXCLUDED.longitud,\n    temperatura = EXCLUDED.temperatura,\n    precipitacion = EXCLUDED.precipitacion,\n    humedad = EXCLUDED.humedad,\n    evapotranspiracion = EXCLUDED.evapotranspiracion;",
+        "options": {
+          "queryReplacement": "={{ [   $json.fecha,   $json.ubicacion,   $json.region_id,   $json.ciudad_referencia,   $json.latitud,   $json.longitud,   $json.temperatura,   $json.precipitacion,   $json.humedad,   $json.evapotranspiracion,   $json.tipo_dato ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2064,
+        832
+      ],
+      "id": "66f1cec4-0acb-49ea-b1c8-fe6a0bd20ca3",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n/*\n AgroSmart Insights - WF0\n Parser MMF2 - Seleccion por fecha de tabla\n\n Fuente: MIDAGRI / SISAP\n\n Objetivos:\n - Leer solo tablas correspondientes al dia solicitado.\n - Evitar mezclar tablas historicas del mismo PDF.\n - Soportar filas horizontales y verticales.\n - Conservar excepcion PERA AGUA ITALIANA.\n - Detectar precios incorrectos y duplicados.\n - NO insertar directamente en PostgreSQL.\n*/\n\nconst items = $input.all();\n\nconst resultados = [];\nconst errores = [];\nconst vistos = new Map();\n\nlet horizontales = 0;\nlet verticales = 0;\nlet duplicadosIdenticos = 0;\n\n// ==========================================\n// 1. FECHA SOLICITADA Y FECHA DEL PDF\n// ==========================================\n\nconst nombrePDF = $('Descargar PDFs')\n  .first().binary.data.fileName;\n\nconst meses = {\n  ene: '01', feb: '02', mar: '03',\n  abr: '04', may: '05', jun: '06',\n  jul: '07', ago: '08', sep: '09',\n  set: '09', oct: '10', nov: '11',\n  dic: '12'\n};\n\nconst coincidencia = nombrePDF.match(\n  /^sisap-gmml-mm2-(\\d{2})([a-z]{3})(\\d{2})\\.pdf$/i\n);\n\nif (!coincidencia) {\n  throw new Error(\n    'Nombre del PDF no reconocido: ' + nombrePDF\n  );\n}\n\nconst mesPDF = meses[\n  coincidencia[2].toLowerCase()\n];\n\nif (!mesPDF) {\n  throw new Error('Mes del PDF no reconocido');\n}\n\nconst fechaObjetivo =\n  `20${coincidencia[3]}-${mesPDF}-${coincidencia[1]}`;\n\nconst fechaSolicitada = String(\n  $('Loop Over Items').item.json.fecha_objetivo ?? ''\n).slice(0, 10);\n\nif (\n  !fechaSolicitada ||\n  fechaObjetivo !== fechaSolicitada\n) {\n  throw new Error(\n    `Fecha incorrecta. PDF: ${fechaObjetivo}. ` +\n    `Solicitada: ${fechaSolicitada}`\n  );\n}\n\nconst diaObjetivo = Number(\n  fechaObjetivo.slice(8, 10)\n);\n\n// ==========================================\n// 2. FUNCIONES AUXILIARES\n// ==========================================\n\nfunction normalizarNombre(valor) {\n  return String(valor ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/\\s+/g, ' ')\n    .trim()\n    .toUpperCase();\n}\n\nfunction numero(valor) {\n  const texto = String(valor ?? '').trim();\n\n  if (!/^\\d+(?:[.,]\\d+)?$/.test(texto)) {\n    return null;\n  }\n\n  const n = Number(texto.replace(',', '.'));\n\n  return Number.isFinite(n) ? n : null;\n}\n\nfunction porcentaje(valor) {\n  return /^[-+]?\\d+(?:[.,]\\d+)?%$/.test(\n    String(valor ?? '').trim()\n  );\n}\n\nfunction excepcionPera(producto, valores) {\n  return (\n    fechaObjetivo === '2026-06-24' &&\n    normalizarNombre(producto) ===\n      'PERA AGUA ITALIANA' &&\n    valores.length === 10\n  );\n}\n\nfunction validarColumnas(valores, producto) {\n\n  if (valores.length === 12) {\n\n    return (\n      porcentaje(valores[2]) &&\n      porcentaje(valores[11]) &&\n      valores.every((v, i) =>\n        i === 2 || i === 11\n          ? porcentaje(v)\n          : numero(v) !== null\n      )\n    );\n  }\n\n  // Fila excepcional comprobada en el PDF\n  // del 24 de junio de 2026.\n\n  if (excepcionPera(producto, valores)) {\n\n    return (\n      numero(valores[0]) !== null &&\n      valores.slice(1, 9).every(\n        v => numero(v) !== null\n      ) &&\n      porcentaje(valores[9])\n    );\n  }\n\n  return false;\n}\n\nfunction nombreValido(producto) {\n\n  const nombre = String(producto ?? '').trim();\n\n  if (nombre.length < 3) return false;\n\n  if (/^\\d{5}$/.test(nombre)) {\n    return false;\n  }\n\n  if (/^(GMML|MMF2)$/i.test(nombre)) {\n    return false;\n  }\n\n  if (/^[-+]?\\d+(?:[.,]\\d+)?%?$/.test(nombre)) {\n    return false;\n  }\n\n  if (\n    /^\\d{5}\\s+.+\\s+(GMML|MMF2)\\s+/i.test(nombre)\n  ) {\n    return false;\n  }\n\n  return true;\n}\n\n// ==========================================\n// 3. REGISTRAR PRODUCTO\n// ==========================================\n\nfunction registrar({\n  codigo,\n  producto,\n  valores,\n  formato\n}) {\n\n  const nombre = String(producto ?? '').trim();\n\n  if (!nombreValido(nombre)) {\n    errores.push('Producto invalido: ' + nombre);\n    return;\n  }\n\n  if (!validarColumnas(valores, nombre)) {\n    errores.push(\n      `Columnas invalidas: ${nombre} -> ` +\n      valores.join(' | ')\n    );\n    return;\n  }\n\n  const excepcional = valores.length === 10;\n\n  const precioAyer = numero(\n    excepcional ? valores[7] : valores[9]\n  );\n\n  const precioHoy = numero(\n    excepcional ? valores[8] : valores[10]\n  );\n\n  if (\n    precioHoy === null ||\n    precioHoy <= 0 ||\n    precioAyer === null ||\n    precioAyer <= 0\n  ) {\n    errores.push(\n      'Precio invalido: ' + nombre\n    );\n    return;\n  }\n\n  const clave = [\n    fechaObjetivo,\n    'MMF2',\n    normalizarNombre(nombre)\n  ].join('|');\n\n  if (vistos.has(clave)) {\n\n    const anterior = vistos.get(clave);\n\n    if (\n      anterior.precio === precioHoy &&\n      anterior.precio_ayer === precioAyer\n    ) {\n      duplicadosIdenticos++;\n      return;\n    }\n\n    errores.push(\n      `Duplicado contradictorio: ${nombre}. ` +\n      `Anterior: ${anterior.precio_ayer}/` +\n      `${anterior.precio}. ` +\n      `Nuevo: ${precioAyer}/${precioHoy}`\n    );\n\n    return;\n  }\n\n  vistos.set(clave, {\n    precio: precioHoy,\n    precio_ayer: precioAyer\n  });\n\n  resultados.push({\n    json: {\n      fecha: fechaObjetivo,\n      codigo_cnpa: codigo ?? null,\n      producto: nombre,\n      mercado: 'MMF2',\n\n      unidad: 'Kilogramo',\n      equivalencia_kg: 1,\n\n      precio: precioHoy,\n      precio_ayer: precioAyer,\n\n      volumen_t: null,\n      volumen_kg: null,\n\n      fuente: 'MIDAGRI',\n      formato_origen: formato,\n      tipo_prueba: 'parser_mmf2'\n    }\n  });\n\n  if (formato === 'horizontal') {\n    horizontales++;\n  } else {\n    verticales++;\n  }\n}\n\n// ==========================================\n// 4. DIVIDIR EL PDF EN TABLAS\n// ==========================================\n\nfunction obtenerLineas() {\n\n  const texto = items\n    .map(item => String(item.json.text ?? ''))\n    .join('\\n');\n\n  if (!texto.trim()) {\n    throw new Error(\n      'Extract from File1 no entrego texto'\n    );\n  }\n\n  return texto\n    .split(/\\r?\\n/)\n    .map(linea =>\n      linea.replace(/\\s+/g, ' ').trim()\n    )\n    .filter(Boolean);\n}\n\nconst lineas = obtenerLineas();\n\n// Ubicar encabezados de tablas de precios.\nconst inicios = [];\n\nfor (let i = 0; i < lineas.length; i++) {\n\n  if (\n    /PRECIOS MAYORISTAS DE LOS PRINCIPALES/i\n      .test(lineas[i])\n  ) {\n    inicios.push(i);\n  }\n}\n\nif (inicios.length === 0) {\n  throw new Error(\n    'No se encontraron encabezados de tablas de precios'\n  );\n}\n\n// ==========================================\n// 5. IDENTIFICAR FECHA DE CADA TABLA\n// ==========================================\n\nfunction fechaCierreTabla(bloque) {\n\n  // El encabezado contiene los dias\n  // de las columnas, por ejemplo:\n  // mar-23, mie-24, ..., mar-30.\n  //\n  // Buscamos el ultimo dia del encabezado,\n  // no las fechas de los productos.\n\n  const encabezado = [];\n\n  for (\n    let i = 0;\n    i < Math.min(bloque.length, 100);\n    i++\n  ) {\n\n    const linea = bloque[i];\n\n    // Detener al encontrar la primera\n    // fila horizontal de producto.\n    if (\n      /^\\d{5}\\s+.+?\\s+(GMML|MMF2)\\s+/i\n        .test(linea)\n    ) {\n      break;\n    }\n\n    encabezado.push(linea);\n  }\n\n  const texto = encabezado.join(' ');\n\n  const patron =\n    /\\b(lun|mar|mie|mié|jue|vie|sab|sáb|dom)[-\\s]+(\\d{1,2})\\b/gi;\n\n  const coincidencias = [\n    ...texto.matchAll(patron)\n  ];\n\n  if (coincidencias.length === 0) {\n    return null;\n  }\n\n  return Number(\n    coincidencias[coincidencias.length - 1][2]\n  );\n}\n\n// Crear secciones delimitadas por encabezados.\nconst secciones = [];\n\nfor (let i = 0; i < inicios.length; i++) {\n\n  const inicio = inicios[i];\n\n  const fin = (\n    i + 1 < inicios.length\n      ? inicios[i + 1]\n      : lineas.length\n  );\n\n  const bloque = lineas.slice(inicio, fin);\n\n  const diaCierre =\n    fechaCierreTabla(bloque);\n\n  secciones.push({\n    inicio: inicio + 1,\n    fin,\n    diaCierre,\n    bloque\n  });\n}\n\nconsole.log(\n  'Tablas identificadas:',\n  secciones.map(s => ({\n    inicio: s.inicio,\n    fin: s.fin,\n    diaCierre: s.diaCierre\n  }))\n);\n\n// ==========================================\n// 6. SELECCIONAR SOLO FECHA OBJETIVO\n// ==========================================\n\nconst seleccionadas = secciones.filter(\n  seccion =>\n    seccion.diaCierre === diaObjetivo\n);\n\nif (seleccionadas.length === 0) {\n  throw new Error(\n    `No se encontro una tabla cuyo cierre ` +\n    `sea el dia ${diaObjetivo}. ` +\n    `Cierres detectados: ` +\n    secciones\n      .map(s => s.diaCierre ?? 'sin fecha')\n      .join(', ')\n  );\n}\n\n// Esta comprobacion evita mezclar\n// secciones antiguas o sin fecha.\n\nconsole.log(\n  'Fecha objetivo:',\n  fechaObjetivo\n);\n\nconsole.log(\n  'Secciones seleccionadas:',\n  seleccionadas.length\n);\n\n// ==========================================\n// 7. EXTRAER FILAS HORIZONTALES\n// ==========================================\n\nfor (const seccion of seleccionadas) {\n\n  const bloque = seccion.bloque;\n\n  for (const linea of bloque) {\n\n    const m = linea.match(\n      /^(\\d{5})\\s+(.+?)\\s+MMF2\\s+(.+)$/i\n    );\n\n    if (!m) continue;\n\n    const codigo = m[1];\n    const producto = m[2];\n\n    const valores = m[3]\n      .trim()\n      .split(/\\s+/);\n\n    registrar({\n      codigo,\n      producto,\n      valores,\n      formato: 'horizontal'\n    });\n  }\n\n\n  // ========================================\n  // 8. EXTRAER FILAS VERTICALES\n  // ========================================\n\n  for (let i = 0; i < bloque.length; i++) {\n\n    if (bloque[i].toUpperCase() !== 'MMF2') {\n      continue;\n    }\n\n    const producto = bloque[i - 1] ?? '';\n\n    \n    // Evitar interpretar como vertical una fila\n    // que ya contiene todos los datos horizontalmente.\n    const filaHorizontal =\n      /^\\d{5}\\s+.+\\s+MMF2\\s+\\d/i.test(producto);\n\n    if (filaHorizontal) {\n      continue;\n    }\n\n    // Validar que el nombre sea independiente,\n    // no una fila horizontal completa.\n    if (/^\\d{5}\\s+.+\\s+MMF2\\b/i.test(producto)) {\n      continue;\n    }\n\n    if (!nombreValido(producto)) {\n      continue;\n    }\n\n    const normalizado = normalizarNombre(producto);\n\n    const clave = [\n      fechaObjetivo,\n      'MMF2',\n      normalizado\n    ].join('|');\n\n    // Evitar duplicar una fila ya recuperada.\n    if (vistos.has(clave)) {\n      continue;\n    }\n\n    const valores12 = bloque.slice(i + 1, i + 13);\n\n    let valores = null;\n\n    // CASO NORMAL: 12 columnas\n    if (\n      valores12.length === 12 &&\n      valores12.every(v => !/\\s/.test(v)) &&\n      validarColumnas(valores12, producto)\n    ) {\n      valores = valores12;\n    }\n\n    // CASO ESPECIAL: PERA AGUA ITALIANA\n    if (\n      !valores &&\n      fechaObjetivo === '2026-06-24' &&\n      normalizado === 'PERA AGUA ITALIANA'\n    ) {\n\n      const valores10 = bloque.slice(i + 1, i + 11);\n\n      if (\n        valores10.length === 10 &&\n        valores10.every(v => !/\\s/.test(v)) &&\n        validarColumnas(valores10, producto)\n      ) {\n        valores = valores10;\n      }\n    }\n\n    // CASO ESPECIAL: COCO, MAYO 2026\n    if (\n      !valores &&\n      fechaObjetivo === '2026-05-14' &&\n      /^COCO\\s*\\(COSTA\\s*\\/\\s*SELVA\\)$/i.test(producto)\n    ) {\n\n      const valores11 = bloque.slice(i + 1, i + 12);\n\n      const valoresEsperados = [\n        '0.00',\n        '1.81',\n        '0.00',\n        '0.00',\n        '2.13',\n        '2.10',\n        '2.15',\n        '2.10',\n        '2.10',\n        '2.10',\n        '0.0%'\n      ];\n\n      // Reconocer unicamente el formato\n      // exacto observado en el PDF.\n      if (\n        valores11.length === 11 &&\n        valores11.every(\n          (v, j) => v === valoresEsperados[j]\n        )\n      ) {\n\n        // No registrar COCO porque falta\n        // una columna y su posicion no\n        // puede reconstruirse con certeza.\n        console.log(\n          'COCO 2026-05-14: fila incompleta, ' +\n          'omitida para evitar precios incorrectos'\n        );\n\n        continue;\n      }\n    }\n\n    if (!valores) {\n      errores.push(\n        `Fila vertical no interpretable: ${producto}`\n      );\n      continue;\n    }\n\n    const codigoAnterior = bloque[i - 2] ?? '';\n\n    const codigo = /^\\d{5}$/.test(codigoAnterior)\n      ? codigoAnterior\n      : null;\n\n    registrar({\n      codigo,\n      producto,\n      valores,\n      formato: 'vertical'\n    });\n  }\n}\n\n// ==========================================\n// 9. VALIDACIONES DE SEGURIDAD\n// ==========================================\n\nif (errores.length > 0) {\n  throw new Error(\n    `${errores.length} registros MMF2 invalidos. ` +\n    'Ejemplos: ' +\n    errores.slice(0, 5).join(' | ')\n  );\n}\n\nif (resultados.length === 0) {\n  throw new Error(\n    'No se encontraron productos MMF2'\n  );\n}\n\nif (resultados.length !== vistos.size) {\n  throw new Error(\n    'Cantidad inconsistente de productos unicos'\n  );\n}\n\n// Este rango es solo una alerta\n// de extraccion atipica.\nif (\n  resultados.length < 50 ||\n  resultados.length > 150\n) {\n  throw new Error(\n    `Cantidad atipica de productos MMF2: ` +\n    resultados.length\n  );\n}\n\n// ==========================================\n// 10. RESULTADO\n// ==========================================\n\nconsole.log(\n  'Productos horizontales:',\n  horizontales\n);\n\nconsole.log(\n  'Productos verticales:',\n  verticales\n);\n\nconsole.log(\n  'Duplicados identicos ignorados:',\n  duplicadosIdenticos\n);\n\nconsole.log(\n  'Total productos extraidos:',\n  resultados.length\n);\n\nreturn resultados;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        16
+      ],
+      "id": "d4933bc2-516c-4a82-a468-dff4cb79714a",
+      "name": "Code - Parser MMF2 Prueba"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nconst claves = new Set();\n\nfor (const item of items) {\n  const r = item.json;\n\n  if (\n    r.mercado !== 'MMF2' ||\n    !/^\\d{4}-\\d{2}-\\d{2}$/.test(r.fecha) ||\n    !Number.isInteger(Number(r.producto_id)) ||\n    Number(r.producto_id) <= 0 ||\n    !Number.isFinite(Number(r.precio)) ||\n    Number(r.precio) <= 0\n  ) {\n    throw new Error(\n      'Registro MMF2 inválido: ' +\n      JSON.stringify(r)\n    );\n  }\n\n  const clave = `${r.fecha}|${r.mercado}|${r.producto_id}`;\n\n  if (claves.has(clave)) {\n    throw new Error('Registro duplicado: ' + clave);\n  }\n\n  claves.add(clave);\n}\nif (items.length < 1 || items.length > 150) {\n  throw new Error(\n    `Cantidad inesperada de registros MMF2: ${items.length}`\n  );\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        16
+      ],
+      "id": "c2ac58ad-c776-4781-88fc-d3773feaadb6",
+      "name": "Code - Validar MMF2"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst texto = $('Extract from File1').first().json.text;\n\nif (!texto) {\n  throw new Error('El PDF no entregó texto');\n}\n\nconst lineas = String(texto).split(/\\r?\\n/);\n\nconst coincidencias = [];\n\nfor (let i = 0; i < lineas.length; i++) {\n  if (/PERA\\s+AGUA\\s+CRIOLLA\\s*\\/\\s*CORRIENTE/i.test(lineas[i])) {\n\n    const siguientes = lineas.slice(i + 1, i + 25);\n\n    coincidencias.push({\n      linea_producto: i + 1,\n      producto: lineas[i].trim(),\n\n      lineas_originales: siguientes.map((valor, j) => ({\n        linea: i + j + 2,\n        valor: valor.trim()\n      })),\n\n      valores_sin_vacios: siguientes\n        .map(v => v.trim())\n        .filter(Boolean)\n        .slice(0, 16)\n    });\n  }\n}\n\nif (coincidencias.length === 0) {\n  throw new Error('No se encontró PERA AGUA CRIOLLA/CORRIENTE');\n}\n\nreturn [{\n  json: {\n    coincidencias_encontradas: coincidencias.length,\n    coincidencias\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        -176
+      ],
+      "id": "e777297b-1db3-41f2-b2ae-99f6d297a810",
+      "name": "Code - Diagnosticar tablas MMF2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Normaliza datos climáticos - Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript Mes1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript Regiones productoras",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript Normalizar nombre producto": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query Buscar producto_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query Buscar producto_id": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript Unir producto maestro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript Unir producto maestro": {
+      "main": [
+        [
+          {
+            "node": "Code - Validar MMF2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript Regiones productoras": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request 2 Open Meteo Historico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request 2 Open Meteo Historico": {
+      "main": [
+        [
+          {
+            "node": "Normaliza datos climáticos - Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar URLs del Mes": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar PDFs": {
+      "main": [
+        [
+          {
+            "node": "If PDF válido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger Mensual": {
+      "main": [
+        [
+          {
+            "node": "Generar URLs del Mes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript Mes1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Code - Parser MMF2 Prueba",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code - Diagnosticar tablas MMF2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Descargar PDFs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If PDF válido": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 2s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert or update rows in a table2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3s": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Wait 3s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code - Preparar chunks Jina",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Jina Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Code - Unir chunks + embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Preparar chunks Jina": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Jina Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Unir chunks + embeddings": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Insertar RAG Jina",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Insertar RAG Jina": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code - Parser MMF2 Prueba": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript Normalizar nombre producto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Validar MMF2": {
+      "main": [
+        [
+          {
+            "node": "Insert or update rows in a table2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Diagnosticar tablas MMF2": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3754627a-033c-4c75-8bc6-72da474ef703",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "HZlJkoPKKXFZJ9Po"
+}

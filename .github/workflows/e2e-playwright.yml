@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   e2e:
@@ -51,3 +52,18 @@ jobs:
           name: playwright-report
           path: e2e/playwright-report/
           retention-days: 14
+
+      - name: Avisar con un issue (si corrió por el cron, no manual)
+        # Corre cada 6h sin que nadie lo mire — antes, si fallaba de madrugada
+        # nadie se enteraba hasta entrar a mano a la pestaña Actions.
+        if: ${{ failure() && github.event_name == 'schedule' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label ci-e2e-failure --state open --json number --jq '.[0].number')
+          BODY="La corrida programada de Playwright falló: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Pruebas E2E fallando en producción" --label ci-e2e-failure --body "$BODY"
+          fi
