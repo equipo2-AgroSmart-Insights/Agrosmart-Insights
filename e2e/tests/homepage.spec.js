@@ -23,8 +23,9 @@ test.describe('Página principal', () => {
     ).toBeVisible();
     await expect(page.getByRole('button', { name: /Consultar/i })).toBeVisible();
 
-    await expect(page.getByText('Tendencias de Precio')).toBeVisible();
-    await expect(page.getByText('Riesgo Climático')).toBeVisible();
-    await expect(page.getByText('Logística')).toBeVisible();
+    // Las consultas sugeridas son contenido editorial (puede cambiar su
+    // redacción con el tiempo, ej. PR #99 de gráficos en el chat) — se
+    // valida la sección en sí, no textos exactos que puedan rotar.
+    await expect(page.getByText('CONSULTAS SUGERIDAS')).toBeVisible();
   });
 });
