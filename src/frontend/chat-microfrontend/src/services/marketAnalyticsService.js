@@ -124,14 +124,183 @@ export function extractDynamicRecords(result) {
     ];
   }
 
-  // 5. Parser dinámico de texto para respuestas libres de n8n / Groq / Gemini
+  // 5. Parser dinámico de texto para respuestas estructuradas del agente n8n
   const textContent = result.respuesta || result.response || result.text || "";
   if (typeof textContent === "string" && textContent.length > 0) {
+    const structuredRows = parseStructuredN8nEvaluation(textContent);
+    if (structuredRows.length > 0) return structuredRows;
+
     const parsedRows = parseTextForMarketNumbers(textContent);
     if (parsedRows.length > 0) return parsedRows;
   }
 
   return [];
+}
+
+/**
+ * Parsea un texto de fecha en lenguaje natural ("9 de octubre de 2026") o ISO
+ * y devuelve una etiqueta corta legible para el eje X del gráfico.
+ */
+function parseDateText(dateText) {
+  if (!dateText || typeof dateText !== "string") return null;
+
+  const monthMap = {
+    enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+    julio: 6, agosto: 7, septiembre: 8, setiembre: 8, octubre: 9,
+    noviembre: 10, diciembre: 11
+  };
+
+  const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun",
+    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+  // Formato lenguaje natural: "9 de octubre de 2026" o "9 de octubre"
+  const textMatch = dateText.match(/(\d{1,2})\s+de\s+([A-Za-z]+)(?:\s+de\s+(\d{4}))?/i);
+  if (textMatch) {
+    const day = parseInt(textMatch[1], 10);
+    const monthName = textMatch[2].toLowerCase();
+    const month = monthMap[monthName] !== undefined ? monthMap[monthName] : null;
+    if (month !== null) {
+      return `${String(day).padStart(2, "0")} ${monthNames[month]}`;
+    }
+  }
+
+  // Formato ISO: "2026-10-09"
+  const isoMatch = dateText.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const month = parseInt(isoMatch[2], 10) - 1;
+    const day = parseInt(isoMatch[3], 10);
+    return `${String(day).padStart(2, "0")} ${monthNames[month]}`;
+  }
+
+  // Si no se puede parsear, devolver el texto tal cual
+  return dateText.trim();
+}
+
+function getSortableDate(dateText) {
+  if (!dateText || typeof dateText !== "string") return null;
+
+  const monthMap = {
+    ene: 0, enero: 0, feb: 1, febrero: 1, mar: 2, marzo: 2,
+    abr: 3, abril: 3, may: 4, mayo: 4, jun: 5, junio: 5,
+    jul: 6, julio: 6, ago: 7, agosto: 7, sep: 8, sept: 8,
+    septiembre: 8, setiembre: 8, oct: 9, octubre: 9, nov: 10,
+    noviembre: 10, dic: 11, diciembre: 11
+  };
+  const normalized = dateText.trim().normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\.$/, "");
+
+  const toTimestamp = (year, month, day) => {
+    const timestamp = Date.UTC(year, month, day);
+    const date = new Date(timestamp);
+    return date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month &&
+      date.getUTCDate() === day
+      ? timestamp
+      : null;
+  };
+
+  let match = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (match) {
+    return toTimestamp(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
+  match = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (match) {
+    const year = Number(match[3]);
+    return toTimestamp(year < 100 ? 2000 + year : year, Number(match[2]) - 1, Number(match[1]));
+  }
+
+  match = normalized.match(/^(\d{1,2})\s+de\s+([a-z]+)(?:\s+de\s+(\d{4}))?$/);
+  if (!match) {
+    match = normalized.match(/^(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?$/);
+  }
+  if (!match) return null;
+
+  const month = monthMap[match[2]];
+  if (month === undefined) return null;
+  return toTimestamp(match[3] ? Number(match[3]) : 2000, month, Number(match[1]));
+}
+
+/**
+ * Analizador especializado para reportes de evaluación comercial emitidos por n8n / IA.
+ * SOLO extrae datos reales explícitamente mencionados en la respuesta del chat.
+ * No inventa ni interpola datos. Si el chat menciona 1 precio, se muestra 1 punto;
+ * si menciona 2, se muestran 2, y así sucesivamente.
+ */
+function parseStructuredN8nEvaluation(text) {
+  if (!text || typeof text !== "string") return [];
+
+  // 1. Extraer nombre del producto y mercado del encabezado
+  let producto = "";
+  let mercado = "GMML";
+  let unidad = "kg";
+
+  const headerMatch = text.match(/Evaluaci[oó]n comercial de ([^—–\n]+)(?:[—–]\s*([^\n]+))?/i);
+  if (headerMatch) {
+    producto = headerMatch[1].trim();
+    if (headerMatch[2]) mercado = headerMatch[2].trim();
+  }
+
+  // Extraer unidad si se menciona: "por Kilogramo" o "por kg"
+  const unidadMatch = text.match(/por\s+([A-Za-z]+)/i);
+  if (unidadMatch) {
+    const u = unidadMatch[1].toLowerCase();
+    unidad = u.includes("kilo") ? "kg" : u;
+  }
+
+  const prodName = producto || "Producto Consultado";
+  const records = [];
+
+  // 2. Extraer último precio y su fecha — dato real explícito de n8n
+  const ultPrecioMatch = text.match(/[UÚuú]ltimo precio:\s*S\/\s*([\d,.]+)(?:[^\(\n]*\(([^)]+)\))?/i);
+  const ultPrecio = ultPrecioMatch ? parseFloat(ultPrecioMatch[1].replace(",", ".")) : null;
+  const ultPrecioFechaRaw = ultPrecioMatch && ultPrecioMatch[2] ? ultPrecioMatch[2].trim() : "";
+
+  // 3. Extraer último volumen y su fecha — dato real explícito de n8n
+  const ultVolMatch = text.match(/[UÚuú]ltimo volumen(?: registrado)?:\s*([\d,.]+)\s*(?:toneladas|TM|kg)(?:[^\(\n]*\(([^)]+)\))?/i);
+  const ultVol = ultVolMatch ? parseFloat(ultVolMatch[1].replace(",", ".")) : 0;
+  const ultVolFechaRaw = ultVolMatch && ultVolMatch[2] ? ultVolMatch[2].trim() : "";
+
+  // 4. Extraer precio anterior — dato real mencionado en la respuesta
+  const precioAntMatch = text.match(/precio anterior\s*\((?:S\/\s*)?([\d,.]+)\)/i);
+  const precioAnterior = precioAntMatch ? parseFloat(precioAntMatch[1].replace(",", ".")) : null;
+
+  // Si no hay ningún dato real explícito, no generar registros
+  if (ultPrecio === null && precioAnterior === null) return [];
+
+  // 5. Construir registros SOLO con datos explícitos del chat
+
+  // Agregar precio anterior si fue mencionado explícitamente en la respuesta
+  if (precioAnterior !== null) {
+    records.push({
+      fecha: "Reg. anterior",
+      producto: prodName,
+      precio: precioAnterior,
+      volumen: 0,
+      mercado,
+      region: mercado,
+      unidad
+    });
+  }
+
+  // Agregar último precio (dato más reciente con fecha explícita)
+  if (ultPrecio !== null) {
+    const fechaLabel = parseDateText(ultPrecioFechaRaw) || new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "short" });
+    records.push({
+      fecha: fechaLabel,
+      fechaOrden: ultPrecioFechaRaw || fechaLabel,
+      producto: prodName,
+      precio: ultPrecio,
+      volumen: ultVol,
+      mercado,
+      region: mercado,
+      unidad
+    });
+  }
+
+  return records;
 }
 
 /**
@@ -157,13 +326,16 @@ function normalizeRawRow(row) {
 }
 
 /**
- * Analizador NLP ligero para extraer pares de datos (Producto / Fecha / Precio / Volumen)
- * directamente del texto emitido por el agente de n8n.
+ * Analizador genérico para extraer pares de datos (Producto / Fecha / Precio / Volumen)
+ * directamente de textos libres.
  */
 function parseTextForMarketNumbers(text) {
   const rows = [];
-  // Buscar patrones como "Papa blanca a S/ 1.45", "S/ 3.20 por kilo", fechas "2026-03-02", etc.
   const lines = text.split("\n");
+
+  // Buscar si en todo el texto hay una mención global de volumen
+  const globalVolMatch = text.match(/([\d,.]+)\s*(?:toneladas|TM)/i);
+  const defaultVol = globalVolMatch ? parseFloat(globalVolMatch[1].replace(",", ".")) : 0;
 
   for (const line of lines) {
     const priceMatch = line.match(/(?:S\/|S\/\.|\$)\s*([\d,.]+)/i);
@@ -172,10 +344,9 @@ function parseTextForMarketNumbers(text) {
 
     if (priceMatch) {
       const cleanPrice = parseFloat(priceMatch[1].replace(",", "."));
-      const cleanVol = volMatch ? parseFloat(volMatch[1].replace(",", ".")) : 0;
-      const cleanDate = dateMatch ? dateMatch[1] : `Punto ${rows.length + 1}`;
+      const cleanVol = volMatch ? parseFloat(volMatch[1].replace(",", ".")) : defaultVol;
+      const cleanDate = dateMatch ? dateMatch[1] : `Registro ${rows.length + 1}`;
 
-      // Extraer nombre de producto potencial antes del precio
       let prodName = line.split(/[:\–\-|]/)[0]?.trim();
       if (!prodName || prodName.length > 40) {
         prodName = "Producto Consultado";
@@ -231,8 +402,6 @@ export function buildChartDatasetsFromRecords({
       availableProducts: [],
       availableRegions: [],
       timeSeriesData: { labels: [], datasets: [] },
-      volumeData: { labels: [], datasets: [] },
-      scatterData: { datasets: [] },
       kpis: null,
       isEmpty: true
     };
@@ -280,8 +449,28 @@ export function buildChartDatasetsFromRecords({
     filtered = [...records];
   }
 
-  // Ordenar por fecha cronológica si las fechas son comparables
-  filtered.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+  // El registro anterior no tiene una fecha exacta; mantenerlo antes de los
+  // registros fechados y ordenar estos cronológicamente, no por su etiqueta.
+  const previousRecord = (record) =>
+    /^(?:reg(?:istro)?\.?\s*anterior)$/i.test(String(record.fecha).trim());
+  filtered = filtered
+    .map((record, index) => ({
+      record,
+      index,
+      timestamp: getSortableDate(record.fechaOrden || record.fecha)
+    }))
+    .sort((a, b) => {
+      if (previousRecord(a.record) !== previousRecord(b.record)) {
+        return previousRecord(a.record) ? -1 : 1;
+      }
+      if (a.timestamp !== null && b.timestamp !== null) {
+        return a.timestamp - b.timestamp || a.index - b.index;
+      }
+      if (a.timestamp !== null) return 1;
+      if (b.timestamp !== null) return -1;
+      return a.index - b.index;
+    })
+    .map(({ record }) => record);
 
   // Extraer etiquetas de fechas únicas
   const labels = filtered.map((r) => r.fecha);
@@ -332,62 +521,9 @@ export function buildChartDatasetsFromRecords({
     datasets: timeSeriesDatasets
   };
 
-  // 2. DATASET DE VOLUMEN (Barras de Ingreso)
-  const volumeData = {
-    labels,
-    datasets: [
-      {
-        type: "bar",
-        label: `Volumen de Mercado (${filtered[0]?.unidad || "TM"})`,
-        data: volumeValues,
-        backgroundColor: sapphire.fill,
-        borderColor: sapphire.stroke,
-        borderWidth: 1.5,
-        borderRadius: 6,
-        barPercentage: 0.65
-      }
-    ]
-  };
+  // 2. DATASET DE VOLUMEN Y DISPERSIÓN - eliminados (ya no se usan en el componente)
 
-  // 3. DATASET DE DISPERSIÓN (Scatter: Volumen vs Precio)
-  // Agrupar por región para generar series con distintas formas y colores accesibles
-  const scatterRegionGroups = {};
-  const regionPaletteList = [sapphire, amber, emerald, crimson, purple, teal];
-
-  filtered.forEach((r) => {
-    const regKey = r.region || r.mercado || "Mercado";
-    if (!scatterRegionGroups[regKey]) {
-      scatterRegionGroups[regKey] = [];
-    }
-    scatterRegionGroups[regKey].push({
-      x: r.volumen,
-      y: r.precio,
-      fecha: r.fecha,
-      producto: r.producto,
-      region: regKey
-    });
-  });
-
-  const scatterDatasets = Object.keys(scatterRegionGroups).map((regKey, idx) => {
-    const colorObj = regionPaletteList[idx % regionPaletteList.length];
-    return {
-      label: `Región / Mercado: ${regKey}`,
-      data: scatterRegionGroups[regKey],
-      borderColor: colorObj.stroke,
-      backgroundColor: colorObj.fill,
-      pointRadius: 7,
-      pointHoverRadius: 10,
-      pointBorderWidth: 2,
-      pointBorderColor: "#ffffff",
-      pointStyle: colorObj.pointStyle
-    };
-  });
-
-  const scatterData = {
-    datasets: scatterDatasets
-  };
-
-  // 4. CÁLCULO DE KPIS DINÁMICOS
+  // 3. CÁLCULO DE KPIS DINÁMICOS
   const validPrices = priceValues.filter((p) => p > 0);
   const avgPrice =
     validPrices.length > 0
@@ -400,20 +536,15 @@ export function buildChartDatasetsFromRecords({
   const pctChange =
     initialPrice > 0 ? Number(((priceDiff / initialPrice) * 100).toFixed(1)) : 0;
 
-  const totalVolume = volumeValues.reduce((acc, v) => acc + v, 0);
-
   return {
     availableProducts,
     availableRegions,
     timeSeriesData,
-    volumeData,
-    scatterData,
     kpis: {
       currentPrice: Number(currentPrice.toFixed(2)),
       avgPrice: Number(avgPrice.toFixed(2)),
       pctChange,
       isUp: pctChange >= 0,
-      totalVolume: Number(totalVolume.toFixed(1)),
       unit: filtered[0]?.unidad || "kg",
       totalRecords: filtered.length,
       sampleProduct: filtered[0]?.producto || "General"

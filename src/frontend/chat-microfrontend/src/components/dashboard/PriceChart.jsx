@@ -5,13 +5,12 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   Title,
   Tooltip,
   Legend,
   Filler
 } from "chart.js";
-import { Line, Bar, Scatter } from "react-chartjs-2";
+import { Line } from "react-chartjs-2";
 import {
   extractDynamicRecords,
   fetchAnalyticsFromN8n,
@@ -25,7 +24,6 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   Title,
   Tooltip,
   Legend,
@@ -40,7 +38,6 @@ export default function PriceChart({ result, query = "" }) {
   // Estados de filtros interactivos
   const [selectedProduct, setSelectedProduct] = useState("all");
   const [selectedRegion, setSelectedRegion] = useState("all");
-  const [chartType, setChartType] = useState("timeSeries"); // 'timeSeries' | 'volume' | 'scatter'
 
   // Selector dinámico de rango de fechas
   const [startDate, setStartDate] = useState("");
@@ -114,8 +111,6 @@ export default function PriceChart({ result, query = "" }) {
     availableProducts,
     availableRegions,
     timeSeriesData,
-    volumeData,
-    scatterData,
     kpis,
     isEmpty
   } = useMemo(() => {
@@ -154,7 +149,7 @@ export default function PriceChart({ result, query = "" }) {
           }
         },
         tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.95)", // Slate 900 alto contraste
+          backgroundColor: "rgba(15, 23, 42, 0.95)",
           titleFont: {
             family: "'Hanken Grotesk', sans-serif",
             size: 13,
@@ -172,9 +167,6 @@ export default function PriceChart({ result, query = "" }) {
             label: function (ctx) {
               const label = ctx.dataset.label || "";
               const val = ctx.parsed.y;
-              if (chartType === "volume") {
-                return ` ${label}: ${Number(val).toLocaleString()} ${kpis?.unit || "TM"}`;
-              }
               return ` ${label}: S/ ${Number(val).toFixed(2)}`;
             }
           }
@@ -208,66 +200,8 @@ export default function PriceChart({ result, query = "" }) {
               weight: 500
             },
             callback: function (value) {
-              if (chartType === "volume") return `${value} ${kpis?.unit || "TM"}`;
               return `S/ ${value}`;
             }
-          }
-        }
-      }
-    };
-  }, [chartType, kpis]);
-
-  // Opciones para gráfico de Dispersión (Scatter)
-  const scatterOptions = useMemo(() => {
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: "top",
-          labels: {
-            usePointStyle: true,
-            font: {
-              family: "'Hanken Grotesk', sans-serif",
-              size: 12,
-              weight: 600
-            },
-            color: "#1a1c18"
-          }
-        },
-        tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.95)",
-          padding: 12,
-          cornerRadius: 8,
-          callbacks: {
-            label: function (ctx) {
-              const pt = ctx.raw;
-              return `${ctx.dataset.label}: Vol ${pt.x} → Precio S/ ${pt.y} (${pt.fecha})`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          type: "linear",
-          title: {
-            display: true,
-            text: `Volumen Registrado (${kpis?.unit || "TM"})`,
-            color: "#1e293b",
-            font: { size: 12, weight: 600 }
-          },
-          ticks: { color: "#334155" }
-        },
-        y: {
-          title: {
-            display: true,
-            text: "Precio de Mercado (S/)",
-            color: "#1e293b",
-            font: { size: 12, weight: 600 }
-          },
-          ticks: {
-            color: "#334155",
-            callback: (v) => `S/ ${v}`
           }
         }
       }
@@ -306,7 +240,7 @@ export default function PriceChart({ result, query = "" }) {
             </h3>
           </div>
           <p className="font-body-md text-sm text-on-surface-variant">
-            Datos transmitidos desde n8n / Base de Datos Postgres • {records.length} registros cargados dinámicamente
+            Tendencias y fluctuaciones de precios del mercado agrícola
           </p>
         </div>
 
@@ -316,14 +250,14 @@ export default function PriceChart({ result, query = "" }) {
             type="button"
             onClick={handleRefreshFromN8n}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center gap-1.5 transition-colors border border-outline-variant/30 cursor-pointer"
-            title="Sincronizar directamente con el endpoint analítico de n8n"
+            title="Actualizar datos del mercado"
           >
             <span className="material-symbols-outlined text-[16px] text-forest-green">sync</span>
-            Sincronizar n8n
+            Actualizar datos
           </button>
           <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary-fixed text-on-primary-fixed border border-primary-fixed-dim/40 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-forest-green animate-pulse" />
-            Live Data
+            En vivo
           </span>
         </div>
       </div>
@@ -379,52 +313,15 @@ export default function PriceChart({ result, query = "" }) {
             </select>
           </div>
 
-          {/* Selector de Tipo de Gráfico */}
+          {/* Indicador de vista de series de tiempo */}
           <div className="md:col-span-4 flex flex-col gap-1">
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
               <span className="material-symbols-outlined text-[16px] text-forest-green">analytics</span>
               Vista Analítica
             </span>
-            <div className="grid grid-cols-3 gap-1 bg-surface-container p-1 rounded-lg border border-outline-variant/30">
-              <button
-                type="button"
-                onClick={() => setChartType("timeSeries")}
-                className={`py-1.5 px-2 rounded-md text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
-                  chartType === "timeSeries"
-                    ? "bg-forest-green text-on-primary shadow-xs"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-                title="Series de Tiempo (Evolución de Precios)"
-              >
-                <span className="material-symbols-outlined text-[15px]">show_chart</span>
-                <span>Series</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setChartType("volume")}
-                className={`py-1.5 px-2 rounded-md text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
-                  chartType === "volume"
-                    ? "bg-forest-green text-on-primary shadow-xs"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-                title="Volumen de Mercado"
-              >
-                <span className="material-symbols-outlined text-[15px]">bar_chart</span>
-                <span>Volumen</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setChartType("scatter")}
-                className={`py-1.5 px-2 rounded-md text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
-                  chartType === "scatter"
-                    ? "bg-forest-green text-on-primary shadow-xs"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-                title="Dispersión Volumen vs Precio"
-              >
-                <span className="material-symbols-outlined text-[15px]">bubble_chart</span>
-                <span>Dispersión</span>
-              </button>
+            <div className="flex items-center gap-2 bg-surface-container p-2 rounded-lg border border-outline-variant/30">
+              <span className="material-symbols-outlined text-[18px] text-forest-green">show_chart</span>
+              <span className="text-sm font-semibold text-on-surface">Series de Tiempo</span>
             </div>
           </div>
         </div>
@@ -491,7 +388,7 @@ export default function PriceChart({ result, query = "" }) {
 
       {/* Tarjetas KPI Calculadas Dinámicamente */}
       {kpis && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <div className="bg-surface-container-low/70 border border-outline-variant/20 rounded-xl p-3.5 flex flex-col justify-between">
             <span className="text-xs text-on-surface-variant font-medium">Precio Actual</span>
             <div className="flex items-baseline gap-1 mt-1">
@@ -530,22 +427,9 @@ export default function PriceChart({ result, query = "" }) {
           </div>
 
           <div className="bg-surface-container-low/70 border border-outline-variant/20 rounded-xl p-3.5 flex flex-col justify-between">
-            <span className="text-xs text-on-surface-variant font-medium">Volumen Total</span>
+            <span className="text-xs text-on-surface-variant font-medium">Registros Analizados</span>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xl font-bold text-forest-green">
-                {kpis.totalVolume.toLocaleString()}
-              </span>
-              <span className="text-xs text-outline font-medium">{kpis.unit}</span>
-            </div>
-            <div className="mt-2 text-xs text-on-surface-variant">
-              Suma de registros filtrados
-            </div>
-          </div>
-
-          <div className="bg-surface-container-low/70 border border-outline-variant/20 rounded-xl p-3.5 flex flex-col justify-between">
-            <span className="text-xs text-on-surface-variant font-medium">Muestreo Dinámico</span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-xl font-bold text-amber-700">
                 {kpis.totalRecords}
               </span>
               <span className="text-xs text-outline font-medium">puntos</span>
@@ -557,30 +441,9 @@ export default function PriceChart({ result, query = "" }) {
         </div>
       )}
 
-      {/* Contenedor del Lienzo de Chart.js */}
+      {/* Contenedor del Lienzo de Chart.js - Series de Tiempo */}
       <div className="relative w-full h-[360px] md:h-[400px] bg-surface-container-lowest rounded-xl p-3 border border-outline-variant/20 shadow-inner">
-        {chartType === "timeSeries" && (
-          <Line key={`timeSeries-${selectedProduct}-${selectedRegion}-${startDate}-${endDate}`} data={timeSeriesData} options={commonOptions} />
-        )}
-
-        {chartType === "volume" && (
-          <Bar key={`volume-${selectedProduct}-${selectedRegion}-${startDate}-${endDate}`} data={volumeData} options={commonOptions} />
-        )}
-
-        {chartType === "scatter" && (
-          <Scatter key={`scatter-${selectedProduct}-${selectedRegion}-${startDate}-${endDate}`} data={scatterData} options={scatterOptions} />
-        )}
-      </div>
-
-      {/* Indicador de accesibilidad y fuente */}
-      <div className="mt-4 pt-3 border-t border-outline-variant/15 flex flex-wrap items-center justify-between text-xs text-on-surface-variant gap-2">
-        <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[15px] text-forest-green">accessibility_new</span>
-          Paleta accesible de alto contraste (WCAG 2.1 AA/AAA) con diferenciación por formas geométricas
-        </span>
-        <span className="font-medium text-forest-green">
-          Origen: n8n Workflow 2 + Postgres SQL
-        </span>
+        <Line key={`timeSeries-${selectedProduct}-${selectedRegion}-${startDate}-${endDate}`} data={timeSeriesData} options={commonOptions} />
       </div>
     </div>
   );

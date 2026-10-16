@@ -4,14 +4,14 @@ const SUGGESTIONS = [
     iconBg: "bg-primary-fixed",
     iconColor: "text-on-primary-fixed",
     title: "Gráficos de Mercado",
-    text: "Dame un gráfico con los precios y volumen de la papa blanca de esta semana",
+    text: "Dame un gráfico con los precios de la papa blanca de esta semana",
   },
   {
     icon: "trending_up",
     iconBg: "bg-wheat-gold/30",
     iconColor: "text-forest-green",
     title: "Tendencias de Limón Sutil",
-    text: "Ver gráfico de dispersión y volumen de limón sutil en Piura",
+    text: "Ver gráfico de precios y dispersión de limón sutil en Piura",
   },
   {
     icon: "local_shipping",
