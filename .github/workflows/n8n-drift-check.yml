@@ -48,8 +48,13 @@ jobs:
         env:
           RENDER_DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
         run: |
+          # `$?` después de un pipe refleja la salida de `tee` (casi nunca
+          # falla), no la de python — el paso nunca fallaba de verdad sin
+          # importar lo que encontrara el script. set -o pipefail + exit
+          # explícito con PIPESTATUS corrige la propagación real.
+          set -o pipefail
           python .github/scripts/check_n8n_drift.py | tee drift-report.txt
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          exit "${PIPESTATUS[0]}"
         continue-on-error: true
 
       - name: Abrir o actualizar issue si hay drift crítico
