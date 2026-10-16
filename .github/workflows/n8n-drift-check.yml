@@ -18,6 +18,13 @@ jobs:
   drift-check:
     name: Comparar producción (Render Postgres) vs git
     runs-on: ubuntu-latest
+    env:
+      # `secrets.X` directo dentro de un `if:` falla la validación del
+      # workflow en cualquier disparador (confirmado: 50/50 corridas
+      # fallidas en 0s — GitHub no reconoce el contexto `secrets` ahí).
+      # Se indirecciona por `env:` a nivel de job, que sí está soportado
+      # en `if:`.
+      HAS_DB_SECRET: ${{ secrets.RENDER_DATABASE_URL != '' }}
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -31,18 +38,23 @@ jobs:
         run: pip install psycopg2-binary
 
       - name: Avisar si falta el secret
-        if: ${{ secrets.RENDER_DATABASE_URL == '' }}
+        if: ${{ env.HAS_DB_SECRET == 'false' }}
         run: |
           echo "::warning::RENDER_DATABASE_URL no está configurado — se omite el chequeo de drift."
 
       - name: Ejecutar chequeo de drift
         id: drift
-        if: ${{ secrets.RENDER_DATABASE_URL != '' }}
+        if: ${{ env.HAS_DB_SECRET == 'true' }}
         env:
           RENDER_DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
         run: |
+          # `$?` después de un pipe refleja la salida de `tee` (casi nunca
+          # falla), no la de python — el paso nunca fallaba de verdad sin
+          # importar lo que encontrara el script. set -o pipefail + exit
+          # explícito con PIPESTATUS corrige la propagación real.
+          set -o pipefail
           python .github/scripts/check_n8n_drift.py | tee drift-report.txt
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          exit "${PIPESTATUS[0]}"
         continue-on-error: true
 
       - name: Abrir o actualizar issue si hay drift crítico
@@ -66,7 +78,7 @@ jobs:
           fi
 
       - name: Cerrar issue de drift si ya quedó todo sincronizado
-        if: ${{ steps.drift.outcome == 'success' && secrets.RENDER_DATABASE_URL != '' }}
+        if: ${{ steps.drift.outcome == 'success' && env.HAS_DB_SECRET == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
