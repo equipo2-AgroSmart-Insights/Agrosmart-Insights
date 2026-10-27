@@ -15,9 +15,13 @@ test('el chat responde de punta a punta a una consulta real', async ({ page }) =
 
   // Confirma que el estado de carga realmente aparece (si no aparece nunca,
   // es señal de que el click no disparó nada).
-  // Texto exacto del badge de estado (no el genérico role="status": PR #99
-  // agregó un segundo elemento con ese rol para el esqueleto del gráfico).
-  const loadingIndicator = page.getByText('Consultando base de datos y endpoints analíticos de n8n', { exact: false });
+  // No se usa texto literal: ya cambió 2 veces por copy del frontend
+  // ("Analizando tu consulta" -> "Consultando base de datos..." -> "Cargando
+  // consulta...") y cada cambio rompía este test. LoadingIndicator.jsx es el
+  // único role="status" del chat SIN aria-label (el de LoadingSkeleton.jsx,
+  // el esqueleto del gráfico, sí tiene aria-label) — eso es estable aunque
+  // cambie el copy de nuevo.
+  const loadingIndicator = page.locator('[role="status"]:not([aria-label])');
   await expect(loadingIndicator).toBeVisible({ timeout: 10_000 });
 
   // El plan free de Render puede tardar 50s+ en despertar más el tiempo
