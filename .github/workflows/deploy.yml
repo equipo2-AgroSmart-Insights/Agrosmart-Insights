@@ -54,7 +54,8 @@ jobs:
 
       - name: Validar workflows n8n versionados
         run: |
-          test -f src/n8n-workflows/production/wf0-ingesta-mensual-rag-midagri.json
+          test -f src/n8n-workflows/production/wf0-ingesta-historica-midagri-gmml.json
+          test -f src/n8n-workflows/production/wf0-ingesta-historica-midagri-mmf2.json
           test -f src/n8n-workflows/production/wf1-ingesta-diaria-precios-clima.json
           test -f src/n8n-workflows/production/wf2-api-chat-analisis-predictivo.json
 
