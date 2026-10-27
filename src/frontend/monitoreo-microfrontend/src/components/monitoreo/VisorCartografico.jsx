@@ -211,12 +211,61 @@ export default function VisorCartografico({
           <p class="font-bold text-sm text-forest-green">${selectedLocation.name}</p>
           <p class="text-xs text-on-surface-variant">${selectedLocation.admin1 || "Perú"}</p>
           <div class="mt-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 p-2 rounded">
-            <strong>Indicador no disponible:</strong> No se muestran datos simulados.
+            <strong>Indicador no disponible:</strong> ${capaData?.motivo || "No se muestran datos simulados."}
           </div>
         </div>
       `);
 
       layerGroup.addLayer(neutralMarker);
+      return;
+    }
+
+    // Caso especial NDVI: Capa raster satelital Sentinel-2 (L.imageOverlay)
+    if (capaData.isRasterImage && capaData.imageUrl && capaData.bounds) {
+      const ndviOverlay = L.imageOverlay(capaData.imageUrl, capaData.bounds, {
+        opacity: 0.85,
+        interactive: true,
+        alt: `Raster NDVI de ${selectedLocation.name}`,
+      });
+
+      const popupContent = `
+        <div style="min-width: 220px; font-family: 'Hanken Grotesk', sans-serif;" class="p-1 text-on-surface">
+          <div class="flex items-center justify-between border-b pb-2 mb-2">
+            <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #1b4332;">${selectedLocation.name}</h4>
+            <span style="font-size: 11px; background: #edefe7; padding: 2px 6px; border-radius: 999px;">Sentinel-2 CDSE</span>
+          </div>
+          <p style="margin: 0 0 4px 0; font-size: 12px; color: #414844;"><strong>Capa:</strong> Raster multiespectral NDVI</p>
+          <p style="margin: 0 0 6px 0; font-size: 12px; color: #1b4332; font-weight: 600;">
+            Resolución: 10m por píxel (Sentinel-2 L2A)
+          </p>
+          <div style="font-size: 11px; color: #717973; border-top: 1px dashed #c1c8c2; pt-2; margin-top: 6px;">
+            Fuente: ${capaData.fuente}<br/>
+            Actualizado: ${capaData.fechaActualizacion}
+          </div>
+        </div>
+      `;
+
+      ndviOverlay.bindPopup(popupContent);
+      layerGroup.addLayer(ndviOverlay);
+
+      const ndviIcon = L.divIcon({
+        className: "custom-risk-icon",
+        html: `
+          <div class="relative flex items-center justify-center cursor-pointer">
+            <span class="animate-ping absolute inline-flex h-10 w-10 rounded-full opacity-35 bg-forest-green"></span>
+            <div class="relative w-9 h-9 rounded-full border-2 border-white flex items-center justify-center text-white shadow-xl bg-forest-green">
+              <span class="material-symbols-outlined text-[18px]">grass</span>
+            </div>
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+
+      const centerMarker = L.marker([lat, lng], { icon: ndviIcon }).bindPopup(popupContent);
+      layerGroup.addLayer(centerMarker);
+
+      map.fitBounds(capaData.bounds, { padding: [20, 20], maxZoom: 13 });
       return;
     }
 
@@ -240,7 +289,7 @@ export default function VisorCartografico({
           <span style="background-color: ${color};" class="animate-ping absolute inline-flex h-10 w-10 rounded-full opacity-35"></span>
           <div style="background-color: ${color};" class="relative w-9 h-9 rounded-full border-2 border-white flex items-center justify-center text-white shadow-xl">
             <span class="material-symbols-outlined text-[18px]">
-              ${indicadorActivo === INDICADORES.SEQUIA ? "water_drop" : "humidity_mid"}
+              ${indicadorActivo === INDICADORES.SEQUIA ? "water_drop" : indicadorActivo === INDICADORES.NDVI ? "grass" : "humidity_mid"}
             </span>
           </div>
         </div>
@@ -408,12 +457,12 @@ export default function VisorCartografico({
             </span>
             <span
               className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                defIndicadorActual.disponible
+                (capaData ? capaData.disponible : defIndicadorActual.disponible)
                   ? "bg-primary-fixed text-on-primary-fixed"
                   : "bg-error-container text-on-error-container"
               }`}
             >
-              {defIndicadorActual.disponible ? "Disponible" : "No disponible"}
+              {(capaData ? capaData.disponible : defIndicadorActual.disponible) ? "Disponible" : "No disponible"}
             </span>
           </div>
 
@@ -424,8 +473,30 @@ export default function VisorCartografico({
             {defIndicadorActual.descripcion}
           </p>
 
-          {/* Si está disponible, mostrar escala y niveles de riesgo */}
-          {defIndicadorActual.disponible && defIndicadorActual.reglasRiesgo?.length > 0 ? (
+          {/* Si es capa raster NDVI, mostrar gradiente continuo espectral */}
+          {indicadorActivo === INDICADORES.NDVI && capaData?.isRasterImage ? (
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+                Escala de Vigor Vegetativo (NDVI):
+              </p>
+              <div className="h-3.5 w-full rounded-full shadow-inner border border-outline-variant/60 bg-gradient-to-r from-[#ba1a1a] via-[#e9c46a] via-[#86af99] to-[#1b4332]"></div>
+              <div className="flex justify-between text-[10px] text-on-surface-variant font-medium px-0.5">
+                <span>&lt; 0.1 (Suelo)</span>
+                <span>0.3 (Escaso)</span>
+                <span>0.5 (Medio)</span>
+                <span>0.7+ (Óptimo)</span>
+              </div>
+              <div className="mt-2.5 p-2 rounded-xl bg-surface-container border border-outline-variant/50 text-xs">
+                <p className="font-bold text-forest-green mb-0.5 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">satellite</span>
+                  Capa Raster Sentinel-2 (CDSE):
+                </p>
+                <p className="text-on-surface text-[11px] leading-relaxed">
+                  {capaData.interpretacion}
+                </p>
+              </div>
+            </div>
+          ) : (capaData ? capaData.disponible : defIndicadorActual.disponible) && defIndicadorActual.reglasRiesgo?.length > 0 ? (
             <div className="space-y-1.5">
               <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
                 Escala y Niveles de Riesgo ({defIndicadorActual.unidad}):
@@ -459,14 +530,14 @@ export default function VisorCartografico({
               )}
             </div>
           ) : (
-            /* Caso NDVI o no disponible: NO SIMULAR DATOS */
+            /* Caso no disponible: NO SIMULAR DATOS */
             <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900">
               <div className="flex items-center gap-1.5 font-bold mb-1">
                 <span className="material-symbols-outlined text-amber-700 text-[18px]">warning</span>
-                <span>Indicador no disponible en WF2</span>
+                <span>Indicador no disponible</span>
               </div>
               <p className="leading-relaxed">
-                {defIndicadorActual.motivoNoDisponible}
+                {capaData?.motivo || defIndicadorActual.motivoNoDisponible}
               </p>
               <div className="mt-2 text-[11px] text-amber-800/80 italic">
                 * Conforme a la política de calidad e integridad de AgroSmart Insights, no se representan datos sintéticos ni simulados.
