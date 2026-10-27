@@ -17,34 +17,24 @@ job por sí solos, salvo que además involucren un workflow activo.
 import hashlib
 import json
 import os
-import re
 import sys
 from pathlib import Path
 
 import psycopg2
 
-PROD_DIR = Path(__file__).resolve().parent.parent.parent / "src" / "n8n-workflows" / "production"
+from n8n_secrets import redact
 
-# Mismos patrones que n8n-validate-ci.yml / sync manual. Se aplican a AMBOS
-# lados (git y producción) antes de comparar el hash: las copias en git
-# llevan las credenciales redactadas por diseño, así que comparar el JSON
-# crudo de producción contra el redactado de git siempre daría "drift" por
-# la redacción en sí, no por un cambio real.
-SECRET_PATTERNS = [
-    re.compile(r'sk-[a-zA-Z0-9]{20,}'),
-    re.compile(r'jina_[a-zA-Z0-9_-]{20,}'),
-    re.compile(r'AIza[a-zA-Z0-9_-]{20,}'),
-    re.compile(r'sk-or-v1-[a-zA-Z0-9]{20,}'),
-    re.compile(r'NanamiKento'),
-    # Placeholders que deja el sync manual al redactar (ej. "{{JINA_API_KEY_...}}")
-    re.compile(r'\{\{[A-Z0-9_]+\}\}'),
-]
+PROD_DIR = Path(__file__).resolve().parent.parent.parent / "src" / "n8n-workflows" / "production"
 
 
 def content_hash(nodes, connections):
+    # redact() se aplica a AMBOS lados (git y producción) antes de comparar
+    # el hash: las copias en git llevan las credenciales redactadas por
+    # diseño, así que comparar el JSON crudo de producción contra el
+    # redactado de git siempre daría "drift" por la redacción en sí, no por
+    # un cambio real.
     payload = json.dumps({"nodes": nodes, "connections": connections}, sort_keys=True, ensure_ascii=False)
-    for pattern in SECRET_PATTERNS:
-        payload = pattern.sub('__REDACTED__', payload)
+    payload = redact(payload)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
