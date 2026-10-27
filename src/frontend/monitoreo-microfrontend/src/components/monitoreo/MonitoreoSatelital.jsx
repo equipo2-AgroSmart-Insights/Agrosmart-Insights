@@ -11,6 +11,7 @@ import {
   Legend,
 } from "chart.js";
 import { fetchLocationClimate, searchLocationsByName } from "../../services/openMeteoService";
+import VisorCartografico from "./VisorCartografico";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -189,75 +190,100 @@ export default function MonitoreoSatelital() {
         </div>
       </div>
 
+      {/* Barra de búsqueda de región agrícola */}
+      <section className="bg-surface-container rounded-2xl border border-outline-variant overflow-hidden shadow-sm mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between px-5 py-4 border-b border-outline-variant bg-surface-container-lowest gap-4">
+          <div className="w-full">
+            <p className="font-label-md text-label-md text-on-surface-variant">Buscar región o zona productora</p>
+            <div className="mt-2 flex gap-3 items-center">
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Ej: Junín, Perú o Arequipa, Perú"
+                className="w-full rounded-full border border-outline-variant bg-white px-4 py-2 text-sm text-on-surface outline-none focus:border-forest-green"
+              />
+              <button
+                type="button"
+                onClick={() => setQuery(query.trim() || DEFAULT_QUERY)}
+                className="rounded-full bg-forest-green px-5 py-2 text-sm font-medium text-on-primary shrink-0 hover:bg-forest-green/90 transition cursor-pointer"
+              >
+                Buscar
+              </button>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-3xl text-forest-green hidden md:block">satellite_alt</span>
+        </div>
+
+        <div className="p-4 bg-surface-container-low">
+          {loadingLocations ? (
+            <p className="text-sm text-on-surface-variant flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-forest-green animate-ping"></span>
+              Buscando ubicaciones agrícolas...
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-semibold text-on-surface-variant mr-1">Regiones sugeridas:</span>
+              {searchResults.map((location) => (
+                <button
+                  key={location.id}
+                  type="button"
+                  onClick={() => setSelectedLocation(location)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                    selectedLocation?.id === location.id
+                      ? "border-forest-green bg-forest-green text-on-primary shadow-sm"
+                      : "border-outline-variant bg-white text-on-surface hover:border-forest-green/40"
+                  }`}
+                >
+                  {location.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Visor Cartográfico Geoespacial Satelital */}
+      <section className="mb-8">
+        <VisorCartografico
+          selectedLocation={selectedLocation}
+          onLocationChange={setSelectedLocation}
+        />
+      </section>
+
+      {/* Métricas e información de la zona seleccionada */}
       <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
         <section className="bg-surface-container rounded-2xl border border-outline-variant overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant bg-surface-container-lowest">
-            <div className="w-full">
-              <p className="font-label-md text-label-md text-on-surface-variant">Buscar región o zona productora</p>
-              <div className="mt-3 flex gap-3 items-center">
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Ej: Arequipa, Perú"
-                  className="w-full rounded-full border border-outline-variant bg-white px-4 py-2 text-sm text-on-surface outline-none focus:border-forest-green"
-                />
-                <button
-                  type="button"
-                  onClick={() => setQuery(query.trim() || DEFAULT_QUERY)}
-                  className="rounded-full bg-forest-green px-4 py-2 text-sm font-medium text-on-primary"
-                >
-                  Buscar
-                </button>
-              </div>
-            </div>
-            <span className="material-symbols-outlined text-3xl text-forest-green ml-3">satellite_alt</span>
-          </div>
-
-          <div className="p-4">
-            {loadingLocations ? (
-              <p className="text-sm text-on-surface-variant">Buscando ubicaciones en Open-Meteo...</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {searchResults.map((location) => (
-                  <button
-                    key={location.id}
-                    type="button"
-                    onClick={() => setSelectedLocation(location)}
-                    className={`rounded-full border px-3 py-2 text-sm transition ${
-                      selectedLocation?.id === location.id
-                        ? "border-forest-green bg-forest-green text-on-primary"
-                        : "border-outline-variant bg-white text-on-surface hover:border-forest-green/40"
-                    }`}
-                  >
-                    {location.name}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="px-5 py-4 border-b border-outline-variant bg-surface-container-lowest flex items-center justify-between">
+            <h3 className="font-headline-sm text-sm font-bold text-on-surface">
+              Variables agroclimáticas de {selectedLocation?.name || "la zona"}
+            </h3>
+            <span className="text-xs text-on-surface-variant bg-surface-container px-2.5 py-1 rounded-full">
+              Fuente: Open-Meteo & MapTiler
+            </span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5">
-            <div className="rounded-xl bg-surface p-4">
+            <div className="rounded-xl bg-surface p-4 border border-outline-variant/40">
               <p className="font-label-md text-label-md text-on-surface-variant">Precipitación</p>
               <p className="font-headline-sm text-headline-sm text-on-surface mt-2">
                 {loading ? "—" : `${Number(data?.summary?.precipitation ?? 0).toFixed(1)} mm`}
               </p>
             </div>
-            <div className="rounded-xl bg-surface p-4">
+            <div className="rounded-xl bg-surface p-4 border border-outline-variant/40">
               <p className="font-label-md text-label-md text-on-surface-variant">Temperatura</p>
               <p className="font-headline-sm text-headline-sm text-on-surface mt-2">
                 {loading ? "—" : `${Number(data?.summary?.temperature ?? 0).toFixed(1)} °C`}
               </p>
             </div>
-            <div className="rounded-xl bg-surface p-4">
+            <div className="rounded-xl bg-surface p-4 border border-outline-variant/40">
               <p className="font-label-md text-label-md text-on-surface-variant">Humedad</p>
               <p className="font-headline-sm text-headline-sm text-on-surface mt-2">
                 {loading ? "—" : `${Number(data?.summary?.humidity ?? 0).toFixed(0)} %`}
               </p>
             </div>
-            <div className="rounded-xl bg-surface p-4">
+            <div className="rounded-xl bg-surface p-4 border border-outline-variant/40">
               <p className="font-label-md text-label-md text-on-surface-variant">Déficit Hídrico</p>
-              <p className={`font-body-md text-body-md mt-2 ${loading ? "text-on-surface-variant" : data?.summary?.risk?.tone}`}>
+              <p className={`font-body-md text-body-md mt-2 font-semibold ${loading ? "text-on-surface-variant" : data?.summary?.risk?.tone}`}>
                 {loading ? "—" : data?.summary?.risk?.label}
               </p>
             </div>
