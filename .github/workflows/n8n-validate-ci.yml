@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -43,6 +43,11 @@ jobs:
               (re.compile(r'jina_[a-zA-Z0-9_-]{20,}'), 'API Key de Jina AI'),
               (re.compile(r'AIza[a-zA-Z0-9_-]{20,}'), 'API Key de Google (Gemini/MapTiler)'),
               (re.compile(r'sk-or-v1-[a-zA-Z0-9]{20,}'), 'API Key de OpenRouter'),
+              # MapTiler no siempre usa el formato AIza... (ya se encontraron 2
+              # keys reales con formato alfanumérico simple) — esto detecta
+              # el patrón estructural (key= en la propia URL) sin importar el
+              # formato de la key.
+              (re.compile(r'maptiler\.com[^\x22]*?[?&]key=[a-zA-Z0-9_-]{10,}'), 'API Key de MapTiler en query string'),
           ]
 
           errors = 0

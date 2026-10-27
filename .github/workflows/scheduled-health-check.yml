@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   health-check:
@@ -16,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Ejecutar health-check.sh contra producción
         env:
@@ -25,3 +26,16 @@ jobs:
         run: |
           chmod +x infrastructure/scripts/health-check.sh
           ./infrastructure/scripts/health-check.sh
+
+      - name: Avisar con un issue (si corrió por el cron, no manual)
+        if: ${{ failure() && github.event_name == 'schedule' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label ci-health-check-failure --state open --json number --jq '.[0].number')
+          BODY="El health-check programado falló: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Health check de producción fallando" --label ci-health-check-failure --body "$BODY"
+          fi
