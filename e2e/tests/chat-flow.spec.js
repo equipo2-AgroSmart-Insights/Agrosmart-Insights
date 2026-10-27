@@ -15,11 +15,18 @@ test('el chat responde de punta a punta a una consulta real', async ({ page }) =
 
   // Confirma que el estado de carga realmente aparece (si no aparece nunca,
   // es señal de que el click no disparó nada).
-  await expect(page.getByText(/Analizando tu consulta/i)).toBeVisible({ timeout: 10_000 });
+  // No se usa texto literal: ya cambió 2 veces por copy del frontend
+  // ("Analizando tu consulta" -> "Consultando base de datos..." -> "Cargando
+  // consulta...") y cada cambio rompía este test. LoadingIndicator.jsx es el
+  // único role="status" del chat SIN aria-label (el de LoadingSkeleton.jsx,
+  // el esqueleto del gráfico, sí tiene aria-label) — eso es estable aunque
+  // cambie el copy de nuevo.
+  const loadingIndicator = page.locator('[role="status"]:not([aria-label])');
+  await expect(loadingIndicator).toBeVisible({ timeout: 10_000 });
 
   // El plan free de Render puede tardar 50s+ en despertar más el tiempo
   // real del LLM — por eso el timeout generoso, no es un test lento a propósito.
-  await expect(page.getByText(/Analizando tu consulta/i)).toBeHidden({ timeout: 140_000 });
+  await expect(loadingIndicator).toBeHidden({ timeout: 140_000 });
 
   // No validamos el contenido exacto de la respuesta (depende del LLM y
   // de datos que cambian a diario) — validamos que haya una respuesta real
