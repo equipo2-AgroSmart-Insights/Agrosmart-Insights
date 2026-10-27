@@ -1,0 +1,94 @@
+name: Exportar workflow n8n (resync manual)
+# Nace del Issue de drift: n8n-drift-check.yml detecta cuando algo se editó
+# en vivo en el editor de n8n y la copia en git quedó vieja, pero hasta
+# ahora resincronizarla significaba conectarse a mano a la base de datos de
+# producción. Este workflow hace ese resync usando el mismo secret que ya
+# vive en GitHub Actions (RENDER_DATABASE_URL) — el secreto nunca tiene que
+# pasar por la laptop de nadie.
+#
+# Deliberadamente NO es automático (sin cron): un drift puede significar
+# que PRODUCCIÓN está mal (alguien tocó algo que no debía) tanto como que
+# GIT está desactualizado — exportar solo no decide cuál de los dos lados
+# es el correcto, por eso se dispara a mano y abre un PR para que alguien
+# lo revise antes de que llegue a main, igual que cualquier otro cambio.
+
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_ids:
+        description: "IDs de n8n a exportar, separados por coma (ver Issue de drift). Usar 'todos' para resincronizar los 4 workflows ya versionados."
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  export:
+    name: Exportar y abrir PR
+    runs-on: ubuntu-latest
+    env:
+      HAS_DB_SECRET: ${{ secrets.RENDER_DATABASE_URL != '' }}
+      # El input nunca se interpola directo en un `run:` (riesgo de script
+      # injection vía workflow_dispatch) — se pasa por variable de entorno
+      # y el script de Python la lee desde ahí.
+      WORKFLOW_IDS_INPUT: ${{ inputs.workflow_ids }}
+    steps:
+      - name: Avisar si falta el secret
+        if: ${{ env.HAS_DB_SECRET == 'false' }}
+        run: |
+          echo "::error::RENDER_DATABASE_URL no está configurado — no se puede exportar."
+          exit 1
+
+      - name: Checkout del código
+        if: ${{ env.HAS_DB_SECRET == 'true' }}
+        uses: actions/checkout@v7
+
+      - name: Configurar Python
+        if: ${{ env.HAS_DB_SECRET == 'true' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias
+        if: ${{ env.HAS_DB_SECRET == 'true' }}
+        run: pip install psycopg2-binary
+
+      - name: Ejecutar export
+        if: ${{ env.HAS_DB_SECRET == 'true' }}
+        working-directory: .github/scripts
+        env:
+          RENDER_DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+        run: |
+          if [ "$WORKFLOW_IDS_INPUT" = "todos" ]; then
+            python export_n8n_workflow.py --all-known
+          else
+            IDS=$(echo "$WORKFLOW_IDS_INPUT" | tr ',' ' ')
+            python export_n8n_workflow.py $IDS
+          fi
+
+      - name: Abrir PR con el resync
+        if: ${{ env.HAS_DB_SECRET == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- src/n8n-workflows/production/; then
+            echo "Sin cambios — los workflows exportados ya coinciden con git."
+            exit 0
+          fi
+
+          BRANCH="n8n-resync-$(date -u +%Y%m%d-%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add src/n8n-workflows/production/
+          git commit -m "chore(n8n): resync automático desde producción (workflow_dispatch)"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "chore(n8n): resync automático de workflows desde producción" \
+            --body "Generado por \`n8n-export.yml\` (disparado manualmente, IDs pedidos: \`$WORKFLOW_IDS_INPUT\`). Revisar que la redacción de secretos sea correcta antes de mergear.
+
+          No se commitea directo a \`main\`: alguien del equipo debe confirmar que este resync refleja un cambio intencional en producción (y no, por ejemplo, que alguien probó algo en el editor de n8n sin querer dejarlo así)." \
+            --label "n8n-drift"
