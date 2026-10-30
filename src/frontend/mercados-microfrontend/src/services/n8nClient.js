@@ -18,10 +18,17 @@ function getSessionId() {
   }
   let sessionId = sessionStorage.getItem(key);
   if (!sessionId) {
-    sessionId =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : "session-" + Math.random().toString(36).substring(2, 9);
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      sessionId = crypto.randomUUID();
+    } else if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      sessionId =
+        "session-" +
+        Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    } else {
+      sessionId = "session-default";
+    }
     sessionStorage.setItem(key, sessionId);
   }
   return sessionId;
