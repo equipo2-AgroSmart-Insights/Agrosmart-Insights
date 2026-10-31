@@ -204,7 +204,7 @@ export default function MercadosMIDAGRI() {
             <span>{refreshing ? "Sincronizando..." : "Actualizar"}</span>
           </button>
         </div>
-      </header>
+      )}
 
       {/* 2. Barra de Selección de Producto, Mercados y Filtros Dinámicos */}
       <section className="bg-surface-container-lowest rounded-3xl p-6 sm:p-7 border border-outline-variant/30 shadow-[0_4px_24px_rgba(0,0,0,0.03)] space-y-6">
@@ -528,6 +528,11 @@ export default function MercadosMIDAGRI() {
                     </span>
                   )}
                 </div>
+                <p className="text-[10px] text-on-surface-variant">
+                  Última fecha GMML: {data.ultimaFechaGMML ? formatearFecha(data.ultimaFechaGMML) : "Sin fecha"}
+                </p>
+              </div>
+            </div>
 
                 <div className="my-2">
                   {data.ultimosPrecios?.mmf2 ? (
