@@ -12,7 +12,7 @@ import {
   Filler,
 } from "chart.js";
 import {
-  getCatalogoProductos,
+  buscarProductos,
   fetchComparativaMercados,
   formatearFecha,
 } from "../../services/mercadosService";
@@ -28,39 +28,57 @@ ChartJS.register(
 );
 
 export default function MercadosMIDAGRI() {
-  const catalogo = useMemo(() => getCatalogoProductos(), []);
-
   // Estados interactivos
-  const [selectedProductId, setSelectedProductId] = useState(101); // 101: Papa Blanca
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   const [selectedHorizonte, setSelectedHorizonte] = useState("mes"); // 'semana' | 'mes' | 'trimestre'
   const [selectedMercados, setSelectedMercados] = useState(["GMML", "MMF2"]);
-  const [filtroCategoria, setFiltroCategoria] = useState("Todos");
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [filtroTabla, setFiltroTabla] = useState("todos"); // 'todos' | 'comparables' | 'discontinuos'
 
-  const categorias = useMemo(() => {
-    const set = new Set(catalogo.map((p) => p.categoria));
-    return ["Todos", ...Array.from(set)];
-  }, [catalogo]);
+  const buscar = async (event) => {
+    event.preventDefault();
+    const termino = searchTerm.trim();
+    if (termino.length < 2) {
+      setSearchError("Ingresa al menos dos caracteres para buscar.");
+      setSearchResults([]);
+      return;
+    }
 
-  const productosFiltrados = useMemo(() => {
-    return catalogo.filter((p) => {
-      return filtroCategoria === "Todos" || p.categoria === filtroCategoria;
-    });
-  }, [catalogo, filtroCategoria]);
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchResults([]);
+    try {
+      const resultados = await buscarProductos(termino);
+      setSearchResults(resultados);
+      if (resultados.length === 0) {
+        setSearchError(
+          "No se encontraron cotizaciones para esa búsqueda en los mercados consultados."
+        );
+      }
+    } catch (error) {
+      setSearchError(error.message || "No se pudo buscar el producto.");
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   // Cargar datos desde los flujos de n8n / base de datos
   const cargarComparativa = async (isManual = false) => {
+    if (!selectedProduct) return;
     if (isManual) setRefreshing(true);
     else setLoading(true);
     setErrorMsg(null);
 
     try {
       const resultado = await fetchComparativaMercados({
-        productoId: selectedProductId,
+        producto: selectedProduct,
         horizonte: selectedHorizonte,
         mercados: selectedMercados,
       });
@@ -79,7 +97,7 @@ export default function MercadosMIDAGRI() {
 
   useEffect(() => {
     cargarComparativa();
-  }, [selectedProductId, selectedHorizonte, selectedMercados]);
+  }, [selectedProduct, selectedHorizonte, selectedMercados]);
 
   const toggleMercado = (mercado) => {
     setSelectedMercados((prev) => {
@@ -99,7 +117,7 @@ export default function MercadosMIDAGRI() {
 
     if (selectedMercados.includes("GMML")) {
       datasets.push({
-        label: `GMML (${data.unidadGMML || "Kilogramo"})`,
+        label: `GMML${data.unidadGMML ? ` (${data.unidadGMML})` : ""}`,
         data: data.grafico.seriesGMML || [],
         borderColor: "#1b4332",
         backgroundColor: "rgba(27, 67, 50, 0.08)",
@@ -116,7 +134,7 @@ export default function MercadosMIDAGRI() {
 
     if (selectedMercados.includes("MMF2")) {
       datasets.push({
-        label: `MMF2 (${data.unidadMMF2 || "Kilogramo"})`,
+        label: `MMF2${data.unidadMMF2 ? ` (${data.unidadMMF2})` : ""}`,
         data: data.grafico.seriesMMF2 || [],
         borderColor: "#c85a17",
         backgroundColor: "rgba(200, 90, 23, 0.08)",
@@ -149,11 +167,7 @@ export default function MercadosMIDAGRI() {
     return data.tabla;
   }, [data, filtroTabla]);
 
-  const productoActual = useMemo(() => {
-    return (
-      catalogo.find((p) => p.id === Number(selectedProductId)) || catalogo[0]
-    );
-  }, [catalogo, selectedProductId]);
+  const productoActual = selectedProduct;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 animate-fadeIn">
@@ -168,7 +182,7 @@ export default function MercadosMIDAGRI() {
             Comparativa de Precios: GMML vs. MMF2
           </h1>
           <p className="font-body-md text-on-surface-variant mt-1 text-sm sm:text-base max-w-3xl">
-            Herramienta para productores y comerciantes: consulte registros oficiales actualizados en tiempo real mediante los flujos de ingesta de n8n, homologue productos por ID maestro e identifique brechas comerciales.
+            Herramienta para productores y comerciantes: busque productos con cotizaciones disponibles y compare sus precios en GMML y MMF2. Las diferencias solo se calculan cuando la respuesta permite verificar ID maestro y unidad.
           </p>
         </div>
 
@@ -195,36 +209,68 @@ export default function MercadosMIDAGRI() {
       {/* 2. Barra de Selección de Producto, Mercados y Filtros Dinámicos */}
       <section className="bg-surface-container-lowest rounded-3xl p-6 sm:p-7 border border-outline-variant/30 shadow-[0_4px_24px_rgba(0,0,0,0.03)] space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
-          {/* Selector de Producto Agrícola con ID Maestro (Criterio 1) */}
+          {/* Búsqueda de productos con cotizaciones disponibles */}
           <div className="lg:col-span-5 space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-              1. Seleccionar Producto Agrícola:
+              1. Buscar producto agrícola:
             </label>
-            <div className="relative">
-              <select
-                value={selectedProductId}
-                onChange={(e) => setSelectedProductId(Number(e.target.value))}
-                className="w-full pl-4 pr-10 py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-2xl text-sm font-semibold text-on-surface focus:outline-none focus:border-forest-green cursor-pointer appearance-none shadow-sm"
+            <form onSubmit={buscar} className="flex gap-2">
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Escribe el nombre del producto"
+                aria-label="Buscar producto agrícola"
+                className="min-w-0 flex-1 pl-4 pr-3 py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-2xl text-sm font-semibold text-on-surface focus:outline-none focus:border-forest-green shadow-sm"
+              />
+              <button
+                type="submit"
+                disabled={searchLoading}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-forest-green text-white text-sm font-semibold disabled:opacity-60"
               >
-                {productosFiltrados.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    [ID Maestro #{p.id}] {p.nombre} ({p.categoria})
-                  </option>
+                {searchLoading ? "Buscando..." : "Buscar"}
+              </button>
+            </form>
+            <p className="text-[11px] text-on-surface-variant">
+              Se muestran productos y unidades presentes en los resultados consultados.
+            </p>
+            {searchError && (
+              <p role="status" className="text-xs text-amber-800">
+                {searchError}
+              </p>
+            )}
+            {searchResults.length > 0 && (
+              <ul className="max-h-48 overflow-y-auto rounded-xl border border-outline-variant/40 bg-surface-container-lowest">
+                {searchResults.map((product) => (
+                  <li key={`${product.nombre}|${product.unidad}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setData(null);
+                        setSearchResults([]);
+                        setSearchError(null);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-surface-container-low"
+                    >
+                      <span className="font-semibold">{product.nombre}</span>
+                      <span className="ml-2 text-on-surface-variant">
+                        / {product.unidad}
+                      </span>
+                      {product.id && (
+                        <span className="ml-2 text-xs text-on-surface-variant">
+                          ID maestro #{product.id}
+                        </span>
+                      )}
+                    </button>
+                  </li>
                 ))}
-              </select>
-              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-[20px]">
-                expand_more
-              </span>
-            </div>
+              </ul>
+            )}
             {productoActual && (
-              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                <span className="px-2 py-0.5 rounded-md bg-forest-green/10 text-forest-green font-bold">
-                  ID Maestro: #{productoActual.id}
-                </span>
-                <span className="text-on-surface-variant">
-                  {productoActual.descripcion}
-                </span>
-              </div>
+              <p className="text-xs text-forest-green font-semibold">
+                Seleccionado: {productoActual.nombre} / {productoActual.unidad}
+              </p>
             )}
           </div>
 
@@ -309,25 +355,6 @@ export default function MercadosMIDAGRI() {
           </div>
         </div>
 
-        {/* Filtros rápidos por categoría */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-outline-variant/20">
-          <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mr-1">
-            Grupo:
-          </span>
-          {categorias.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setFiltroCategoria(cat)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                filtroCategoria === cat
-                  ? "bg-primary-fixed text-on-primary-fixed font-bold"
-                  : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
       </section>
 
       {/* Estado de Error o Reconexión */}
@@ -366,6 +393,14 @@ export default function MercadosMIDAGRI() {
         </div>
       )}
 
+      {!loading && !selectedProduct && (
+        <div className="bg-surface-container-lowest rounded-3xl p-8 border border-outline-variant/30 text-center">
+          <p className="text-sm font-semibold text-on-surface">
+            Busca y selecciona un producto para consultar los registros disponibles.
+          </p>
+        </div>
+      )}
+
       {/* Contenido Principal (solo si no está cargando y hay datos) */}
       {!loading && data && (
         <>
@@ -376,7 +411,7 @@ export default function MercadosMIDAGRI() {
                 warning
               </span>
               <div className="text-xs sm:text-sm text-amber-900 space-y-1">
-                <p className="font-bold">Regla de Homologación: Unidades no comparables directamente</p>
+                <p className="font-bold">Comparación no disponible</p>
                 <p>{data.mensajeEquivalencia}</p>
               </div>
             </div>
@@ -394,7 +429,7 @@ export default function MercadosMIDAGRI() {
                     <span>El Gran Mercado Mayorista (GMML) no cuenta con registros para {productoActual?.nombre}. </span>
                   )}
                   {!data.ultimosPrecios?.mmf2 && (
-                    <span>El Mercado de Frutas N° 2 (MMF2) no comercializa ni registra cotizaciones para {productoActual?.nombre}. </span>
+                    <span>No se encontraron cotizaciones para {productoActual?.nombre} en MMF2. </span>
                   )}
                   Se muestran con fidelidad los registros del mercado disponible sin inventar cifras faltantes.
                 </p>
@@ -411,7 +446,7 @@ export default function MercadosMIDAGRI() {
                   <span className="text-xs font-bold uppercase tracking-wider text-forest-green">
                     Gran Mercado Mayorista (GMML)
                   </span>
-                  {data.variacionesPeriodo?.gmml !== undefined && (
+                  {data.variacionesPeriodo?.gmml != null && (
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                         data.variacionesPeriodo.gmml > 0
@@ -465,6 +500,9 @@ export default function MercadosMIDAGRI() {
                 <p className="text-[10px] text-on-surface-variant">
                   Última fecha GMML: {data.ultimaFechaGMML ? formatearFecha(data.ultimaFechaGMML) : "Sin fecha"}
                 </p>
+                <p className="text-[10px] text-on-surface-variant">
+                  {data.promediosPeriodo?.aclaracion}
+                </p>
               </div>
             </div>
 
@@ -475,7 +513,7 @@ export default function MercadosMIDAGRI() {
                   <span className="text-xs font-bold uppercase tracking-wider text-[#c85a17]">
                     Mercado de Frutas N° 2 (MMF2)
                   </span>
-                  {data.variacionesPeriodo?.mmf2 !== undefined && (
+                  {data.variacionesPeriodo?.mmf2 != null && (
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                         data.variacionesPeriodo.mmf2 > 0
@@ -529,6 +567,9 @@ export default function MercadosMIDAGRI() {
                 <p className="text-[10px] text-on-surface-variant">
                   Última fecha MMF2: {data.ultimaFechaMMF2 ? formatearFecha(data.ultimaFechaMMF2) : "Sin fecha"}
                 </p>
+                <p className="text-[10px] text-on-surface-variant">
+                  {data.promediosPeriodo?.aclaracion}
+                </p>
               </div>
             </div>
 
@@ -545,14 +586,10 @@ export default function MercadosMIDAGRI() {
                 </div>
 
                 <div className="my-2">
-                  {data.sonEquivalentes && data.ultimosPrecios?.gmml && data.ultimosPrecios?.mmf2 ? (
+                  {data.comparacionMasReciente ? (
                     (() => {
-                      const dif = Number(
-                        (data.ultimosPrecios.gmml.precio - data.ultimosPrecios.mmf2.precio).toFixed(2)
-                      );
-                      const difPct = Number(
-                        (((dif) / data.ultimosPrecios.mmf2.precio) * 100).toFixed(1)
-                      );
+                      const { diferenciaSoles: dif, diferenciaPct: difPct, fechaCompleta } =
+                        data.comparacionMasReciente;
                       const esPositivo = dif > 0;
                       return (
                         <div>
@@ -565,6 +602,7 @@ export default function MercadosMIDAGRI() {
                             </span>
                           </div>
                           <p className="text-xs text-on-surface-variant mt-1">
+                            Comparación del {fechaCompleta}.{" "}
                             {esPositivo
                               ? "GMML cotiza a mayor precio que MMF2"
                               : dif < 0
@@ -577,7 +615,7 @@ export default function MercadosMIDAGRI() {
                   ) : data.mensajeEquivalencia ? (
                     <div className="py-2">
                       <span className="inline-block px-3 py-1 bg-amber-100 text-amber-900 rounded-xl text-xs font-bold">
-                        Unidades no equivalentes
+                        No homologado
                       </span>
                       <p className="text-xs text-on-surface-variant mt-1">
                         No se calcula brecha directa
@@ -586,10 +624,14 @@ export default function MercadosMIDAGRI() {
                   ) : (
                     <div className="py-2">
                       <span className="inline-block px-3 py-1 bg-surface-container-high rounded-xl text-xs font-semibold text-on-surface-variant">
-                        Mercado único con registro
+                        {data.tienenAmbosRegistros
+                          ? "Sin fecha comparable"
+                          : "Una fuente con registros"}
                       </span>
                       <p className="text-xs text-on-surface-variant mt-1">
-                        Solo 1 fuente disponible para este producto
+                        {data.tienenAmbosRegistros
+                          ? "Hay datos en ambos mercados, pero no una fecha común homologada."
+                          : "Solo una de las fuentes consultadas devolvió registros."}
                       </p>
                     </div>
                   )}
@@ -629,13 +671,13 @@ export default function MercadosMIDAGRI() {
                 {selectedMercados.includes("GMML") && (
                   <div className="flex items-center gap-1.5">
                     <span className="w-3.5 h-3.5 rounded-full bg-forest-green inline-block"></span>
-                    <span>GMML ({data.unidadGMML || "Kg"})</span>
+                    <span>GMML{data.unidadGMML ? ` (${data.unidadGMML})` : ""}</span>
                   </div>
                 )}
                 {selectedMercados.includes("MMF2") && (
                   <div className="flex items-center gap-1.5">
                     <span className="w-3.5 h-3.5 rounded-full bg-[#c85a17] inline-block"></span>
-                    <span>MMF2 ({data.unidadMMF2 || "Kg"})</span>
+                    <span>MMF2{data.unidadMMF2 ? ` (${data.unidadMMF2})` : ""}</span>
                   </div>
                 )}
               </div>
@@ -664,7 +706,7 @@ export default function MercadosMIDAGRI() {
                           label: function (context) {
                             const val = context.parsed.y;
                             if (val === null || isNaN(val)) {
-                              return `${context.dataset.label}: Sin cotización registrada`;
+                              return `${context.dataset.label}: Sin dato devuelto`;
                             }
                             return `${context.dataset.label}: S/ ${val.toFixed(2)}`;
                           },
@@ -695,7 +737,7 @@ export default function MercadosMIDAGRI() {
 
             <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-on-surface-variant border-t border-outline-variant/15 gap-2">
               <p>
-                <span className="font-bold text-on-surface">Regla de discontinuidad visual:</span> Las líneas interrumpidas reflejan fechas sin cotización publicada por MIDAGRI. No se inventan valores faltantes.
+                <span className="font-bold text-on-surface">Datos incompletos:</span> Las líneas interrumpidas indican fechas sin un dato devuelto por el workflow; esto no confirma que la base de datos carezca de registros en esas fechas.
               </p>
               <p className="text-outline">
                 Horizonte activo: {data.labelHorizonte} ({data.tabla?.length || 0} jornadas analizadas)
@@ -708,7 +750,7 @@ export default function MercadosMIDAGRI() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-outline-variant/20">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-on-surface">
-                  Tabla Comparativa Diaria Homologada
+                  Tabla Comparativa Diaria
                 </h2>
                 <p className="text-xs sm:text-sm text-on-surface-variant">
                   Detalle diario por fecha, cotización por mercado, unidad comercial y cálculo de brechas.
@@ -782,9 +824,11 @@ export default function MercadosMIDAGRI() {
                             <span className="font-bold text-on-surface">
                               {fila.productoNombre}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-container-high text-on-surface-variant">
-                              #{fila.productoId}
-                            </span>
+                            {fila.productoId && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-container-high text-on-surface-variant">
+                                ID maestro #{fila.productoId}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="py-3.5 px-4">
@@ -799,7 +843,7 @@ export default function MercadosMIDAGRI() {
                             </div>
                           ) : (
                             <span className="text-outline italic text-xs">
-                              Sin registro
+                              Sin dato devuelto
                             </span>
                           )}
                         </td>
@@ -815,7 +859,7 @@ export default function MercadosMIDAGRI() {
                             </div>
                           ) : (
                             <span className="text-outline italic text-xs">
-                              Sin registro
+                              Sin dato devuelto
                             </span>
                           )}
                         </td>
@@ -840,6 +884,10 @@ export default function MercadosMIDAGRI() {
                             <span className="text-xs text-amber-700 italic">
                               Unidades no equivalentes
                             </span>
+                          ) : fila.estadoComparacion === "producto_no_homologado" ? (
+                            <span className="text-xs text-amber-700 italic">
+                              ID maestro no coincide o no disponible
+                            </span>
                           ) : (
                             <span className="text-xs text-outline italic">
                               — No comparable —
@@ -854,6 +902,10 @@ export default function MercadosMIDAGRI() {
                           ) : fila.estadoComparacion === "unidades_distintas" ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900">
                               ⚠ Unidades distintas
+                            </span>
+                          ) : fila.estadoComparacion === "producto_no_homologado" ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900">
+                              ID maestro no coincide
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-surface-container-high text-on-surface-variant">
