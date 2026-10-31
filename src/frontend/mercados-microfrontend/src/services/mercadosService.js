@@ -1,38 +1,6 @@
 import { sendN8nAction } from "./n8nClient.js";
 
 /**
- * Catálogo canónico de productos agrícolas homologados por MIDAGRI
- * Identificados mediante sus IDs maestros (productos_maestro) para GMML y MMF2.
- */
-export const PRODUCTOS_OFICIALES = [
-  { id: 101, nombre: "Papa Blanca", categoria: "Tubérculos", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Papa blanca comercial mayorista de consumo masivo en Lima." },
-  { id: 102, nombre: "Papa Amarilla", categoria: "Tubérculos", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Papa amarilla nativa de alta cotización culinaria." },
-  { id: 103, nombre: "Papa Canchán", categoria: "Tubérculos", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Variedad de papa de consumo masivo comercializada en GMML." },
-  { id: 104, nombre: "Papa Yungay", categoria: "Tubérculos", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Variedad de alta productividad procedente de la sierra central." },
-  { id: 105, nombre: "Camote Amarillo", categoria: "Tubérculos", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Tubérculo dulce procedente de valles costeros en GMML." },
-  { id: 106, nombre: "Yuca Amarilla", categoria: "Tubérculos", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Yuca fresca procedente de selva central cotizada en GMML." },
-  { id: 201, nombre: "Cebolla Cabeza Roja", categoria: "Hortalizas", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Hortaliza de alto volumen mayorista en GMML." },
-  { id: 202, nombre: "Tomate Katia", categoria: "Hortalizas", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Hortaliza de fruto cotizada diariamente en GMML." },
-  { id: 203, nombre: "Zanahoria", categoria: "Hortalizas", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Hortaliza de raíz comercializada en GMML." },
-  { id: 204, nombre: "Zapallo Macre", categoria: "Hortalizas", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Zapallo de pulpa anaranjada de alta demanda en Lima." },
-  { id: 205, nombre: "Arveja Verde Americana", categoria: "Legumbres y Granos", mercados: ["GMML"], unidad: "Kilogramo", descripcion: "Legumbre fresca comercializada en GMML." },
-  { id: 301, nombre: "Limón Sutil", categoria: "Frutas", mercados: ["GMML", "MMF2"], unidad: "Kilogramo", descripcion: "Cítrico comercializado tanto en GMML como en el Mercado de Frutas N° 2 (MMF2)." },
-  { id: 302, nombre: "Maracuyá", categoria: "Frutas", mercados: ["GMML", "MMF2"], unidad: "Kilogramo", descripcion: "Fruta ácida cotizada en ambos mercados mayoristas (GMML y MMF2)." },
-  { id: 303, nombre: "Palta Fuerte", categoria: "Frutas", mercados: ["GMML", "MMF2"], unidad: "Kilogramo", descripcion: "Fruto de alta cotización presente en ambos mercados mayoristas." },
-  { id: 304, nombre: "Plátano Seda", categoria: "Frutas", mercados: ["MMF2"], unidad: "Kilogramo", descripcion: "Fruta líder en volumen mayorista en el Mercado de Frutas N° 2 (MMF2)." },
-  { id: 305, nombre: "Manzana Delicia", categoria: "Frutas", mercados: ["MMF2"], unidad: "Kilogramo", descripcion: "Variedad de manzana nacional comercializada en MMF2." },
-  { id: 306, nombre: "Papaya Selva", categoria: "Frutas", mercados: ["MMF2"], unidad: "Kilogramo", descripcion: "Fruta tropical de gran abastecimiento en MMF2." },
-  { id: 307, nombre: "Piña Golden", categoria: "Frutas", mercados: ["MMF2"], unidad: "Kilogramo", descripcion: "Fruta tropical dulce cotizada en MMF2." },
-  { id: 308, nombre: "Sandía", categoria: "Frutas", mercados: ["MMF2"], unidad: "Kilogramo", descripcion: "Fruta estacional de gran volumen en MMF2." },
-  { id: 309, nombre: "Pera Agua Italiana", categoria: "Frutas", mercados: ["MMF2"], unidad: "Kilogramo", descripcion: "Fruta comercializada en MMF2 (caso de validación del parser WF0)." },
-  { id: 310, nombre: "Fresa", categoria: "Frutas", mercados: ["MMF2"], unidad: "Kilogramo", descripcion: "Baya fresca comercializada en MMF2." },
-];
-
-export function getCatalogoProductos() {
-  return PRODUCTOS_OFICIALES;
-}
-
-/**
  * Normaliza nombres para comparación flexible insensible a mayúsculas y tildes.
  */
 function normalizarTexto(texto) {
@@ -41,6 +9,12 @@ function normalizarTexto(texto) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function obtenerIdMaestro(valor) {
+  if (valor === null || valor === undefined || valor === "") return null;
+  const id = Number(valor);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 /**
@@ -69,7 +43,7 @@ export function sonUnidadesEquivalentes(unidadA, unidadB) {
 /**
  * Parsea fechas en lenguaje natural o ISO.
  */
-function parsearFechaTexto(fechaStr) {
+function parsearFechaTexto(fechaStr, anioReferencia) {
   if (!fechaStr) return null;
   const meses = {
     enero: "01", febrero: "02", marzo: "03", abril: "04", mayo: "05", junio: "06",
@@ -93,7 +67,13 @@ function parsearFechaTexto(fechaStr) {
     const dia = String(natMatch[1]).padStart(2, "0");
     const mesNom = normalizarTexto(natMatch[2]);
     const mes = meses[mesNom] || "01";
-    const anio = natMatch[3] || "2026";
+    let anio = Number(natMatch[3] || anioReferencia || new Date().getFullYear());
+    if (!natMatch[3] && anioReferencia) {
+      const fechaReferencia = String(anioReferencia).match(/^(\d{4})-(\d{2})-/);
+      const mesReferencia = fechaReferencia ? Number(fechaReferencia[2]) : null;
+      const numeroMes = Number(mes);
+      if (mesReferencia && numeroMes > mesReferencia) anio -= 1;
+    }
     return `${anio}-${mes}-${dia}`;
   }
 
@@ -129,9 +109,9 @@ export function formatearFecha(fechaStr) {
  * Parsea el texto estructurado que genera WF2 con base en la consulta SQL a precios_diarios:
  * Ej:
  * Precios de [Producto] — consulta del [Fecha]
- * • GMML: Precio de hoy: S/ 3.20 por Kilogramo (20 de agosto de 2026).
- *   Historial anterior: 19 de agosto de 2026: S/ 3.25; 18 de agosto de 2026: S/ 3.28.
- * • MMF2: Precio de hoy: S/ 3.40 por Kilogramo (20 de agosto de 2026).
+ * • GMML: Precio de hoy: S/ [precio] por [unidad] ([fecha]).
+ *   Historial anterior: [fecha]: S/ [precio]; [fecha]: S/ [precio].
+ * • MMF2: Precio de hoy: S/ [precio] por [unidad] ([fecha]).
  * • MMF2: sin registros disponibles.
  */
 function parsearRespuestaWF(textoRespuesta, productoConsultado) {
@@ -139,63 +119,71 @@ function parsearRespuestaWF(textoRespuesta, productoConsultado) {
 
   const lineas = textoRespuesta.split("\n");
   const registros = [];
+  const fechaReferenciaTexto = textoRespuesta.match(
+    /(?:consulta del|—)\s*(\d{1,2}\s+de\s+[A-Za-záéíóú]+\s+de\s+\d{4})/i
+  )?.[1];
+  const fechaReferencia = fechaReferenciaTexto
+    ? parsearFechaTexto(fechaReferenciaTexto)
+    : null;
 
   let mercadoActual = null;
-  let unidadActual = "Kilogramo";
+  let productoActual = null;
+  let unidadActual = null;
 
   for (const rawLinea of lineas) {
     const linea = rawLinea.trim();
 
-    // Detección de variedad o unidad en el texto: "Producto — Unidad"
-    const headerUnidad = linea.match(/—\s*([A-Za-z]+)$/);
+    const headerUnidad = linea.match(/^(.+?)\s+—\s+(.+)$/);
     if (headerUnidad) {
-      unidadActual = headerUnidad[1].trim();
+      productoActual = headerUnidad[1].trim();
+      unidadActual = headerUnidad[2].trim();
+      mercadoActual = null;
     }
 
     // Detección de línea GMML
-    if (linea.includes("• GMML:")) {
+    if (linea.includes("• GMML:") || linea.includes("- GMML:")) {
       mercadoActual = "GMML";
       if (linea.includes("sin registros disponibles")) {
         continue;
       }
-      const matchPrecio = linea.match(/S\/\s*([\d.]+)\s*por\s*([^\n(]+)\s*\(([^)]+)\)/i);
+      const matchPrecio = linea.match(/S\/\s*([\d.,]+)\s*por\s*([^\n(]+)\s*\(([^)]+)\)/i);
       if (matchPrecio) {
-        const precio = parseFloat(matchPrecio[1]);
+        const precio = Number(matchPrecio[1].replace(",", "."));
         const unidad = matchPrecio[2].trim();
         const fechaRaw = matchPrecio[3].trim();
-        const fechaIso = parsearFechaTexto(fechaRaw);
+        const fechaIso = parsearFechaTexto(fechaRaw, fechaReferencia);
         registros.push({
           mercado: "GMML",
           fecha: fechaIso,
           fechaTexto: fechaRaw,
           precio,
           unidad,
-          producto: productoConsultado.nombre,
-          producto_id: productoConsultado.id,
+          producto: productoActual || productoConsultado.nombre,
+          producto_id: null,
         });
       }
     }
 
     // Detección de línea MMF2
-    if (linea.includes("• MMF2:")) {
+    if (linea.includes("• MMF2:") || linea.includes("- MMF2:")) {
       mercadoActual = "MMF2";
       if (linea.includes("sin registros disponibles")) {
         continue;
       }
-      const matchPrecio = linea.match(/S\/\s*([\d.]+)\s*por\s*([^\n(]+)\s*\(([^)]+)\)/i);
+      const matchPrecio = linea.match(/S\/\s*([\d.,]+)\s*por\s*([^\n(]+)\s*\(([^)]+)\)/i);
       if (matchPrecio) {
-        const precio = parseFloat(matchPrecio[1]);
+        const precio = Number(matchPrecio[1].replace(",", "."));
         const unidad = matchPrecio[2].trim();
         const fechaRaw = matchPrecio[3].trim();
-        const fechaIso = parsearFechaTexto(fechaRaw);
+        const fechaIso = parsearFechaTexto(fechaRaw, fechaReferencia);
         registros.push({
           mercado: "MMF2",
           fecha: fechaIso,
           fechaTexto: fechaRaw,
           precio,
           unidad,
-          producto: productoConsultado.nombre,
-          producto_id: productoConsultado.id,
+          producto: productoActual || productoConsultado.nombre,
+          producto_id: null,
         });
       }
     }
@@ -206,19 +194,19 @@ function parsearRespuestaWF(textoRespuesta, productoConsultado) {
       if (matchHist) {
         const partes = matchHist[1].replace(/\.$/, "").split(";");
         for (const parte of partes) {
-          const itemMatch = parte.match(/(.+?):\s*S\/\s*([\d.]+)/);
+          const itemMatch = parte.match(/(.+?):\s*S\/\s*([\d.,]+)/);
           if (itemMatch) {
             const fechaRaw = itemMatch[1].trim();
-            const precio = parseFloat(itemMatch[2]);
-            const fechaIso = parsearFechaTexto(fechaRaw);
+            const precio = Number(itemMatch[2].replace(",", "."));
+            const fechaIso = parsearFechaTexto(fechaRaw, fechaReferencia);
             registros.push({
               mercado: mercadoActual,
               fecha: fechaIso,
               fechaTexto: fechaRaw,
               precio,
               unidad: unidadActual,
-              producto: productoConsultado.nombre,
-              producto_id: productoConsultado.id,
+              producto: productoActual || productoConsultado.nombre,
+              producto_id: null,
             });
           }
         }
@@ -248,13 +236,19 @@ export function normalizarRegistrosWF(n8nResponse, productoConsultado) {
 
   if (Array.isArray(rawList) && rawList.length > 0) {
     return rawList.map((row) => ({
-      mercado: String(row.mercado || "GMML").toUpperCase(),
+      mercado: String(row.mercado || "").toUpperCase(),
       fecha: parsearFechaTexto(row.fecha || row.date),
-      precio: Number(row.precio || row.price || 0),
-      unidad: row.unidad || row.unit || productoConsultado.unidad || "Kilogramo",
+      precio: Number(row.precio ?? row.price ?? 0),
+      unidad: row.unidad || row.unit || null,
       producto: row.producto || row.name || productoConsultado.nombre,
-      producto_id: row.producto_id || productoConsultado.id,
-      volumen_t: row.volumen_t !== undefined ? Number(row.volumen_t) : null,
+      producto_id: obtenerIdMaestro(
+        row.producto_id ??
+          row.productoId ??
+          row.id_maestro ??
+          row.master_product_id ??
+          row.product_id
+      ),
+      volumen_t: row.volumen_t != null ? Number(row.volumen_t) : null,
     }));
   }
 
@@ -265,6 +259,56 @@ export function normalizarRegistrosWF(n8nResponse, productoConsultado) {
   }
 
   return [];
+}
+
+async function consultarPreciosWF(nombreProducto) {
+  const nombre = String(nombreProducto || "").trim();
+  if (!nombre) throw new Error("Ingresa el nombre de un producto agrícola.");
+
+  const response = await sendN8nAction({
+    action: "get_market_prices",
+    tipo: "mercados",
+    producto: nombre,
+    mercados: ["GMML", "MMF2"],
+    pregunta: `¿Cuál es el precio actual de ${nombre} en GMML y MMF2?`,
+  });
+  if (!response || typeof response !== "object") {
+    throw new Error("El workflow de mercados devolvió una respuesta inválida.");
+  }
+  return response;
+}
+
+export async function buscarProductos(termino) {
+  const query = String(termino || "").trim();
+  if (query.length < 2) return [];
+
+  const response = await consultarPreciosWF(query);
+  const registros = normalizarRegistrosWF(response, { nombre: query });
+  const productos = new Map();
+  for (const registro of registros) {
+    if (!registro.producto || !registro.unidad) continue;
+    const key = `${normalizarTexto(registro.producto)}|${normalizarTexto(registro.unidad)}`;
+    if (!productos.has(key)) {
+      productos.set(key, {
+        id: obtenerIdMaestro(registro.producto_id),
+        idMaestroEnConflicto: false,
+        nombre: registro.producto,
+        unidad: registro.unidad,
+      });
+    } else {
+      const productoEncontrado = productos.get(key);
+      const idRegistro = obtenerIdMaestro(registro.producto_id);
+      if (idRegistro && productoEncontrado.id && idRegistro !== productoEncontrado.id) {
+        productoEncontrado.id = null;
+        productoEncontrado.idMaestroEnConflicto = true;
+      } else if (!productoEncontrado.id && !productoEncontrado.idMaestroEnConflicto) {
+        productoEncontrado.id = idRegistro;
+      }
+    }
+  }
+  return Array.from(productos.values()).map(
+    ({ idMaestroEnConflicto, ...producto }) => producto
+  );
 }
 
 /**
@@ -280,15 +324,22 @@ export function procesarComparativa({
   horizonte = "mes", // 'semana' | 'mes' | 'trimestre'
   mercados = ["GMML", "MMF2"],
 }) {
-  const prod = producto || PRODUCTOS_OFICIALES[0];
+  const prod = producto || { id: null, nombre: "" };
 
   // Separar registros de los flujos por mercado
-  const registrosGMML = registros.filter(
-    (r) => r.mercado === "GMML" && r.precio > 0
+  const productoNormalizado = normalizarTexto(prod.nombre);
+  const registrosProducto = registros.filter(
+    (registro) =>
+      normalizarTexto(registro.producto) === productoNormalizado &&
+      (!prod.unidad ||
+        normalizarTexto(registro.unidad) === normalizarTexto(prod.unidad))
   );
-  const registrosMMF2 = registros.filter(
-    (r) => r.mercado === "MMF2" && r.precio > 0
-  );
+  const registrosGMML = registrosProducto
+    .filter((r) => r.mercado === "GMML" && r.precio > 0)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const registrosMMF2 = registrosProducto
+    .filter((r) => r.mercado === "MMF2" && r.precio > 0)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   // Determinar la última fecha registrada para cada fuente oficial (Criterio 3)
   const ultimaFechaGMML =
@@ -301,38 +352,86 @@ export function procesarComparativa({
       ? registrosMMF2.reduce((max, r) => (r.fecha > max ? r.fecha : max), "")
       : null;
 
-  const unidadGMML = registrosGMML[0]?.unidad || prod.unidad || "Kilogramo";
-  const unidadMMF2 = registrosMMF2[0]?.unidad || prod.unidad || "Kilogramo";
+  const ultimoRegistroGMML = registrosGMML.at(-1) || null;
+  const ultimoRegistroMMF2 = registrosMMF2.at(-1) || null;
+  const unidadGMML = ultimoRegistroGMML?.unidad || null;
+  const unidadMMF2 = ultimoRegistroMMF2?.unidad || null;
 
   const tienenAmbosRegistros = registrosGMML.length > 0 && registrosMMF2.length > 0;
+  const idsMaestros = new Set(
+    registrosProducto
+      .map((registro) => obtenerIdMaestro(registro.producto_id))
+      .filter((id) => id !== null)
+  );
+  const tieneIdMaestro =
+    idsMaestros.size === 1 &&
+    registrosProducto.every(
+      (registro) => obtenerIdMaestro(registro.producto_id) !== null
+    );
+  const idMaestro = tieneIdMaestro ? idsMaestros.values().next().value : null;
   const sonEquivalentes =
-    tienenAmbosRegistros && sonUnidadesEquivalentes(unidadGMML, unidadMMF2);
+    tienenAmbosRegistros &&
+    tieneIdMaestro &&
+    registrosProducto.every(
+      (registro) =>
+        obtenerIdMaestro(registro.producto_id) === idMaestro &&
+        sonUnidadesEquivalentes(registro.unidad, unidadGMML)
+    ) &&
+    registrosProducto.every(
+      (registro) =>
+        obtenerIdMaestro(registro.producto_id) === idMaestro &&
+        sonUnidadesEquivalentes(registro.unidad, unidadMMF2)
+    );
 
   let mensajeEquivalencia = null;
-  if (tienenAmbosRegistros && !sonEquivalentes) {
+  if (tienenAmbosRegistros && !tieneIdMaestro) {
+    mensajeEquivalencia =
+      "El workflow disponible no incluye el ID maestro en su respuesta. Se muestran los precios consultados, pero no se calcula una diferencia sin poder verificar la homologación.";
+  } else if (tienenAmbosRegistros && !sonEquivalentes) {
     mensajeEquivalencia = `Las unidades comerciales no son equivalentes (${unidadGMML} en GMML vs. ${unidadMMF2} en MMF2). La diferencia de precios directa no debe calcularse para preservar la validez comercial.`;
   }
 
-  // Extraer universo de fechas ordenadas cronológicamente
-  const todasLasFechas = Array.from(
-    new Set(registros.map((r) => r.fecha).filter(Boolean))
-  ).sort();
-
-  // Limitar al horizonte temporal seleccionado (Criterio 2)
-  let limiteRegistros = 30;
+  let diasHorizonte = 30;
   let labelHorizonte = "Último Mes";
   if (horizonte === "semana") {
-    limiteRegistros = 7;
+    diasHorizonte = 7;
     labelHorizonte = "Última Semana";
   } else if (horizonte === "trimestre") {
-    limiteRegistros = 90;
+    diasHorizonte = 90;
     labelHorizonte = "Último Trimestre";
   }
 
-  const fechasHorizonte = todasLasFechas.slice(-limiteRegistros);
+  const partesHoy = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Lima",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const hoyParts = Object.fromEntries(
+    partesHoy.map(({ type, value }) => [type, value])
+  );
+  const fechaFinal = Date.UTC(
+    Number(hoyParts.year),
+    Number(hoyParts.month) - 1,
+    Number(hoyParts.day)
+  );
+  const fechaInicio = new Date(
+    fechaFinal - (diasHorizonte - 1) * 86400000
+  ).toISOString().slice(0, 10);
+  const fechasHorizonte = Array.from({ length: diasHorizonte }, (_, index) =>
+    new Date(fechaFinal - (diasHorizonte - index - 1) * 86400000)
+      .toISOString()
+      .slice(0, 10)
+  );
 
-  const mapGMML = new Map(registrosGMML.map((r) => [r.fecha, r]));
-  const mapMMF2 = new Map(registrosMMF2.map((r) => [r.fecha, r]));
+  const registrosGMMLPeriodo = registrosGMML.filter(
+    (registro) => registro.fecha >= fechaInicio
+  );
+  const registrosMMF2Periodo = registrosMMF2.filter(
+    (registro) => registro.fecha >= fechaInicio
+  );
+  const mapGMML = new Map(registrosGMMLPeriodo.map((r) => [r.fecha, r]));
+  const mapMMF2 = new Map(registrosMMF2Periodo.map((r) => [r.fecha, r]));
 
   const seriesLabels = [];
   const seriesGMML = [];
@@ -344,6 +443,9 @@ export function procesarComparativa({
   let countGMML = 0;
   let sumaMMF2 = 0;
   let countMMF2 = 0;
+  let sumaGMMLComparable = 0;
+  let sumaMMF2Comparable = 0;
+  let countFechasComparables = 0;
 
   fechasHorizonte.forEach((fecha) => {
     const regGMML = mapGMML.get(fecha) || null;
@@ -379,14 +481,14 @@ export function procesarComparativa({
       discontinuidades.push({
         fecha,
         mercado: "GMML",
-        motivo: "Sin cotización registrada en GMML para esta fecha",
+        motivo: "El workflow no devolvió una cotización de GMML para esta fecha",
       });
     }
     if (mercados.includes("MMF2") && !regMMF2) {
       discontinuidades.push({
         fecha,
         mercado: "MMF2",
-        motivo: "Sin cotización registrada en MMF2 para esta fecha",
+        motivo: "El workflow no devolvió una cotización de MMF2 para esta fecha",
       });
     }
 
@@ -394,15 +496,32 @@ export function procesarComparativa({
     let diferenciaSoles = null;
     let diferenciaPct = null;
     let estadoComparacion = "comparable";
+    const idsEquivalentes =
+      regGMML &&
+      regMMF2 &&
+      obtenerIdMaestro(regGMML.producto_id) !== null &&
+      obtenerIdMaestro(regGMML.producto_id) ===
+        obtenerIdMaestro(regMMF2.producto_id);
 
     if (precioGMML !== null && precioMMF2 !== null) {
-      if (sonEquivalentes) {
+      if (
+        idsEquivalentes &&
+        sonUnidadesEquivalentes(regGMML.unidad, regMMF2.unidad)
+      ) {
         diferenciaSoles = Number((precioGMML - precioMMF2).toFixed(2));
         diferenciaPct = Number(
           (((precioGMML - precioMMF2) / precioMMF2) * 100).toFixed(1)
         );
+        sumaGMMLComparable += precioGMML;
+        sumaMMF2Comparable += precioMMF2;
+        countFechasComparables++;
       } else {
-        estadoComparacion = "unidades_distintas";
+        estadoComparacion =
+          !regGMML.unidad || !regMMF2.unidad
+            ? "unidad_no_disponible"
+            : idsEquivalentes
+              ? "unidades_distintas"
+              : "producto_no_homologado";
       }
     } else if (precioGMML !== null || precioMMF2 !== null) {
       estadoComparacion = "registro_parcial";
@@ -414,7 +533,7 @@ export function procesarComparativa({
       fecha,
       fechaFormateada: formatearFechaCorta(fecha),
       fechaCompleta: formatearFecha(fecha),
-      productoId: prod.id,
+      productoId: idMaestro || obtenerIdMaestro(prod.id),
       productoNombre: prod.nombre,
       gmml: {
         precio: precioGMML,
@@ -430,7 +549,10 @@ export function procesarComparativa({
       },
       diferenciaSoles,
       diferenciaPct,
-      sonEquivalentes,
+      sonEquivalentes: Boolean(
+        idsEquivalentes &&
+          sonUnidadesEquivalentes(regGMML?.unidad, regMMF2?.unidad)
+      ),
       estadoComparacion,
     });
   });
@@ -443,17 +565,18 @@ export function procesarComparativa({
 
   let diferenciaPromediosSoles = null;
   let diferenciaPromediosPct = null;
-  if (
-    promedioPeriodoGMML !== null &&
-    promedioPeriodoMMF2 !== null &&
-    sonEquivalentes
-  ) {
+  if (countFechasComparables > 0) {
+    const promedioGMMLComparable =
+      sumaGMMLComparable / countFechasComparables;
+    const promedioMMF2Comparable =
+      sumaMMF2Comparable / countFechasComparables;
     diferenciaPromediosSoles = Number(
-      (promedioPeriodoGMML - promedioPeriodoMMF2).toFixed(2)
+      (promedioGMMLComparable - promedioMMF2Comparable).toFixed(2)
     );
     diferenciaPromediosPct = Number(
       (
-        ((promedioPeriodoGMML - promedioPeriodoMMF2) / promedioPeriodoMMF2) *
+        ((promedioGMMLComparable - promedioMMF2Comparable) /
+          promedioMMF2Comparable) *
         100
       ).toFixed(1)
     );
@@ -470,7 +593,7 @@ export function procesarComparativa({
             100
           ).toFixed(1)
         )
-      : 0;
+      : null;
 
   const validosMMF2 = seriesMMF2.filter((p) => p !== null);
   const variacionPeriodoMMF2 =
@@ -482,10 +605,7 @@ export function procesarComparativa({
             100
           ).toFixed(1)
         )
-      : 0;
-
-  const ultimoRegistroGMML = registrosGMML[registrosGMML.length - 1] || null;
-  const ultimoRegistroMMF2 = registrosMMF2[registrosMMF2.length - 1] || null;
+      : null;
 
   return {
     producto: prod,
@@ -517,6 +637,9 @@ export function procesarComparativa({
           }
         : null,
     },
+    comparacionMasReciente: tabla
+        .filter((fila) => fila.estadoComparacion === "comparable")
+        .at(-1) || null,
     promediosPeriodo: {
       gmml: promedioPeriodoGMML,
       mmf2: promedioPeriodoMMF2,
@@ -524,7 +647,7 @@ export function procesarComparativa({
       diferenciaPct: diferenciaPromediosPct,
       label: `Promedio del Período (${labelHorizonte})`,
       aclaracion:
-        "Este valor representa el promedio estadístico durante el período elegido y no debe confundirse con la cotización diaria.",
+        "Promedio de las cotizaciones que el workflow devolvió dentro del período elegido; no debe confundirse con el precio diario ni con una serie completa si la fuente no entregó todos los días.",
     },
     variacionesPeriodo: {
       gmml: variacionPeriodoGMML,
@@ -546,29 +669,24 @@ export function procesarComparativa({
  * Sin ningún archivo de dataset estático ni números inventados.
  */
 export async function fetchComparativaMercados({
-  productoId = 101,
+  producto,
   horizonte = "mes",
   mercados = ["GMML", "MMF2"],
 }) {
-  const producto =
-    PRODUCTOS_OFICIALES.find((p) => p.id === Number(productoId)) ||
-    PRODUCTOS_OFICIALES[0];
+  if (!producto?.nombre?.trim()) {
+    throw new Error("Busca y selecciona un producto para consultar sus precios.");
+  }
 
   try {
-    const response = await sendN8nAction({
-      action: "get_market_prices",
-      tipo: "mercados",
-      producto_id: producto.id,
-      producto: producto.nombre,
-      mercados,
-      horizonte,
-      pregunta: `¿Cuál es el precio y evolución de ${producto.nombre} en GMML y MMF2 en el horizonte de ${horizonte}?`,
-    });
+    const response = await consultarPreciosWF(producto.nombre);
 
     if (response) {
       const registros = normalizarRegistrosWF(response, producto);
+      const registrosMercados = registros.filter((registro) =>
+        mercados.includes(registro.mercado)
+      );
       return procesarComparativa({
-        registros,
+        registros: registrosMercados,
         producto,
         horizonte,
         mercados,
