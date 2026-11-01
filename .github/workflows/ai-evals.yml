@@ -57,6 +57,15 @@ jobs:
         id: eval
         env:
           DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+          # LANGFUSE_PUBLIC_KEY/SECRET_KEY ya existían como secrets del repo
+          # desde el 08/09/2026 pero ningún workflow los usaba -- el script
+          # ya sabía pedirle a Langfuse costo/tokens acumulados
+          # (obtenerMetricasLangfuse en audit_eval.js), solo le faltaba la
+          # credencial real. Si Langfuse no responde o las claves no son
+          # válidas, la función ya maneja el error y devuelve null sin
+          # romper la evaluación.
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
         run: |
           set -o pipefail
           node audit_eval.js | tee eval-report.txt
