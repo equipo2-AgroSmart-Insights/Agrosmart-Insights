@@ -41,9 +41,9 @@ jobs:
           # Antes este check solo validaba agrosmart-frontend (el shell) — los
           # 3 microfrontends (chat, monitoreo, mercados) nunca se compilaban
           # en CI. Un JSX roto en mercados-microfrontend (PR #152) llegó a
-          # main sin que este "required check" lo detectara, porque
-          # literalmente no miraba esa carpeta. Ahora valida los 4.
-          PROYECTOS="src/frontend/agrosmart-frontend src/frontend/chat-microfrontend src/frontend/monitoreo-microfrontend src/frontend/mercados-microfrontend"
+          # main sin que este "required check" lo detectara. Valida el shell
+          # y todos los remotos independientes.
+          PROYECTOS="src/frontend/agrosmart-frontend src/frontend/chat-microfrontend src/frontend/monitoreo-microfrontend src/frontend/mercados-microfrontend src/frontend/alertas-microfrontend"
 
           if [ ! -f "src/frontend/agrosmart-frontend/package.json" ] && [ -f "src/frontend/package.json" ]; then
             PROYECTOS="src/frontend"

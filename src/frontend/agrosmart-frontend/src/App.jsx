@@ -9,11 +9,13 @@ import MicrofrontendErrorBoundary from "./components/shared/MicrofrontendErrorBo
 const ChatApp = lazy(() => import("chat/ChatApp"));
 const MonitoreoSatelital = lazy(() => import("monitoreo/MonitoreoSatelital"));
 const MercadosMIDAGRI = lazy(() => import("mercados/MercadosMIDAGRI"));
+const AlertasRiesgo = lazy(() => import("alertas/AlertasRiesgo"));
 
 const VIEWS = {
   "nueva-consulta": ChatApp,
   "mercados-midagri": MercadosMIDAGRI,
   "monitoreo-satelital": MonitoreoSatelital,
+  "alertas-riesgo": AlertasRiesgo,
   "calendario-agricola": CalendarioAgricola,
 };
 
@@ -27,7 +29,7 @@ export default function App() {
       <div className="pl-72">
         <Header />
         <main className="relative pt-20 min-h-screen bg-background">
-          <MicrofrontendErrorBoundary key={view}>
+          <MicrofrontendErrorBoundary key={view} view={view}>
             <Suspense fallback={
               <div className="flex items-center justify-center h-[calc(100vh-80px)] text-on-surface-variant font-label-md text-label-md">
                 Cargando módulo…

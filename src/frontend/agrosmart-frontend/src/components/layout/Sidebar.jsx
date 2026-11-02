@@ -2,6 +2,7 @@ const NAV_ITEMS = [
   { key: "nueva-consulta", label: "Nueva Consulta", icon: "add_circle" },
   { key: "mercados-midagri", label: "Mercados MIDAGRI", icon: "monitoring" },
   { key: "monitoreo-satelital", label: "Monitoreo Satelital", icon: "satellite_alt" },
+  { key: "alertas-riesgo", label: "Alertas de riesgo", icon: "notification_important" },
   { key: "calendario-agricola", label: "Calendario Agrícola", icon: "calendar_month" },
 ];
 
