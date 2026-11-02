@@ -3,7 +3,7 @@
 on:
   push:
     branches:
-      - cristhianPimentel
+      - main
     paths:
       - "docs-architecture/**"
       - ".github/workflows/docs-pages.yml"
