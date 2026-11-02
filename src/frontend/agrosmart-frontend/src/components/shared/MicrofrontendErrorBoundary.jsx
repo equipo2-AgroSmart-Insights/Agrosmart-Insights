@@ -21,7 +21,11 @@ export default class MicrofrontendErrorBoundary extends Component {
       let mfeDir;
       let mfePort;
 
-      if (this.props.view === "alertas-riesgo" || errStr.includes("alertas") || errStr.includes("5177")) {
+      if (this.props.view === "calendario-agricola" || errStr.includes("calendario") || errStr.includes("5178")) {
+        mfeName = "calendario agrícola";
+        mfeDir = "src/frontend/calendario-microfrontend";
+        mfePort = "5178";
+      } else if (this.props.view === "alertas-riesgo" || errStr.includes("alertas") || errStr.includes("5177")) {
         mfeName = "alertas de riesgo";
         mfeDir = "src/frontend/alertas-microfrontend";
         mfePort = "5177";

@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
   const monitoreoRemoteUrl = env.VITE_MONITOREO_REMOTE_URL || 'http://localhost:5175/assets/remoteEntry.js'
   const mercadosRemoteUrl = env.VITE_MERCADOS_REMOTE_URL || 'http://localhost:5176/assets/remoteEntry.js'
   const alertasRemoteUrl = env.VITE_ALERTAS_REMOTE_URL || 'http://localhost:5177/assets/remoteEntry.js'
+  const calendarioRemoteUrl = env.VITE_CALENDARIO_REMOTE_URL || 'http://localhost:5178/assets/remoteEntry.js'
 
   return {
     plugins: [
@@ -23,6 +24,7 @@ export default defineConfig(({ mode }) => {
           monitoreo: monitoreoRemoteUrl,
           mercados: mercadosRemoteUrl,
           alertas: alertasRemoteUrl,
+          calendario: calendarioRemoteUrl,
         },
         shared: ['react', 'react-dom'],
       }),

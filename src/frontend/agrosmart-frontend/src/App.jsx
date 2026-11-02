@@ -1,7 +1,6 @@
 import { useState, Suspense, lazy } from "react";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
-import CalendarioAgricola from "./components/calendario/CalendarioAgricola";
 import ComingSoon from "./components/shared/ComingSoon";
 import MicrofrontendErrorBoundary from "./components/shared/MicrofrontendErrorBoundary";
 
@@ -10,6 +9,7 @@ const ChatApp = lazy(() => import("chat/ChatApp"));
 const MonitoreoSatelital = lazy(() => import("monitoreo/MonitoreoSatelital"));
 const MercadosMIDAGRI = lazy(() => import("mercados/MercadosMIDAGRI"));
 const AlertasRiesgo = lazy(() => import("alertas/AlertasRiesgo"));
+const CalendarioAgricola = lazy(() => import("calendario/CalendarioAgricola"));
 
 const VIEWS = {
   "nueva-consulta": ChatApp,

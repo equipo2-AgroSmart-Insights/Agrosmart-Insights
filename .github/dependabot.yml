@@ -35,6 +35,12 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
 
+  - package-ecosystem: "npm"
+    directory: "/src/frontend/calendario-microfrontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

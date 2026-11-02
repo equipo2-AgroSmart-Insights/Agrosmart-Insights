@@ -43,7 +43,7 @@ jobs:
           # en CI. Un JSX roto en mercados-microfrontend (PR #152) llegó a
           # main sin que este "required check" lo detectara. Valida el shell
           # y todos los remotos independientes.
-          PROYECTOS="src/frontend/agrosmart-frontend src/frontend/chat-microfrontend src/frontend/monitoreo-microfrontend src/frontend/mercados-microfrontend src/frontend/alertas-microfrontend"
+          PROYECTOS="src/frontend/agrosmart-frontend src/frontend/chat-microfrontend src/frontend/monitoreo-microfrontend src/frontend/mercados-microfrontend src/frontend/alertas-microfrontend src/frontend/calendario-microfrontend"
 
           if [ ! -f "src/frontend/agrosmart-frontend/package.json" ] && [ -f "src/frontend/package.json" ]; then
             PROYECTOS="src/frontend"
