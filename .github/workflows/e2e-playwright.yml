@@ -67,3 +67,17 @@ jobs:
           else
             gh issue create --repo "$GITHUB_REPOSITORY" --title "Pruebas E2E fallando en producción" --label ci-e2e-failure --body "$BODY"
           fi
+
+      - name: Cerrar issue si ya quedó en verde
+        # Faltaba este paso (sí existe en n8n-drift-check.yml): sin él, el
+        # Issue #116 siguió abierto 4 días después de que el fix (PR #139)
+        # ya lo había resuelto de verdad, porque nada lo volvía a cerrar.
+        if: ${{ success() && github.event_name == 'schedule' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label ci-e2e-failure --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "Resuelto: la corrida del $(date -u +%Y-%m-%d) confirma que las pruebas E2E vuelven a pasar."
+            gh issue close "$EXISTING" --repo "$GITHUB_REPOSITORY"
+          fi

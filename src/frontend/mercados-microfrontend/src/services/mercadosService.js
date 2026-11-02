@@ -114,7 +114,30 @@ export function formatearFecha(fechaStr) {
  * • MMF2: Precio de hoy: S/ [precio] por [unidad] ([fecha]).
  * • MMF2: sin registros disponibles.
  */
-function parsearRespuestaWF(textoRespuesta, productoConsultado) {
+// Arma un registro a partir de las piezas ya extraídas (precio, unidad,
+// fecha opcional). Compartido entre el formato con viñetas y el formato
+// libre, para no duplicar el parseo de precio/fecha dos veces.
+function construirRegistro(mercado, precioRaw, unidadRaw, fechaRaw, fechaReferencia, producto, productoConsultado) {
+  const precio = Number(String(precioRaw).replace(",", "."));
+  const unidad = String(unidadRaw).trim().replace(/\.$/, "");
+  const fechaTexto = fechaRaw ? String(fechaRaw).trim() : null;
+  const fechaIso = fechaTexto ? parsearFechaTexto(fechaTexto, fechaReferencia) : fechaReferencia;
+  return {
+    mercado,
+    fecha: fechaIso,
+    fechaTexto: fechaTexto || fechaReferencia,
+    precio,
+    unidad,
+    producto: producto || productoConsultado.nombre,
+    producto_id: null,
+  };
+}
+
+// fechaConsultaFallback: la fecha que el propio backend reporta como
+// consultada (n8nResponse.fecha_consultada), usada cuando la respuesta en
+// texto libre no repite la fecha en cada línea de precio -- ver 3.3.2 en
+// Informe-04 Sprint 4 para el caso real que motivó esto.
+function parsearRespuestaWF(textoRespuesta, productoConsultado, fechaConsultaFallback) {
   if (!textoRespuesta || typeof textoRespuesta !== "string") return [];
 
   const lineas = textoRespuesta.split("\n");
@@ -124,7 +147,7 @@ function parsearRespuestaWF(textoRespuesta, productoConsultado) {
   )?.[1];
   const fechaReferencia = fechaReferenciaTexto
     ? parsearFechaTexto(fechaReferenciaTexto)
-    : null;
+    : fechaConsultaFallback || null;
 
   let mercadoActual = null;
   let productoActual = null;
@@ -132,59 +155,73 @@ function parsearRespuestaWF(textoRespuesta, productoConsultado) {
 
   for (const rawLinea of lineas) {
     const linea = rawLinea.trim();
+    if (!linea) continue;
 
     const headerUnidad = linea.match(/^(.+?)\s+—\s+(.+)$/);
     if (headerUnidad) {
       productoActual = headerUnidad[1].trim();
       unidadActual = headerUnidad[2].trim();
       mercadoActual = null;
+      continue;
     }
 
-    // Detección de línea GMML
+    // Detección de línea GMML (formato con viñeta: "• GMML: S/ X por Y (fecha)")
     if (linea.includes("• GMML:") || linea.includes("- GMML:")) {
       mercadoActual = "GMML";
-      if (linea.includes("sin registros disponibles")) {
-        continue;
-      }
-      const matchPrecio = linea.match(/S\/\s*([\d.,]+)\s*por\s*([^\n(]+)\s*\(([^)]+)\)/i);
+      if (/sin registros disponibles|no encontr[eé]/i.test(linea)) continue;
+      const matchPrecio = linea.match(/S\/\s*([\d.,]+)\s*por\s*([^\n(]+?)\s*\(([^)]+)\)/i);
       if (matchPrecio) {
-        const precio = Number(matchPrecio[1].replace(",", "."));
-        const unidad = matchPrecio[2].trim();
-        const fechaRaw = matchPrecio[3].trim();
-        const fechaIso = parsearFechaTexto(fechaRaw, fechaReferencia);
-        registros.push({
-          mercado: "GMML",
-          fecha: fechaIso,
-          fechaTexto: fechaRaw,
-          precio,
-          unidad,
-          producto: productoActual || productoConsultado.nombre,
-          producto_id: null,
-        });
+        registros.push(
+          construirRegistro("GMML", matchPrecio[1], matchPrecio[2], matchPrecio[3], fechaReferencia, productoActual, productoConsultado)
+        );
       }
+      continue;
     }
 
-    // Detección de línea MMF2
+    // Detección de línea MMF2 (formato con viñeta)
     if (linea.includes("• MMF2:") || linea.includes("- MMF2:")) {
       mercadoActual = "MMF2";
-      if (linea.includes("sin registros disponibles")) {
-        continue;
-      }
-      const matchPrecio = linea.match(/S\/\s*([\d.,]+)\s*por\s*([^\n(]+)\s*\(([^)]+)\)/i);
+      if (/sin registros disponibles|no encontr[eé]/i.test(linea)) continue;
+      const matchPrecio = linea.match(/S\/\s*([\d.,]+)\s*por\s*([^\n(]+?)\s*\(([^)]+)\)/i);
       if (matchPrecio) {
-        const precio = Number(matchPrecio[1].replace(",", "."));
-        const unidad = matchPrecio[2].trim();
-        const fechaRaw = matchPrecio[3].trim();
-        const fechaIso = parsearFechaTexto(fechaRaw, fechaReferencia);
-        registros.push({
-          mercado: "MMF2",
-          fecha: fechaIso,
-          fechaTexto: fechaRaw,
-          precio,
-          unidad,
-          producto: productoActual || productoConsultado.nombre,
-          producto_id: null,
-        });
+        registros.push(
+          construirRegistro("MMF2", matchPrecio[1], matchPrecio[2], matchPrecio[3], fechaReferencia, productoActual, productoConsultado)
+        );
+      }
+      continue;
+    }
+
+    // Encabezado de mercado SIN viñeta (ej. "Gran Mercado Mayorista de Lima
+    // (GMML)"): el formato que el modelo actual devuelve en consultas
+    // directas -- ya no sigue las viñetas del diseño original. El precio
+    // llega en una línea aparte (siguiente bloque), no en la misma línea.
+    if (/\(GMML\)/i.test(linea)) {
+      mercadoActual = "GMML";
+      continue;
+    }
+    if (/\(MMF2\)/i.test(linea)) {
+      mercadoActual = "MMF2";
+      continue;
+    }
+
+    // Línea de precio en formato libre: "Producto: S/ X por Unidad[, (fecha)]".
+    // La fecha entre paréntesis ya no es obligatoria -- sin ella se usa
+    // fechaReferencia (de la propia respuesta, o fechaConsultaFallback).
+    if (mercadoActual) {
+      const matchLibre = linea.match(/^(.+?):\s*S\/\s*([\d.,]+)\s*por\s*([^\n(]+?)(?:\s*\(([^)]+)\))?\.?\s*$/i);
+      if (matchLibre) {
+        registros.push(
+          construirRegistro(
+            mercadoActual,
+            matchLibre[2],
+            matchLibre[3],
+            matchLibre[4],
+            fechaReferencia,
+            matchLibre[1].trim() || productoActual,
+            productoConsultado
+          )
+        );
+        continue;
       }
     }
 
@@ -255,7 +292,7 @@ export function normalizarRegistrosWF(n8nResponse, productoConsultado) {
   // Si devuelve texto formateado por el agente WF2
   const textContent = n8nResponse?.respuesta || n8nResponse?.response || n8nResponse?.text;
   if (typeof textContent === "string" && textContent.length > 0) {
-    return parsearRespuestaWF(textContent, productoConsultado);
+    return parsearRespuestaWF(textContent, productoConsultado, n8nResponse?.fecha_consultada || null);
   }
 
   return [];

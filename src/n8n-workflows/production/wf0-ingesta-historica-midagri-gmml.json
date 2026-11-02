@@ -545,7 +545,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{SECRETO_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}"
+              "value": "Bearer {{JINA_API_KEY_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}"
             },
             {
               "name": "Content-Type",

@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const anioTarget = 2026;\nconst mesTarget = 3;\n\n// Hora de Lima\nconst ahoraLima = new Date(\n  new Date().toLocaleString(\"en-US\", {\n    timeZone: \"America/Lima\"\n  })\n);\n\n// Para histórico usamos hasta ayer,\n// porque el día actual todavía puede estar incompleto.\nconst ayer = new Date(ahoraLima);\nayer.setDate(ayer.getDate() - 1);\n\nconst inicioMes =\n  new Date(anioTarget, mesTarget - 1, 1);\n\nconst finMes =\n  new Date(anioTarget, mesTarget, 0);\n\n// Elegimos el menor:\n// fin del mes o ayer.\nconst finReal =\n  finMes < ayer\n    ? finMes\n    : ayer;\n\nfunction formatoFecha(d) {\n  const y = d.getFullYear();\n\n  const m =\n    String(d.getMonth() + 1)\n      .padStart(2, \"0\");\n\n  const dia =\n    String(d.getDate())\n      .padStart(2, \"0\");\n\n  return `${y}-${m}-${dia}`;\n}\n\n// Si intentaras cargar un mes futuro,\n// no mandamos nada a Open-Meteo.\nif (inicioMes > finReal) {\n  return [];\n}\n\nreturn [{\n  json: {\n    start_date: formatoFecha(inicioMes),\n    end_date: formatoFecha(finReal)\n  }\n}];"
+        "jsCode": "const anioTarget = 2024;\nconst mesTarget = 1;\n\n// Hora de Lima\nconst ahoraLima = new Date(\n  new Date().toLocaleString(\"en-US\", {\n    timeZone: \"America/Lima\"\n  })\n);\n\n// Para histórico usamos hasta ayer,\n// porque el día actual todavía puede estar incompleto.\nconst ayer = new Date(ahoraLima);\nayer.setDate(ayer.getDate() - 1);\n\nconst inicioMes =\n  new Date(anioTarget, mesTarget - 1, 1);\n\nconst finMes =\n  new Date(anioTarget, mesTarget, 0);\n\n// Elegimos el menor:\n// fin del mes o ayer.\nconst finReal =\n  finMes < ayer\n    ? finMes\n    : ayer;\n\nfunction formatoFecha(d) {\n  const y = d.getFullYear();\n\n  const m =\n    String(d.getMonth() + 1)\n      .padStart(2, \"0\");\n\n  const dia =\n    String(d.getDate())\n      .padStart(2, \"0\");\n\n  return `${y}-${m}-${dia}`;\n}\n\n// Si intentaras cargar un mes futuro,\n// no mandamos nada a Open-Meteo.\nif (inicioMes > finReal) {\n  return [];\n}\n\nreturn [{\n  json: {\n    start_date: formatoFecha(inicioMes),\n    end_date: formatoFecha(finReal)\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -38,8 +38,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2768,
-        16
+        3104,
+        -64
       ],
       "id": "e9fbffdc-84e0-4c51-981a-ff1ce2077cfb",
       "name": "Code in JavaScript Normalizar nombre producto"
@@ -47,7 +47,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n    $1::text AS producto_original,\n    p.id AS producto_id,\n    p.nombre_canonico\nFROM (SELECT 1) AS base\nLEFT JOIN public.productos_maestro p\n    ON p.nombre_normalizado =\n       LOWER(UNACCENT(TRIM($1::text)))\nLIMIT 1;",
+        "query": "\nSELECT\n    producto_original,\n    producto_id,\n    nombre_canonico,\n    estado_mapeo\nFROM public.resolver_producto_mmf2($1::text);\n",
         "options": {
           "queryReplacement": "={{ [$json.producto] }}"
         }
@@ -55,8 +55,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        2944,
-        16
+        3376,
+        -64
       ],
       "id": "2de6f604-701e-4bdd-b4e5-ad0ae49302c5",
       "name": "Execute a SQL query Buscar producto_id",
@@ -69,13 +69,13 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst maestros = $input.all();\n\nconst originales = $items(\n  \"Code in JavaScript Normalizar nombre producto\"\n);\n\nif (maestros.length !== originales.length) {\n  throw new Error(\n    `Cantidad diferente: ${maestros.length} resultados SQL y ${originales.length} productos`\n  );\n}\n\nreturn maestros.map((maestro, index) => {\n  const original = originales[index].json;\n  const encontrado = maestro.json;\n\n  const normalizar = s => String(s ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .trim()\n    .toLowerCase();\n\n  if (\n    normalizar(original.producto) !==\n    normalizar(encontrado.producto_original)\n  ) {\n    throw new Error(\n      `Mapeo incorrecto: ${original.producto} / ${encontrado.producto_original}`\n    );\n  }\n\n  if (!encontrado.producto_id) {\n    throw new Error(\n      `Producto sin ID maestro: ${original.producto}`\n    );\n  }\n\n  return {\n    json: {\n      ...original,\n      producto_id: Number(encontrado.producto_id),\n      producto: encontrado.nombre_canonico\n    }\n  };\n});\n"
+        "jsCode": "\nconst resultadosSQL = $input.all().map(item => item.json);\n\nconst originales = $('Code in JavaScript Normalizar nombre producto')\n  .all()\n  .map(item => item.json);\n\nif (resultadosSQL.length !== originales.length) {\n  throw new Error(\n    `Cantidad diferente: ${resultadosSQL.length} resultados SQL ` +\n    `y ${originales.length} productos originales`\n  );\n}\n\nconst validos = [];\nconst pendientes = [];\n\nfor (let i = 0; i < originales.length; i++) {\n  const original = originales[i];\n  const encontrado = resultadosSQL[i];\n\n  const id = Number(encontrado.producto_id);\n\n  if (\n    encontrado.producto_id === null ||\n    encontrado.producto_id === undefined ||\n    !Number.isSafeInteger(id) ||\n    id <= 0\n  ) {\n    pendientes.push({\n      producto: original.producto,\n      estado_mapeo: encontrado.estado_mapeo,\n      posibles_maestros: encontrado.nombre_canonico\n    });\n\n    continue;\n  }\n\n  // Verificar que las filas correspondan al mismo producto.\n  const nombreOriginal = String(original.producto || '')\n    .trim()\n    .toLowerCase();\n\n  const nombreSQL = String(encontrado.producto_original || '')\n    .trim()\n    .toLowerCase();\n\n  if (nombreOriginal !== nombreSQL) {\n    throw new Error(\n      `Desorden de registros en posición ${i + 1}: ` +\n      `${original.producto} != ${encontrado.producto_original}`\n    );\n  }\n\n  validos.push({\n    json: {\n      ...original,\n      producto_id: id,\n      producto: encontrado.nombre_canonico,\n      producto_original: original.producto,\n      estado_mapeo: encontrado.estado_mapeo\n    }\n  });\n}\n\nconsole.log('Productos válidos:', validos.length);\nconsole.log('Productos pendientes:', pendientes.length);\nconsole.log('Pendientes:', JSON.stringify(pendientes));\n\nreturn validos;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3136,
-        16
+        3664,
+        -64
       ],
       "id": "39c47280-4b7f-417b-a982-ccafb3fcf6c5",
       "name": "Code in JavaScript Unir producto maestro"
@@ -140,7 +140,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n/*\n AgroSmart Insights - WF0\n Generar fechas para la ingesta historica MIDAGRI MMF2\n\n Permite:\n - Procesar un mes completo.\n - Probar una fecha especifica.\n - Saltar sabados y domingos.\n - Mantener la fecha dinamica.\n*/\n\nconst anioTarget = 2026;\nconst mesTarget = 3;\n\n\nconst resultados = [];\n\n// Validar año y mes.\nif (\n  !Number.isInteger(anioTarget) ||\n  !Number.isInteger(mesTarget) ||\n  mesTarget < 1 ||\n  mesTarget > 12\n) {\n  throw new Error('Año o mes invalido');\n}\n\nconst ultimoDia = new Date(\n  Date.UTC(anioTarget, mesTarget, 0)\n).getUTCDate();\n\n// Generar fechas.\nfor (let dia = 1; dia <= ultimoDia; dia++) {\n\n  const fecha = new Date(\n    Date.UTC(anioTarget, mesTarget - 1, dia)\n  );\n\n  const fechaTexto =\n    fecha.toISOString().slice(0, 10);\n\n  const diaSemana = fecha.getUTCDay();\n\n  // Saltar sabados y domingos.\n  if (diaSemana === 0 || diaSemana === 6) {\n    continue;\n  }\n\n\n  resultados.push({\n    json: {\n      fecha_objetivo: fechaTexto,\n      anio: anioTarget,\n      mes: mesTarget\n    }\n  });\n}\n\n// Verificar que exista al menos una fecha.\nif (resultados.length === 0) {\n  throw new Error(\n    'No se generaron fechas. Revisa el mes, año y fechaPrueba.'\n  );\n}\n\nconsole.log(\n  'Fechas generadas:',\n  resultados.map(x => x.json.fecha_objetivo)\n);\nreturn resultados;\n"
+        "jsCode": "\n\nconst anioTarget = 2024;\nconst mesTarget = 1;\n\n\nconst resultados = [];\n\n// Validar año y mes.\nif (\n  !Number.isInteger(anioTarget) ||\n  !Number.isInteger(mesTarget) ||\n  mesTarget < 1 ||\n  mesTarget > 12\n) {\n  throw new Error('Año o mes invalido');\n}\n\nconst ultimoDia = new Date(\n  Date.UTC(anioTarget, mesTarget, 0)\n).getUTCDate();\n\n// Generar fechas.\nfor (let dia = 1; dia <= ultimoDia; dia++) {\n\n  const fecha = new Date(\n    Date.UTC(anioTarget, mesTarget - 1, dia)\n  );\n\n  const fechaTexto =\n    fecha.toISOString().slice(0, 10);\n\n  const diaSemana = fecha.getUTCDay();\n\n  // Saltar sabados y domingos.\n  if (diaSemana === 0 || diaSemana === 6) {\n    continue;\n  }\n\n\n  resultados.push({\n    json: {\n      fecha_objetivo: fechaTexto,\n      anio: anioTarget,\n      mes: mesTarget\n    }\n  });\n}\n\n// Verificar que exista al menos una fecha.\nif (resultados.length === 0) {\n  throw new Error(\n    'No se generaron fechas. Revisa el mes, año y fechaPrueba.'\n  );\n}\n\nconsole.log(\n  'Fechas generadas:',\n  resultados.map(x => x.json.fecha_objetivo)\n);\nreturn resultados;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -227,7 +227,7 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1.1,
       "position": [
-        2272,
+        2080,
         16
       ],
       "id": "a0968d07-2dc0-4d33-8bb8-ecfaddc952df",
@@ -404,8 +404,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        3568,
-        16
+        4080,
+        -64
       ],
       "id": "1d300c2a-1c0b-48c6-93f3-816c2d82e8fc",
       "name": "Insert or update rows in a table2",
@@ -481,7 +481,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        4016,
+        4464,
         576
       ],
       "id": "e7d046ad-65cf-483b-b0d9-17ba3656f004",
@@ -495,7 +495,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2080,
+        2304,
         416
       ],
       "id": "7a88f3ec-b5be-4faf-a022-ec2cc9f80897",
@@ -507,7 +507,7 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        3856,
+        4304,
         224
       ],
       "id": "5fbff1cc-f508-4d6e-b668-fd75eb4c3be3",
@@ -521,7 +521,7 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1.1,
       "position": [
-        2128,
+        2432,
         240
       ],
       "id": "2e720f4f-bbe7-411c-b096-90dfaf6fc60d",
@@ -536,7 +536,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{SECRETO_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}"
+              "value": "Bearer {{JINA_API_KEY_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}"
             },
             {
               "name": "Content-Type",
@@ -552,7 +552,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        2864,
+        3216,
         240
       ],
       "id": "905fa140-9f35-4c8e-9d55-3c1faa8fc9c9",
@@ -565,7 +565,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2592,
+        2864,
         240
       ],
       "id": "9f1746e0-fca0-4e0f-8c2b-a0ee10cef38f",
@@ -578,7 +578,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3136,
+        3488,
         240
       ],
       "id": "03e11b60-362d-4d80-b9d2-424914ab1de7",
@@ -595,7 +595,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        3424,
+        3776,
         240
       ],
       "id": "c26d9707-8d2a-4f3b-896f-8b8a99a5b585",
@@ -632,13 +632,13 @@
     },
     {
       "parameters": {
-        "jsCode": "\n/*\n AgroSmart Insights - WF0\n Parser MMF2 - Seleccion por fecha de tabla\n\n Fuente: MIDAGRI / SISAP\n\n Objetivos:\n - Leer solo tablas correspondientes al dia solicitado.\n - Evitar mezclar tablas historicas del mismo PDF.\n - Soportar filas horizontales y verticales.\n - Conservar excepcion PERA AGUA ITALIANA.\n - Detectar precios incorrectos y duplicados.\n - NO insertar directamente en PostgreSQL.\n*/\n\nconst items = $input.all();\n\nconst resultados = [];\nconst errores = [];\nconst vistos = new Map();\n\nlet horizontales = 0;\nlet verticales = 0;\nlet duplicadosIdenticos = 0;\n\n// ==========================================\n// 1. FECHA SOLICITADA Y FECHA DEL PDF\n// ==========================================\n\nconst nombrePDF = $('Descargar PDFs')\n  .first().binary.data.fileName;\n\nconst meses = {\n  ene: '01', feb: '02', mar: '03',\n  abr: '04', may: '05', jun: '06',\n  jul: '07', ago: '08', sep: '09',\n  set: '09', oct: '10', nov: '11',\n  dic: '12'\n};\n\nconst coincidencia = nombrePDF.match(\n  /^sisap-gmml-mm2-(\\d{2})([a-z]{3})(\\d{2})\\.pdf$/i\n);\n\nif (!coincidencia) {\n  throw new Error(\n    'Nombre del PDF no reconocido: ' + nombrePDF\n  );\n}\n\nconst mesPDF = meses[\n  coincidencia[2].toLowerCase()\n];\n\nif (!mesPDF) {\n  throw new Error('Mes del PDF no reconocido');\n}\n\nconst fechaObjetivo =\n  `20${coincidencia[3]}-${mesPDF}-${coincidencia[1]}`;\n\nconst fechaSolicitada = String(\n  $('Loop Over Items').item.json.fecha_objetivo ?? ''\n).slice(0, 10);\n\nif (\n  !fechaSolicitada ||\n  fechaObjetivo !== fechaSolicitada\n) {\n  throw new Error(\n    `Fecha incorrecta. PDF: ${fechaObjetivo}. ` +\n    `Solicitada: ${fechaSolicitada}`\n  );\n}\n\nconst diaObjetivo = Number(\n  fechaObjetivo.slice(8, 10)\n);\n\n// ==========================================\n// 2. FUNCIONES AUXILIARES\n// ==========================================\n\nfunction normalizarNombre(valor) {\n  return String(valor ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/\\s+/g, ' ')\n    .trim()\n    .toUpperCase();\n}\n\nfunction numero(valor) {\n  const texto = String(valor ?? '').trim();\n\n  if (!/^\\d+(?:[.,]\\d+)?$/.test(texto)) {\n    return null;\n  }\n\n  const n = Number(texto.replace(',', '.'));\n\n  return Number.isFinite(n) ? n : null;\n}\n\nfunction porcentaje(valor) {\n  return /^[-+]?\\d+(?:[.,]\\d+)?%$/.test(\n    String(valor ?? '').trim()\n  );\n}\n\nfunction excepcionPera(producto, valores) {\n  return (\n    fechaObjetivo === '2026-06-24' &&\n    normalizarNombre(producto) ===\n      'PERA AGUA ITALIANA' &&\n    valores.length === 10\n  );\n}\n\nfunction validarColumnas(valores, producto) {\n\n  if (valores.length === 12) {\n\n    return (\n      porcentaje(valores[2]) &&\n      porcentaje(valores[11]) &&\n      valores.every((v, i) =>\n        i === 2 || i === 11\n          ? porcentaje(v)\n          : numero(v) !== null\n      )\n    );\n  }\n\n  // Fila excepcional comprobada en el PDF\n  // del 24 de junio de 2026.\n\n  if (excepcionPera(producto, valores)) {\n\n    return (\n      numero(valores[0]) !== null &&\n      valores.slice(1, 9).every(\n        v => numero(v) !== null\n      ) &&\n      porcentaje(valores[9])\n    );\n  }\n\n  return false;\n}\n\nfunction nombreValido(producto) {\n\n  const nombre = String(producto ?? '').trim();\n\n  if (nombre.length < 3) return false;\n\n  if (/^\\d{5}$/.test(nombre)) {\n    return false;\n  }\n\n  if (/^(GMML|MMF2)$/i.test(nombre)) {\n    return false;\n  }\n\n  if (/^[-+]?\\d+(?:[.,]\\d+)?%?$/.test(nombre)) {\n    return false;\n  }\n\n  if (\n    /^\\d{5}\\s+.+\\s+(GMML|MMF2)\\s+/i.test(nombre)\n  ) {\n    return false;\n  }\n\n  return true;\n}\n\n// ==========================================\n// 3. REGISTRAR PRODUCTO\n// ==========================================\n\nfunction registrar({\n  codigo,\n  producto,\n  valores,\n  formato\n}) {\n\n  const nombre = String(producto ?? '').trim();\n\n  if (!nombreValido(nombre)) {\n    errores.push('Producto invalido: ' + nombre);\n    return;\n  }\n\n  if (!validarColumnas(valores, nombre)) {\n    errores.push(\n      `Columnas invalidas: ${nombre} -> ` +\n      valores.join(' | ')\n    );\n    return;\n  }\n\n  const excepcional = valores.length === 10;\n\n  const precioAyer = numero(\n    excepcional ? valores[7] : valores[9]\n  );\n\n  const precioHoy = numero(\n    excepcional ? valores[8] : valores[10]\n  );\n\n  if (\n    precioHoy === null ||\n    precioHoy <= 0 ||\n    precioAyer === null ||\n    precioAyer <= 0\n  ) {\n    errores.push(\n      'Precio invalido: ' + nombre\n    );\n    return;\n  }\n\n  const clave = [\n    fechaObjetivo,\n    'MMF2',\n    normalizarNombre(nombre)\n  ].join('|');\n\n  if (vistos.has(clave)) {\n\n    const anterior = vistos.get(clave);\n\n    if (\n      anterior.precio === precioHoy &&\n      anterior.precio_ayer === precioAyer\n    ) {\n      duplicadosIdenticos++;\n      return;\n    }\n\n    errores.push(\n      `Duplicado contradictorio: ${nombre}. ` +\n      `Anterior: ${anterior.precio_ayer}/` +\n      `${anterior.precio}. ` +\n      `Nuevo: ${precioAyer}/${precioHoy}`\n    );\n\n    return;\n  }\n\n  vistos.set(clave, {\n    precio: precioHoy,\n    precio_ayer: precioAyer\n  });\n\n  resultados.push({\n    json: {\n      fecha: fechaObjetivo,\n      codigo_cnpa: codigo ?? null,\n      producto: nombre,\n      mercado: 'MMF2',\n\n      unidad: 'Kilogramo',\n      equivalencia_kg: 1,\n\n      precio: precioHoy,\n      precio_ayer: precioAyer,\n\n      volumen_t: null,\n      volumen_kg: null,\n\n      fuente: 'MIDAGRI',\n      formato_origen: formato,\n      tipo_prueba: 'parser_mmf2'\n    }\n  });\n\n  if (formato === 'horizontal') {\n    horizontales++;\n  } else {\n    verticales++;\n  }\n}\n\n// ==========================================\n// 4. DIVIDIR EL PDF EN TABLAS\n// ==========================================\n\nfunction obtenerLineas() {\n\n  const texto = items\n    .map(item => String(item.json.text ?? ''))\n    .join('\\n');\n\n  if (!texto.trim()) {\n    throw new Error(\n      'Extract from File1 no entrego texto'\n    );\n  }\n\n  return texto\n    .split(/\\r?\\n/)\n    .map(linea =>\n      linea.replace(/\\s+/g, ' ').trim()\n    )\n    .filter(Boolean);\n}\n\nconst lineas = obtenerLineas();\n\n// Ubicar encabezados de tablas de precios.\nconst inicios = [];\n\nfor (let i = 0; i < lineas.length; i++) {\n\n  if (\n    /PRECIOS MAYORISTAS DE LOS PRINCIPALES/i\n      .test(lineas[i])\n  ) {\n    inicios.push(i);\n  }\n}\n\nif (inicios.length === 0) {\n  throw new Error(\n    'No se encontraron encabezados de tablas de precios'\n  );\n}\n\n// ==========================================\n// 5. IDENTIFICAR FECHA DE CADA TABLA\n// ==========================================\n\nfunction fechaCierreTabla(bloque) {\n\n  // El encabezado contiene los dias\n  // de las columnas, por ejemplo:\n  // mar-23, mie-24, ..., mar-30.\n  //\n  // Buscamos el ultimo dia del encabezado,\n  // no las fechas de los productos.\n\n  const encabezado = [];\n\n  for (\n    let i = 0;\n    i < Math.min(bloque.length, 100);\n    i++\n  ) {\n\n    const linea = bloque[i];\n\n    // Detener al encontrar la primera\n    // fila horizontal de producto.\n    if (\n      /^\\d{5}\\s+.+?\\s+(GMML|MMF2)\\s+/i\n        .test(linea)\n    ) {\n      break;\n    }\n\n    encabezado.push(linea);\n  }\n\n  const texto = encabezado.join(' ');\n\n  const patron =\n    /\\b(lun|mar|mie|mié|jue|vie|sab|sáb|dom)[-\\s]+(\\d{1,2})\\b/gi;\n\n  const coincidencias = [\n    ...texto.matchAll(patron)\n  ];\n\n  if (coincidencias.length === 0) {\n    return null;\n  }\n\n  return Number(\n    coincidencias[coincidencias.length - 1][2]\n  );\n}\n\n// Crear secciones delimitadas por encabezados.\nconst secciones = [];\n\nfor (let i = 0; i < inicios.length; i++) {\n\n  const inicio = inicios[i];\n\n  const fin = (\n    i + 1 < inicios.length\n      ? inicios[i + 1]\n      : lineas.length\n  );\n\n  const bloque = lineas.slice(inicio, fin);\n\n  const diaCierre =\n    fechaCierreTabla(bloque);\n\n  secciones.push({\n    inicio: inicio + 1,\n    fin,\n    diaCierre,\n    bloque\n  });\n}\n\nconsole.log(\n  'Tablas identificadas:',\n  secciones.map(s => ({\n    inicio: s.inicio,\n    fin: s.fin,\n    diaCierre: s.diaCierre\n  }))\n);\n\n// ==========================================\n// 6. SELECCIONAR SOLO FECHA OBJETIVO\n// ==========================================\n\nconst seleccionadas = secciones.filter(\n  seccion =>\n    seccion.diaCierre === diaObjetivo\n);\n\nif (seleccionadas.length === 0) {\n  throw new Error(\n    `No se encontro una tabla cuyo cierre ` +\n    `sea el dia ${diaObjetivo}. ` +\n    `Cierres detectados: ` +\n    secciones\n      .map(s => s.diaCierre ?? 'sin fecha')\n      .join(', ')\n  );\n}\n\n// Esta comprobacion evita mezclar\n// secciones antiguas o sin fecha.\n\nconsole.log(\n  'Fecha objetivo:',\n  fechaObjetivo\n);\n\nconsole.log(\n  'Secciones seleccionadas:',\n  seleccionadas.length\n);\n\n// ==========================================\n// 7. EXTRAER FILAS HORIZONTALES\n// ==========================================\n\nfor (const seccion of seleccionadas) {\n\n  const bloque = seccion.bloque;\n\n  for (const linea of bloque) {\n\n    const m = linea.match(\n      /^(\\d{5})\\s+(.+?)\\s+MMF2\\s+(.+)$/i\n    );\n\n    if (!m) continue;\n\n    const codigo = m[1];\n    const producto = m[2];\n\n    const valores = m[3]\n      .trim()\n      .split(/\\s+/);\n\n    registrar({\n      codigo,\n      producto,\n      valores,\n      formato: 'horizontal'\n    });\n  }\n\n\n  // ========================================\n  // 8. EXTRAER FILAS VERTICALES\n  // ========================================\n\n  for (let i = 0; i < bloque.length; i++) {\n\n    if (bloque[i].toUpperCase() !== 'MMF2') {\n      continue;\n    }\n\n    const producto = bloque[i - 1] ?? '';\n\n    \n    // Evitar interpretar como vertical una fila\n    // que ya contiene todos los datos horizontalmente.\n    const filaHorizontal =\n      /^\\d{5}\\s+.+\\s+MMF2\\s+\\d/i.test(producto);\n\n    if (filaHorizontal) {\n      continue;\n    }\n\n    // Validar que el nombre sea independiente,\n    // no una fila horizontal completa.\n    if (/^\\d{5}\\s+.+\\s+MMF2\\b/i.test(producto)) {\n      continue;\n    }\n\n    if (!nombreValido(producto)) {\n      continue;\n    }\n\n    const normalizado = normalizarNombre(producto);\n\n    const clave = [\n      fechaObjetivo,\n      'MMF2',\n      normalizado\n    ].join('|');\n\n    // Evitar duplicar una fila ya recuperada.\n    if (vistos.has(clave)) {\n      continue;\n    }\n\n    const valores12 = bloque.slice(i + 1, i + 13);\n\n    let valores = null;\n\n    // CASO NORMAL: 12 columnas\n    if (\n      valores12.length === 12 &&\n      valores12.every(v => !/\\s/.test(v)) &&\n      validarColumnas(valores12, producto)\n    ) {\n      valores = valores12;\n    }\n\n    // CASO ESPECIAL: PERA AGUA ITALIANA\n    if (\n      !valores &&\n      fechaObjetivo === '2026-06-24' &&\n      normalizado === 'PERA AGUA ITALIANA'\n    ) {\n\n      const valores10 = bloque.slice(i + 1, i + 11);\n\n      if (\n        valores10.length === 10 &&\n        valores10.every(v => !/\\s/.test(v)) &&\n        validarColumnas(valores10, producto)\n      ) {\n        valores = valores10;\n      }\n    }\n\n    // CASO ESPECIAL: COCO, MAYO 2026\n    if (\n      !valores &&\n      fechaObjetivo === '2026-05-14' &&\n      /^COCO\\s*\\(COSTA\\s*\\/\\s*SELVA\\)$/i.test(producto)\n    ) {\n\n      const valores11 = bloque.slice(i + 1, i + 12);\n\n      const valoresEsperados = [\n        '0.00',\n        '1.81',\n        '0.00',\n        '0.00',\n        '2.13',\n        '2.10',\n        '2.15',\n        '2.10',\n        '2.10',\n        '2.10',\n        '0.0%'\n      ];\n\n      // Reconocer unicamente el formato\n      // exacto observado en el PDF.\n      if (\n        valores11.length === 11 &&\n        valores11.every(\n          (v, j) => v === valoresEsperados[j]\n        )\n      ) {\n\n        // No registrar COCO porque falta\n        // una columna y su posicion no\n        // puede reconstruirse con certeza.\n        console.log(\n          'COCO 2026-05-14: fila incompleta, ' +\n          'omitida para evitar precios incorrectos'\n        );\n\n        continue;\n      }\n    }\n\n    if (!valores) {\n      errores.push(\n        `Fila vertical no interpretable: ${producto}`\n      );\n      continue;\n    }\n\n    const codigoAnterior = bloque[i - 2] ?? '';\n\n    const codigo = /^\\d{5}$/.test(codigoAnterior)\n      ? codigoAnterior\n      : null;\n\n    registrar({\n      codigo,\n      producto,\n      valores,\n      formato: 'vertical'\n    });\n  }\n}\n\n// ==========================================\n// 9. VALIDACIONES DE SEGURIDAD\n// ==========================================\n\nif (errores.length > 0) {\n  throw new Error(\n    `${errores.length} registros MMF2 invalidos. ` +\n    'Ejemplos: ' +\n    errores.slice(0, 5).join(' | ')\n  );\n}\n\nif (resultados.length === 0) {\n  throw new Error(\n    'No se encontraron productos MMF2'\n  );\n}\n\nif (resultados.length !== vistos.size) {\n  throw new Error(\n    'Cantidad inconsistente de productos unicos'\n  );\n}\n\n// Este rango es solo una alerta\n// de extraccion atipica.\nif (\n  resultados.length < 50 ||\n  resultados.length > 150\n) {\n  throw new Error(\n    `Cantidad atipica de productos MMF2: ` +\n    resultados.length\n  );\n}\n\n// ==========================================\n// 10. RESULTADO\n// ==========================================\n\nconsole.log(\n  'Productos horizontales:',\n  horizontales\n);\n\nconsole.log(\n  'Productos verticales:',\n  verticales\n);\n\nconsole.log(\n  'Duplicados identicos ignorados:',\n  duplicadosIdenticos\n);\n\nconsole.log(\n  'Total productos extraidos:',\n  resultados.length\n);\n\nreturn resultados;\n"
+        "jsCode": "\n/*\n AGROSMART INSIGHTS - WF0 / WF1\n PARSER HISTORICO FLEXIBLE MMF2\n\n Fuente: MIDAGRI\n Mercado: Mercado Mayorista de Frutas N. 2\n\n Compatible con boletines historicos y actuales\n que conservan la estructura de columnas.\n\n REGLAS:\n - Identificar el origen del documento MMF2.\n - Validar la fecha real del PDF.\n - Reconocer encabezados variables.\n - Extraer productos y precios.\n - Conservar volumenes faltantes como null.\n - Omitir productos sin precio de hoy.\n - Evitar registros duplicados.\n - Detener registros con errores importantes.\n*/\n\nconst items = $input.all();\n\nconst resultados = [];\nconst vistos = new Set();\nconst errores = [];\nconst omitidos = [];\n\nconst meses = {\n  enero: 1,\n  febrero: 2,\n  marzo: 3,\n  abril: 4,\n  mayo: 5,\n  junio: 6,\n  julio: 7,\n  agosto: 8,\n  setiembre: 9,\n  septiembre: 9,\n  octubre: 10,\n  noviembre: 11,\n  diciembre: 12\n};\n\n// =======================================\n// 1. FUNCIONES GENERALES\n// =======================================\n\nfunction normalizarTexto(valor) {\n  return String(valor ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/\\s+/g, ' ')\n    .toLowerCase()\n    .trim();\n}\n\nfunction obtenerFecha() {\n\n  const opciones = [\n    () => $('Code - Validar fecha MMF2')\n      .first().json.fecha_objetivo,\n\n    () => $('Loop Over Items')\n      .item.json.fecha_objetivo,\n\n    () => $('Code - preparar fecha MIDAGRI1')\n      .first().json.fecha_objetivo\n  ];\n\n  for (const opcion of opciones) {\n    try {\n      const fecha = String(opcion() ?? '')\n        .slice(0, 10);\n\n      if (/^\\d{4}-\\d{2}-\\d{2}$/.test(fecha)) {\n        return fecha;\n      }\n    } catch (e) {}\n  }\n\n  throw new Error(\n    'No se encontro fecha_objetivo de WF0 o WF1'\n  );\n}\n\nconst fechaObjetivo = obtenerFecha();\n\n// =======================================\n// 2. IDENTIFICAR ARCHIVO DE ORIGEN\n// =======================================\n\nfunction obtenerArchivoMMF2(item) {\n\n  const candidatos = [];\n\n  // Nombre conservado en el item actual.\n  if (item.binary?.data?.fileName) {\n    candidatos.push(item.binary.data.fileName);\n  }\n\n  if (item.json?.fileName) {\n    candidatos.push(item.json.fileName);\n  }\n\n  // Buscar el archivo original descargado.\n  try {\n    const descarga = $('Descargar PDFs').first();\n\n    if (descarga.binary?.data?.fileName) {\n      candidatos.push(\n        descarga.binary.data.fileName\n      );\n    }\n\n    if (descarga.json?.fileName) {\n      candidatos.push(\n        descarga.json.fileName\n      );\n    }\n\n    if (descarga.binary?.data?.url) {\n      candidatos.push(\n        descarga.binary.data.url\n      );\n    }\n\n  } catch (e) {}\n\n  // Identificar nombre del documento MMF2.\n  const archivo = candidatos.find(valor =>\n    /sisap-ingreso-mm2-[a-z0-9-]+\\.pdf/i\n      .test(String(valor))\n  );\n\n  return {\n    archivo: archivo\n      ? String(archivo)\n      : '',\n\n    archivoMMF2: Boolean(archivo)\n  };\n}\n\n// =======================================\n// 3. EXPRESIONES PARA EXTRAER FILAS\n// =======================================\n\nconst num = String.raw`\\d+(?:[.,]\\d+)?`;\n\nconst celda = String.raw`(?:${num}|:|\\.{3})`;\n\nconst unidad = String.raw`(Kilogramo|Bandeja|Caj[oó]n|Caja|Jaba|Bolsa|Ciento|Unidad|Saco|Paquete|Atado|Mano)`;\n\nconst patron = new RegExp(\n  String.raw`^(.+?)\\s+` +\n  String.raw`(${celda})\\s+` +\n  String.raw`(${celda})\\s+` +\n  String.raw`(${celda})\\s+` +\n  String.raw`(${celda})\\s+` +\n  unidad + String.raw`\\s+` +\n  String.raw`(${num})\\s+` +\n  String.raw`(${celda})\\s+` +\n  String.raw`(${celda})\\s+` +\n  String.raw`(${celda})\\s*$`,\n  'i'\n);\n\n// =======================================\n// 4. CONVERTIR VALORES NUMERICOS\n// =======================================\n\nfunction numero(valor) {\n\n  const texto = String(valor ?? '').trim();\n\n  if (\n    texto === '' ||\n    texto === ':' ||\n    texto === '...'\n  ) {\n    return null;\n  }\n\n  const valorNumerico = Number(\n    texto.replace(',', '.')\n  );\n\n  return Number.isFinite(valorNumerico)\n    ? valorNumerico\n    : null;\n}\n\n// =======================================\n// 5. EXTRAER UNA FILA\n// =======================================\n\nfunction extraerFila(textoFila) {\n\n  const m = textoFila.match(patron);\n\n  if (!m) {\n    return null;\n  }\n\n  let producto = m[1]\n    .replace(/\\s+/g, ' ')\n    .trim();\n\n  // Limpiar encabezados que se unen al producto.\n  producto = producto.replace(\n    /^Ayer\\s+Hoy\\s+[ÚU]ltimos\\s+7\\s+d[ií]as\\s+/i,\n    ''\n  );\n\n  producto = producto.replace(\n    /^Frutas\\s+(?=Aguaje$)/i,\n    ''\n  );\n\n  // Validar que sea un nombre de producto.\n  if (\n    producto.length < 2 ||\n    producto.length > 90 ||\n    /BOLET[IÍ]N|PRODUCTOS|PRECIO|MASA|FUENTE|ELABORACI[OÓ]N|MMF2|MIDAGRI|DGESEP|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo/i\n      .test(producto)\n  ) {\n    return null;\n  }\n\n  return {\n    producto,\n\n    volumen_ayer_t: numero(m[2]),\n    volumen_t: numero(m[3]),\n    volumen_promedio_7d_t: numero(m[4]),\n    volumen_promedio_4d_t: numero(m[5]),\n\n    unidad: m[6],\n    equivalencia_kg: numero(m[7]),\n\n    precio_ayer: numero(m[8]),\n    precio: numero(m[9]),\n    precio_promedio_7d: numero(m[10])\n  };\n}\n\n// =======================================\n// 6. PROCESAR LOS PDF\n// =======================================\n\nfor (const item of items) {\n\n  const texto = String(\n    item.json.text ?? ''\n  );\n\n  if (!texto.trim()) {\n    throw new Error(\n      'Extract from File no entrego texto'\n    );\n  }\n\n  const textoNormalizado =\n    normalizarTexto(texto);\n\n  const encabezadoNormalizado =\n    normalizarTexto(texto.slice(0, 1500));\n\n  // =====================================\n  // 6.1 IDENTIFICAR EL MERCADO\n  // =====================================\n\n  const origen = obtenerArchivoMMF2(item);\n\n  const encabezadoMMF2 =\n    /\\bmmf\\s*2\\b|\\bmmf2\\b/.test(\n      encabezadoNormalizado\n    ) ||\n\n    /mercado\\s+mayorista\\s+(?:de\\s+)?frutas/.test(\n      encabezadoNormalizado\n    ) ||\n\n    /mercado\\s+mayorista\\s*n(?:ro|umero)?\\s*2\\b/.test(\n      encabezadoNormalizado\n    );\n\n  const identidadMMF2 =\n    origen.archivoMMF2 || encabezadoMMF2;\n\n  console.log(\n    'IDENTIFICACION MMF2',\n    JSON.stringify({\n      archivo: origen.archivo,\n      archivo_mmf2: origen.archivoMMF2,\n      encabezado_mmf2: encabezadoMMF2,\n      identidad_mmf2: identidadMMF2\n    })\n  );\n\n  // No aceptar documentos de origen desconocido.\n  if (!identidadMMF2) {\n\n    throw new Error(\n      'No se pudo confirmar el origen MMF2. ' +\n      'Archivo: ' +\n      (origen.archivo || 'No identificado') +\n      '. Revisar descarga y encabezado.'\n    );\n  }\n\n  // =====================================\n  // 6.2 VALIDACION FLEXIBLE DE ESTRUCTURA\n  // =====================================\n\n  const senales = {\n\n    ingreso:\n      /volumen\\s+de\\s+ingreso|masa\\s+de\\s+ingreso/i\n        .test(textoNormalizado),\n\n    precios:\n      /precios?\\s*(?:s\\/|soles|mayoristas?)/i\n        .test(textoNormalizado),\n\n    unidadEquivalencia:\n      /\\bunidad\\b[\\s\\S]{0,40}\\bequiv/i\n        .test(textoNormalizado),\n\n    ayerHoy:\n      /\\bayer\\b[\\s\\S]{0,40}\\bhoy\\b/i\n        .test(textoNormalizado),\n\n    promedios:\n      /\\bult(?:imos?)?\\.?\\s*[47]\\b|\\bpromedio\\b/i\n        .test(textoNormalizado)\n  };\n\n  const puntaje = Object.values(senales)\n    .filter(Boolean)\n    .length;\n\n  // Separar las lineas del documento.\n  const lineas = texto\n    .split(/\\r?\\n/)\n    .map(x =>\n      x.replace(/\\s+/g, ' ').trim()\n    )\n    .filter(Boolean);\n\n  // Contar filas compatibles.\n  let filasCompatibles = 0;\n\n  for (\n    let i = 0;\n    i < lineas.length &&\n    filasCompatibles < 3;\n    i++\n  ) {\n\n    for (\n      let k = 1;\n      k <= Math.min(\n        12,\n        lineas.length - i\n      );\n      k++\n    ) {\n\n      const candidato = lineas\n        .slice(i, i + k)\n        .join(' ');\n\n      if (extraerFila(candidato)) {\n        filasCompatibles++;\n        i += k - 1;\n        break;\n      }\n\n      if (candidato.length > 190) {\n        break;\n      }\n    }\n  }\n\n  console.log(\n    'ESTRUCTURA MMF2',\n    JSON.stringify({\n      fecha_objetivo: fechaObjetivo,\n      senales,\n      puntaje,\n      filas_compatibles: filasCompatibles\n    })\n  );\n\n  // No depender de un unico encabezado.\n  // Exigir columnas y filas reconocibles.\n  if (\n    puntaje < 2 ||\n    filasCompatibles < 2\n  ) {\n\n    throw new Error(\n      'Estructura MMF2 no reconocida. ' +\n      'Puntaje: ' + puntaje +\n      '. Filas compatibles: ' +\n      filasCompatibles\n    );\n  }\n\n  // =====================================\n  // 6.3 VALIDAR FECHA REAL DEL PDF\n  // =====================================\n\n  const cabecera = texto.match(\n    /\\b(\\d{1,2})\\s+de\\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre)\\s+de\\s+(20\\d{2})\\b/i\n  );\n\n  if (!cabecera) {\n    throw new Error(\n      'No se pudo verificar la fecha del PDF'\n    );\n  }\n\n  const fechaPDF =\n    cabecera[3] + '-' +\n    String(\n      meses[cabecera[2].toLowerCase()]\n    ).padStart(2, '0') + '-' +\n    String(cabecera[1]).padStart(2, '0');\n\n  if (fechaPDF !== fechaObjetivo) {\n\n    throw new Error(\n      'Fecha del PDF: ' + fechaPDF +\n      '. Fecha solicitada: ' +\n      fechaObjetivo\n    );\n  }\n\n  // =====================================\n  // 6.4 EXTRAER TODOS LOS PRODUCTOS\n  // =====================================\n\n  for (\n    let i = 0;\n    i < lineas.length;\n    i++\n  ) {\n\n    let encontrado = null;\n    let consumir = 0;\n\n    for (\n      let k = 1;\n      k <= Math.min(\n        12,\n        lineas.length - i\n      );\n      k++\n    ) {\n\n      const candidato = lineas\n        .slice(i, i + k)\n        .join(' ');\n\n      const fila =\n        extraerFila(candidato);\n\n      if (fila) {\n        encontrado = fila;\n        consumir = k;\n        break;\n      }\n\n      if (candidato.length > 190) {\n        break;\n      }\n    }\n\n    if (!encontrado) {\n      continue;\n    }\n\n    i += consumir - 1;\n\n    const r = encontrado;\n\n    // ===================================\n    // CONTROL DE DUPLICADOS\n    // ===================================\n\n    const clave = [\n      fechaPDF,\n      normalizarTexto(r.producto),\n      normalizarTexto(r.unidad)\n    ].join('|');\n\n    if (vistos.has(clave)) {\n      continue;\n    }\n\n    vistos.add(clave);\n\n    // ===================================\n    // VALIDAR EQUIVALENCIA\n    // ===================================\n\n    if (\n      r.equivalencia_kg === null ||\n      r.equivalencia_kg <= 0\n    ) {\n\n      errores.push(\n        'Equivalencia invalida: ' +\n        r.producto\n      );\n\n      continue;\n    }\n\n    // ===================================\n    // OMITIR PRECIO FALTANTE\n    // ===================================\n\n    if (r.precio === null) {\n\n      omitidos.push({\n        producto: r.producto,\n        unidad: r.unidad,\n        motivo: 'Sin precio de hoy'\n      });\n\n      continue;\n    }\n\n    if (\n      !Number.isFinite(r.precio) ||\n      r.precio <= 0\n    ) {\n\n      errores.push(\n        'Precio invalido: ' +\n        r.producto\n      );\n\n      continue;\n    }\n\n    // ===================================\n    // VALIDAR VOLUMENES\n    // ===================================\n\n    const volumenes = [\n      r.volumen_ayer_t,\n      r.volumen_t,\n      r.volumen_promedio_7d_t,\n      r.volumen_promedio_4d_t\n    ];\n\n    if (\n      volumenes.some(\n        v => v !== null && v < 0\n      )\n    ) {\n\n      errores.push(\n        'Volumen negativo: ' +\n        r.producto\n      );\n\n      continue;\n    }\n\n    // ===================================\n    // REGISTRO VALIDO\n    // ===================================\n\n    resultados.push({\n      json: {\n\n        fecha: fechaPDF,\n\n        codigo_cnpa: null,\n\n        producto: r.producto,\n\n        mercado: 'MMF2',\n\n        unidad: r.unidad,\n\n        equivalencia_kg:\n          r.equivalencia_kg,\n\n        precio: r.precio,\n\n        precio_ayer: r.precio_ayer,\n\n        precio_promedio_7d:\n          r.precio_promedio_7d,\n\n        volumen_t:\n          r.volumen_t,\n\n        volumen_kg:\n          r.volumen_t === null\n            ? null\n            : r.volumen_t * 1000,\n\n        volumen_ayer_t:\n          r.volumen_ayer_t,\n\n        volumen_promedio_7d_t:\n          r.volumen_promedio_7d_t,\n\n        volumen_promedio_4d_t:\n          r.volumen_promedio_4d_t,\n\n        fuente: 'MIDAGRI',\n\n        formato_origen:\n          'MMF2 independiente',\n\n        tipo_prueba:\n          'parser_mmf2_ingreso'\n      }\n    });\n  }\n}\n\n// =======================================\n// 7. CONTROL DE ERRORES\n// =======================================\n\nif (errores.length > 0) {\n\n  throw new Error(\n    'Filas MMF2 por revisar (' +\n    errores.length + '): ' +\n    errores.slice(0, 5).join(' | ')\n  );\n}\n\n// =======================================\n// 8. VALIDAR CANTIDAD DE PRODUCTOS\n// =======================================\n\nif (\n  resultados.length < 40 ||\n  resultados.length > 150\n) {\n\n  throw new Error(\n    'Cantidad anomala de productos MMF2: ' +\n    resultados.length\n  );\n}\n\n// =======================================\n// 9. RESUMEN FINAL\n// =======================================\n\nconsole.log(\n  'Boletin MMF2 ' +\n  fechaObjetivo + ': ' +\n  resultados.length +\n  ' productos validos'\n);\n\nconsole.log(\n  'Productos omitidos sin precio:',\n  omitidos.length\n);\n\nif (omitidos.length > 0) {\n\n  console.log(\n    'Detalle de productos omitidos:',\n    JSON.stringify(omitidos)\n  );\n}\n\nreturn resultados;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2544,
-        16
+        2864,
+        -64
       ],
       "id": "d4933bc2-516c-4a82-a468-dff4cb79714a",
       "name": "Code - Parser MMF2 Prueba"
@@ -650,24 +650,97 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3344,
-        16
+        3856,
+        -64
       ],
       "id": "c2ac58ad-c776-4781-88fc-d3773feaadb6",
       "name": "Code - Validar MMF2"
     },
     {
       "parameters": {
-        "jsCode": "\nconst texto = $('Extract from File1').first().json.text;\n\nif (!texto) {\n  throw new Error('El PDF no entregó texto');\n}\n\nconst lineas = String(texto).split(/\\r?\\n/);\n\nconst coincidencias = [];\n\nfor (let i = 0; i < lineas.length; i++) {\n  if (/PERA\\s+AGUA\\s+CRIOLLA\\s*\\/\\s*CORRIENTE/i.test(lineas[i])) {\n\n    const siguientes = lineas.slice(i + 1, i + 25);\n\n    coincidencias.push({\n      linea_producto: i + 1,\n      producto: lineas[i].trim(),\n\n      lineas_originales: siguientes.map((valor, j) => ({\n        linea: i + j + 2,\n        valor: valor.trim()\n      })),\n\n      valores_sin_vacios: siguientes\n        .map(v => v.trim())\n        .filter(Boolean)\n        .slice(0, 16)\n    });\n  }\n}\n\nif (coincidencias.length === 0) {\n  throw new Error('No se encontró PERA AGUA CRIOLLA/CORRIENTE');\n}\n\nreturn [{\n  json: {\n    coincidencias_encontradas: coincidencias.length,\n    coincidencias\n  }\n}];\n"
+        "jsCode": "\nconst registros = $input.all().map(item => item.json);\n\nconst pendientes = registros.filter(r =>\n  r.producto_id === null ||\n  r.producto_id === undefined ||\n  r.producto_id === ''\n);\n\nconst contar = estado =>\n  registros.filter(r => r.estado_mapeo === estado).length;\n\nreturn [{\n  json: {\n    total_productos: registros.length,\n    productos_con_id: registros.length - pendientes.length,\n    productos_pendientes: pendientes.length,\n    encontrados_exactos: contar('EXACTO'),\n    encontrados_por_alias: contar('ALIAS'),\n    productos_creados: contar('CREADO'),\n    requieren_revision: contar('REVISAR_ALIAS'),\n    nombres_invalidos: contar('NOMBRE_INVALIDO'),\n    duplicados_por_revisar: contar('REVISAR_DUPLICADO'),\n    lista_pendientes: pendientes.map(r => ({\n      producto_pdf: r.producto_original,\n      estado: r.estado_mapeo,\n      posibles_maestros: r.nombre_canonico\n    }))\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2544,
-        -176
+        3664,
+        -240
       ],
-      "id": "e777297b-1db3-41f2-b2ae-99f6d297a810",
-      "name": "Code - Diagnosticar tablas MMF2"
+      "id": "e03a8cfc-a082-43e5-bc1e-1b1a12df0456",
+      "name": "Diagnosticar IDs faltantes"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n/*\n AgroSmart - Validar fecha de PDF MMF2\n Compara fecha interna del boletin\n con la fecha solicitada por WF0.\n*/\n\nconst items = $input.all();\n\nconst meses = {\n  enero: 1,\n  febrero: 2,\n  marzo: 3,\n  abril: 4,\n  mayo: 5,\n  junio: 6,\n  julio: 7,\n  agosto: 8,\n  setiembre: 9,\n  septiembre: 9,\n  octubre: 10,\n  noviembre: 11,\n  diciembre: 12\n};\n\nconst fechaObjetivo = String(\n  $('Loop Over Items').first().json.fecha_objetivo ?? ''\n).slice(0, 10);\n\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(fechaObjetivo)) {\n  throw new Error('Fecha objetivo invalida');\n}\n\nreturn items.map(item => {\n  const texto = String(item.json.text ?? '');\n\n  if (!texto.trim()) {\n    return {\n      json: {\n        ...item.json,\n        fecha_objetivo: fechaObjetivo,\n        fecha_pdf: null,\n        fecha_correcta: false,\n        motivo: 'PDF sin texto extraible'\n      }\n    };\n  }\n\n  const cabecera = texto.match(\n    /\\b(\\d{1,2})\\s+de\\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre)\\s+de\\s+(20\\d{2})\\b/i\n  );\n\n  if (!cabecera) {\n    return {\n      json: {\n        ...item.json,\n        fecha_objetivo: fechaObjetivo,\n        fecha_pdf: null,\n        fecha_correcta: false,\n        motivo: 'No se encontro fecha en el PDF'\n      }\n    };\n  }\n\n  const fechaPDF =\n    cabecera[3] + '-' +\n    String(meses[cabecera[2].toLowerCase()])\n      .padStart(2, '0') + '-' +\n    String(cabecera[1]).padStart(2, '0');\n\n  const fechaCorrecta = fechaPDF === fechaObjetivo;\n\n  return {\n    json: {\n      ...item.json,\n      fecha_objetivo: fechaObjetivo,\n      fecha_pdf: fechaPDF,\n      fecha_correcta: fechaCorrecta,\n      motivo: fechaCorrecta\n        ? 'Fecha validada'\n        : 'La fecha interna del PDF no coincide'\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        16
+      ],
+      "id": "d00955b9-c238-48e3-b291-58092c853f9d",
+      "name": "Code - Validar fecha MMF2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d1f4654a-14b2-4578-ade6-266600ece623",
+              "leftValue": "={{ $json.fecha_correcta }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2640,
+        16
+      ],
+      "id": "7ae95dbc-a545-4ab0-90ef-5ffbd5e71e72",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn $input.all().map(item => ({\n  json: {\n    fecha_objetivo: item.json.fecha_objetivo,\n    fecha_pdf: item.json.fecha_pdf,\n    mercado: 'MMF2',\n    estado: 'OMITIDO',\n    motivo: item.json.motivo\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2864,
+        112
+      ],
+      "id": "469928db-7f67-4844-b648-1d2e23e27f91",
+      "name": "Code - PDF omitido"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first();\nconst texto = String(item.json.text ?? '');\n\nconst n = texto\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/\\s+/g, ' ')\n  .toLowerCase();\n\nreturn [{\n  json: {\n    ...item.json,\n    tiene_unidad_equiv: n.includes('unidad equiv'),\n    tiene_ayer_hoy: n.includes('ayer hoy'),\n    tiene_ultimos_7: /ult\\s*\\.?\\s*7/.test(n),\n    tiene_ultimos_4: /ult\\s*\\.?\\s*4/.test(n),\n    tiene_aguaje: n.includes('aguaje'),\n    encabezado_pdf: texto.slice(0, 1000)\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        16
+      ],
+      "id": "b1afa4d6-9bd3-4b2b-93b6-a8195dc23f0e",
+      "name": "Code in JavaScript"
     }
   ],
   "pinData": {},
@@ -708,6 +781,11 @@
     "Execute a SQL query Buscar producto_id": {
       "main": [
         [
+          {
+            "node": "Diagnosticar IDs faltantes",
+            "type": "main",
+            "index": 0
+          },
           {
             "node": "Code in JavaScript Unir producto maestro",
             "type": "main",
@@ -791,12 +869,7 @@
       "main": [
         [
           {
-            "node": "Code - Parser MMF2 Prueba",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Code - Diagnosticar tablas MMF2",
+            "node": "Code in JavaScript",
             "type": "main",
             "index": 0
           }
@@ -959,9 +1032,60 @@
         ]
       ]
     },
-    "Code - Diagnosticar tablas MMF2": {
+    "Diagnosticar IDs faltantes": {
       "main": [
         []
+      ]
+    },
+    "Code - Validar fecha MMF2": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code - Parser MMF2 Prueba",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - PDF omitido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - PDF omitido": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Code - Validar fecha MMF2",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -970,7 +1094,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "3754627a-033c-4c75-8bc6-72da474ef703",
+  "versionId": "bfdd125c-6119-40b7-b24d-1a12f482959b",
   "meta": {
     "templateCredsSetupCompleted": true
   },
