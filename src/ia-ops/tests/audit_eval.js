@@ -57,6 +57,7 @@ async function ejecutarAuditoria() {
   let correctas = 0;
   let alucinaciones = 0;
   let erroresSolicitud = 0;
+  let rechazosIndebidos = 0; // ver sección 2 de docs/sprint-4/S4-LLMOps-Inventario-Modelos-y-Evals.md
 
   // 3. Ejecuta la prueba contra la IA
   for (let i = 0; i < dataset.length; i++) {
@@ -83,8 +84,20 @@ async function ejecutarAuditoria() {
         const respuestaIA = data.respuesta || '';
         const precioObtenido = extraerPrecio(respuestaIA);
 
+        // Caso aparte: el chat rechazó una pregunta de precio legítima como
+        // "fuera de alcance" / "información sensible". Esto NO es lo mismo
+        // que una alucinación de precio -- es un falso rechazo, y es la
+        // señal más confiable de las dos (el precio real fluctúa a diario,
+        // así que comparar el número exacto contra un dataset de hace
+        // semanas da falsos positivos solo por eso; un rechazo indebido no
+        // depende de cuándo se generó el dataset).
+        const esRechazoIndebido = data.estado === 'fuera_de_alcance' || /no puede ser atendida/i.test(respuestaIA);
+
         let estado = 'DISCREPANCIA / ALUCINACIÓN';
-        if (precioObtenido !== null && Math.abs(precioObtenido - precioEsperado) < 0.01) {
+        if (esRechazoIndebido) {
+          estado = 'RECHAZO INDEBIDO';
+          rechazosIndebidos++;
+        } else if (precioObtenido !== null && Math.abs(precioObtenido - precioEsperado) < 0.01) {
           estado = 'CORRECTA';
           correctas++;
         } else {
@@ -109,6 +122,7 @@ async function ejecutarAuditoria() {
   // 4. Reporte técnico final
   const totalEvaluadas = dataset.length;
   const exactitud = totalEvaluadas > 0 ? (correctas / totalEvaluadas) * 100 : 0;
+  const tasaRechazoIndebido = totalEvaluadas > 0 ? (rechazosIndebidos / totalEvaluadas) * 100 : 0;
   const latenciaPromedio = latencias.length > 0 ? latencias.reduce((a, b) => a + b, 0) / latencias.length : 0;
   const latenciaP95 = calcularP95(latencias);
   const tasaExito = totalEvaluadas > 0 ? ((totalEvaluadas - erroresSolicitud) / totalEvaluadas) * 100 : 0;
@@ -119,8 +133,9 @@ async function ejecutarAuditoria() {
   console.log('     REPORTE TÉCNICO DE AUDITORÍA       ');
   console.log('========================================');
   console.log(`Preguntas evaluadas:       ${totalEvaluadas}`);
-  console.log(`Exactitud numérica:         ${exactitud.toFixed(2)}%`);
+  console.log(`Exactitud numérica:         ${exactitud.toFixed(2)}% (informativo -- el precio real cambia a diario, no es un gate de CI)`);
   console.log(`Alucinaciones:              ${alucinaciones}`);
+  console.log(`Rechazos indebidos:         ${rechazosIndebidos} (${tasaRechazoIndebido.toFixed(2)}%) -- preguntas de precio legítimas bloqueadas como "fuera de alcance"`);
   console.log(`Tasa de éxito HTTP:         ${tasaExito.toFixed(2)}%\n`);
   console.log(`Latencia promedio:          ${latenciaPromedio.toFixed(2)} s`);
   console.log(`Latencia p95:               ${latenciaP95.toFixed(2)} s`);
@@ -131,6 +146,27 @@ async function ejecutarAuditoria() {
     console.log(`Costo acumulado:            $${langfuseData.totalCost || '0.00'}`);
   }
   console.log('========================================');
+
+  // Código de salida: antes este script nunca fallaba, sin importar el
+  // resultado -- un reporte que nadie corría ni leía. Se falla sobre señales
+  // que NO dependen de que el precio de mercado haya cambiado desde que se
+  // generó el dataset (eso es ruido esperado, no una regresión real):
+  //   - Tasa de éxito HTTP baja: el servicio o la red están fallando.
+  //   - Rechazos indebidos: el chat está bloqueando preguntas legítimas.
+  // Umbrales generosos a propósito -- es la primera corrida con datos
+  // reales, ver sección 4 de docs/sprint-4/S4-LLMOps-Inventario-Modelos-y-Evals.md.
+  const UMBRAL_TASA_EXITO_MIN = 90;
+  const UMBRAL_RECHAZO_INDEBIDO_MAX = 20;
+
+  if (tasaExito < UMBRAL_TASA_EXITO_MIN) {
+    console.error(`\n❌ FALLO: tasa de éxito HTTP (${tasaExito.toFixed(2)}%) por debajo del umbral (${UMBRAL_TASA_EXITO_MIN}%).`);
+    return 1;
+  }
+  if (tasaRechazoIndebido > UMBRAL_RECHAZO_INDEBIDO_MAX) {
+    console.error(`\n❌ FALLO: ${rechazosIndebidos} preguntas legítimas rechazadas como "fuera de alcance" (${tasaRechazoIndebido.toFixed(2)}%, umbral ${UMBRAL_RECHAZO_INDEBIDO_MAX}%).`);
+    return 1;
+  }
+  return 0;
 }
 
-ejecutarAuditoria();
+ejecutarAuditoria().then((codigoSalida) => process.exit(codigoSalida || 0));
