@@ -528,6 +528,9 @@ export default function MercadosMIDAGRI() {
                     </span>
                   )}
                 </div>
+                <p className="text-[10px] text-on-surface-variant">
+                  Última fecha GMML: {data.ultimaFechaGMML ? formatearFecha(data.ultimaFechaGMML) : "Sin fecha"}
+                </p>
 
                 <div className="my-2">
                   {data.ultimosPrecios?.mmf2 ? (
