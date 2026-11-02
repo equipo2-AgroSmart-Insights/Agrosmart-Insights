@@ -1,4 +1,4 @@
-<img src=".\docs-architecture\docs\arquitectura\media/media/image1.png"
+<img src="media/media/image1.png"
 style="width:5.90556in;height:1.63333in" />
 
 **ESCUELA PROFESIONAL DE INGENIERÍA DE COMPUTACIÓN Y SISTEMAS**   \
@@ -590,11 +590,21 @@ procesos programados. Se ha trabajado con consultas a MIDAGRI y
 Open-Meteo, verificación de fechas y procesamiento por lotes de regiones
 meteorológicas.
 
-**WF2 — API de chat y análisis predictivo**
+**WF2 — API de chat, mercados y análisis predictivo**
 
-Es el flujo de atención de consultas. Recibe las solicitudes de la
-interfaz, clasifica la intención, ejecuta las ramas correspondientes,
-consulta datos y herramientas y devuelve una respuesta.
+Es el flujo central de atención de consultas (`POST /webhook/v1/query`). Recibe las solicitudes de los microfrontends de Chat NLQ, Mercados MIDAGRI y el respaldo agroclimático de Monitoreo, clasifica la intención, ejecuta las ramas correspondientes, consulta datos y herramientas y devuelve una respuesta.
+
+**WF3 — Servicio de monitoreo satelital NDVI**
+
+Gestiona la consulta de capas espectrales raster NDVI obtenidas desde Copernicus Sentinel-2 (CDSE) mediante `POST /webhook/v1/satelital/ndvi` para el microfrontend de Monitoreo Satelital.
+
+**WF4 — API de calendario agrícola MIDAGRI**
+
+Expone el endpoint `GET /webhook/v1/calendario` para filtrar y consultar ferias, eventos y campañas agrícolas por rango de fechas, departamento, modalidad y entidad organizadora desde el microfrontend de Calendario Agrícola.
+
+**WF5 — Motor y API de alertas de riesgo agrícola**
+
+Combina una ejecución programada (Cron lunes a sábado a las 14:00 `America/Lima`) que evalúa reglas configurables en PostgreSQL (`alertas_riesgo_evaluar`) con el webhook `POST /webhook/v1/alertas` para listar alertas, consultar su evidencia histórica y actualizar su estado (`pending`, `read`, `attended`) desde el microfrontend de Alertas de Riesgo.
 
 La separación permite actualizar la información con independencia de las
 consultas interactivas y facilita identificar en qué etapa se produce un
@@ -721,32 +731,21 @@ componentes.</p>
 
 **5.2. Nivel 2: componentes internos**
 
-**5.2.1. Frontend**
+**5.2.1. Frontend (Arquitectura de Microfrontends con Module Federation)**
 
-El frontend está construido con React y Vite. Se ha organizado alrededor
-de cuatro módulos funcionales:
+El frontend está construido con React 19, Vite 8 y `@originjs/vite-plugin-federation`. Consta de una aplicación contenedora (**Shell**: `src/frontend/agrosmart-frontend`) que orquesta y aísla mediante `MicrofrontendErrorBoundary` cinco microfrontends independientes desplegados en Vercel:
 
-1.  **Monitoreo:** visualización de información e indicadores
-    relevantes.
+1.  **Chat NLQ (`chat-microfrontend`):** interfaz para consultas en lenguaje natural sobre precios, tendencias y boletines RAG, conectada a **WF2** (`POST /webhook/v1/query`).
 
-2.  **Chat SQL:** interfaz para consultas en lenguaje natural
-    relacionadas con los datos disponibles.
+2.  **Mercados MIDAGRI (`mercados-microfrontend`):** comparativa analítica e histórica entre GMML y MMF2 con validación de homologación por ID maestro y unidades equivalentes, conectada a **WF2** (`POST /webhook/v1/query`, `action: "get_market_prices"`).
 
-3.  **Mercados:** consulta y análisis de información de precios
-    agrícolas.
+3.  **Monitoreo Satelital (`monitoreo-microfrontend`):** visor cartográfico e indicadores agroclimáticos (sequía, humedad y vigor vegetativo NDVI), conectado a **WF3** (`POST /webhook/v1/satelital/ndvi`), **WF2** (`analisis_satelital_riesgo`), **Open-Meteo** y **MapTiler**.
 
-4.  **Calendario:** módulo previsto para presentar fechas y eventos de
-    campañas agrícolas.
+4.  **Alertas de Riesgo (`alertas-microfrontend`):** panel de monitoreo de alertas por caída de volumen ingresado o anomalías climáticas, con consulta de evidencia histórica y gestión de estados (`Pendiente`, `Leída`, `Atendida`), conectado a **WF5** (`POST /webhook/v1/alertas`).
 
-> El módulo Calendario se encuentra documentado como parte del alcance
-> funcional, pero su implementación completa y su fuente de datos deben
-> verificarse antes de considerarlo terminado.
->
-> La comunicación con el backend se realiza mediante solicitudes HTTP a
-> los webhooks configurados. Durante el desarrollo se identificó un
-> error de configuración asociado a VITE_N8N_WEBHOOK_URL, lo que
-> evidencia la necesidad de validar las variables de entorno en cada
-> ambiente.
+5.  **Calendario Agrícola (`calendario-microfrontend`):** calendario mensual e interactivo de ferias, campañas y eventos oficiales de MIDAGRI con filtros por departamento, modalidad, entidad y búsqueda textual, conectado a **WF4** (`GET /webhook/v1/calendario`).
+
+> La comunicación entre cada microfrontend y n8n se realiza mediante solicitudes HTTP configuradas por variables de entorno (`VITE_N8N_WEBHOOK_URL`, `VITE_WF3_NDVI_URL`, `VITE_ALERTS_WEBHOOK_URL` y `VITE_CALENDARIO_API_URL`), mientras que el Shell resuelve las URLs remotas (`VITE_*_REMOTE_URL`) de cada `remoteEntry.js`.
 
 **5.2.2. WF0: ingesta de conocimiento documental**
 
