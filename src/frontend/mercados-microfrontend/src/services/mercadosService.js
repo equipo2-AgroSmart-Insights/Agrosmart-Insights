@@ -77,6 +77,17 @@ function parsearFechaTexto(fechaStr, anioReferencia) {
     return `${anio}-${mes}-${dia}`;
   }
 
+  // DD/MM/YYYY (ej. "registro del 30/10/2026") -- formato que WF2 empezó a
+  // usar y que no entraba en ninguno de los dos casos anteriores, dejando la
+  // fecha como texto sin parsear y por lo tanto sin coincidir con ninguna
+  // fecha del horizonte (ver sección 9 del informe de la semana).
+  const numMatch = str.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
+  if (numMatch) {
+    const dia = String(numMatch[1]).padStart(2, "0");
+    const mes = String(numMatch[2]).padStart(2, "0");
+    return `${numMatch[3]}-${mes}-${dia}`;
+  }
+
   return str;
 }
 
