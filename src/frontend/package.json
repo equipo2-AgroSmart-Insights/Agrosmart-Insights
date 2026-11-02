@@ -15,10 +15,11 @@
     "preview:monitoreo": "cd monitoreo-microfrontend && npm run build && npm run preview",
     "build:mercados": "cd mercados-microfrontend && npm run build",
     "preview:mercados": "cd mercados-microfrontend && npm run build && npm run preview",
+    "install:all": "npm install && npm --prefix agrosmart-frontend install && npm --prefix chat-microfrontend install && npm --prefix monitoreo-microfrontend install && npm --prefix mercados-microfrontend install",
     "build:shell": "cd agrosmart-frontend && npm run build"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.2.5"
   }
 }
 

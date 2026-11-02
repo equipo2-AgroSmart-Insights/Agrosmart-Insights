@@ -6,8 +6,9 @@ export function QueryProvider({ children }) {
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [query, setQuery] = useState("");
 
-  const value = { status, setStatus, result, setResult, error, setError };
+  const value = { status, setStatus, result, setResult, error, setError, query, setQuery };
   return <QueryContext.Provider value={value}>{children}</QueryContext.Provider>;
 }
 

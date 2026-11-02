@@ -1,0 +1,83 @@
+name: Pruebas E2E (Playwright)
+# Prueba el flujo real de un usuario en el navegador, de punta a punta:
+# frontend -> microfrontends -> webhook de n8n -> LLM -> respuesta en pantalla.
+# No reemplaza al healthcheck (que solo mira HTTP 200) ni a los tests de
+# Vitest/Postman de QA (que prueban componentes y la API por separado) —
+# es la capa que faltaba: la experiencia completa, en un navegador real.
+#
+# Corre por horario, no en cada PR: depende de LLMs reales y del estado de
+# producción (que puede estar "dormida" por el plan free de Render), así
+# que no es confiable como gate obligatorio de merge.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # cada 6h, igual que el healthcheck
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  e2e:
+    name: Pruebas de humo E2E contra producción
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar navegadores de Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Ejecutar pruebas E2E
+        run: npx playwright test --project=chromium
+
+      - name: Subir reporte (si falló algo)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 14
+
+      - name: Avisar con un issue (si corrió por el cron, no manual)
+        # Corre cada 6h sin que nadie lo mire — antes, si fallaba de madrugada
+        # nadie se enteraba hasta entrar a mano a la pestaña Actions.
+        if: ${{ failure() && github.event_name == 'schedule' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label ci-e2e-failure --state open --json number --jq '.[0].number')
+          BODY="La corrida programada de Playwright falló: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Pruebas E2E fallando en producción" --label ci-e2e-failure --body "$BODY"
+          fi
+
+      - name: Cerrar issue si ya quedó en verde
+        # Faltaba este paso (sí existe en n8n-drift-check.yml): sin él, el
+        # Issue #116 siguió abierto 4 días después de que el fix (PR #139)
+        # ya lo había resuelto de verdad, porque nada lo volvía a cerrar.
+        if: ${{ success() && github.event_name == 'schedule' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label ci-e2e-failure --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "Resuelto: la corrida del $(date -u +%Y-%m-%d) confirma que las pruebas E2E vuelven a pasar."
+            gh issue close "$EXISTING" --repo "$GITHUB_REPOSITORY"
+          fi
