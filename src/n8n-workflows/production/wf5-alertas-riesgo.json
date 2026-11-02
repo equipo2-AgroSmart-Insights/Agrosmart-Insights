@@ -1,0 +1,205 @@
+{
+  "name": "WF5 - Alertas de Riesgo Agrícola",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 14 * * 1-6"
+            }
+          ]
+        }
+      },
+      "id": "4c88bc30-29b0-48ff-a503-f2c9ff153d23",
+      "name": "Schedule Trigger 14:00 (después de WF1)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d8685338-7959-4815-9327-6b204cf7a855",
+      "name": "Manual - Evaluar ahora",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.alertas_riesgo_evaluar() AS resultado;",
+        "options": {}
+      },
+      "id": "36fbcc9b-2a72-4184-a224-130422fd8254",
+      "name": "Postgres - Evaluar reglas",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v1/alertas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e18eb469-a0fc-4bbc-8fbb-d1c8b761c6aa",
+      "name": "Webhook POST v1/alertas",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        460
+      ],
+      "webhookId": "ed90d30e-8e92-426f-a6d6-0ade26e16595"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza el cuerpo que envía alertas-microfrontend (alertasService.js).\n// No lanza errores: una solicitud inválida llega a SQL como acción 'invalid'\n// y vuelve al navegador como { error } con HTTP 200.\nconst body = $json.body ?? {};\nconst acciones = ['list', 'details', 'update'];\nconst accion = acciones.includes(body.action) ? body.action : 'invalid';\n\nconst alertId = /^\\d{1,18}$/.test(String(body.alert_id ?? '')) ? String(body.alert_id) : '';\nconst status = ['read', 'attended'].includes(body.status) ? body.status : String(body.status ?? '');\nconst sessionId = String(body.session_id ?? '').slice(0, 64);\n\nreturn [{ json: { accion, alert_id: alertId, status, session_id: sessionId } }];\n"
+      },
+      "id": "658b2db4-49b0-42b5-9cb4-273ebc5273e2",
+      "name": "Code - Validar solicitud",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT CASE $1\n    WHEN 'list'    THEN public.alertas_riesgo_listar()\n    WHEN 'details' THEN public.alertas_riesgo_detalle(NULLIF($2, '')::bigint)\n    WHEN 'update'  THEN public.alertas_riesgo_actualizar(NULLIF($2, '')::bigint, $3, $4)\n    ELSE jsonb_build_object('error', 'Acción no soportada. Usa list, details o update.')\nEND AS resultado;",
+        "options": {
+          "queryReplacement": "={{ [ $json.accion, $json.alert_id, $json.status, $json.session_id ] }}"
+        }
+      },
+      "id": "1d51039a-1f6a-4029-9ef3-e7eca48e83c3",
+      "name": "Postgres - list / details / update",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        460
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.resultado }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "5983263c-3d67-428f-9563-db8d209123d1",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        720,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## WF5 · Alertas de riesgo agrícola\n**Cálculo:** lun–sáb 14:00 (America/Lima), después de WF1. Llama a `alertas_riesgo_evaluar()`.\n**API:** `POST /webhook/v1/alertas` con `{ action: list | details | update, session_id, alert_id, status }`.\nLa lógica y las reglas viven en Postgres: `src/database/migrations/003_alertas_riesgo.sql`. Los umbrales se cambian en la tabla `alertas_riesgo_reglas`, no aquí.",
+        "height": 220,
+        "width": 560
+      },
+      "id": "0c26c67f-c798-4105-b658-0a546dddc258",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        380,
+        -200
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger 14:00 (después de WF1)": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Evaluar reglas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual - Evaluar ahora": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Evaluar reglas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook POST v1/alertas": {
+      "main": [
+        [
+          {
+            "node": "Code - Validar solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Validar solicitud": {
+      "main": [
+        [
+          {
+            "node": "Postgres - list / details / update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - list / details / update": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Lima"
+  }
+}

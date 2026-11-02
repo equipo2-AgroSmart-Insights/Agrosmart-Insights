@@ -1,0 +1,87 @@
+name: Base de datos — aplicar migración en producción
+# Aplica una migración de src/database/migrations/ sobre la base de Render,
+# usando el mismo secret que ya usan n8n-drift-check y n8n-export
+# (RENDER_DATABASE_URL), así la URL nunca pasa por la laptop de nadie.
+#
+# Modos:
+#   probar  -> ejecuta la migración y una simulación dentro de una transacción
+#              y hace ROLLBACK. No deja ningún cambio. Correr siempre primero.
+#   aplicar -> ejecuta la migración en una sola transacción (todo o nada).
+#
+# Solo manual (workflow_dispatch) y con opciones cerradas: el input nunca se
+# interpola como texto libre en el comando.
+
+on:
+  workflow_dispatch:
+    inputs:
+      migracion:
+        description: "Migración a ejecutar"
+        required: true
+        type: choice
+        options:
+          - 003_alertas_riesgo.sql
+      modo:
+        description: "probar = simula y hace ROLLBACK · aplicar = deja los cambios"
+        required: true
+        type: choice
+        default: probar
+        options:
+          - probar
+          - aplicar
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-migrate-produccion
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: ${{ inputs.modo }} ${{ inputs.migracion }}
+    runs-on: ubuntu-latest
+    env:
+      HAS_DB_SECRET: ${{ secrets.RENDER_DATABASE_URL != '' }}
+      MIGRACION: ${{ inputs.migracion }}
+      MODO: ${{ inputs.modo }}
+    steps:
+      - name: Avisar si falta el secret
+        if: ${{ env.HAS_DB_SECRET == 'false' }}
+        run: |
+          echo "::error::RENDER_DATABASE_URL no está configurado."
+          exit 1
+
+      - uses: actions/checkout@v7
+
+      - name: Instalar cliente de PostgreSQL
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client > /dev/null
+
+      - name: Ejecutar
+        env:
+          DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+          # Igual que export_n8n_workflow.py: Render exige SSL.
+          PGSSLMODE: require
+        run: |
+          set -euo pipefail
+          ARCHIVO="src/database/migrations/$MIGRACION"
+          test -f "$ARCHIVO"
+
+          # Simulación específica de cada migración (solo lectura).
+          SIMULACION=""
+          if [ "$MIGRACION" = "003_alertas_riesgo.sql" ]; then
+            SIMULACION="SELECT jsonb_pretty(public.alertas_riesgo_evaluar(NULL, true)) AS simulacion;"
+          fi
+
+          if [ "$MODO" = "probar" ]; then
+            echo "▶ Modo probar: todo corre dentro de BEGIN ... ROLLBACK."
+            { echo "BEGIN;"; cat "$ARCHIVO"; echo "$SIMULACION"; echo "ROLLBACK;"; } \
+              | psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -q -P pager=off
+            echo "✅ Prueba terminada. No quedó ningún cambio en la base."
+          else
+            echo "▶ Modo aplicar: una sola transacción (si algo falla, no se aplica nada)."
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -q -P pager=off --single-transaction -f "$ARCHIVO"
+            if [ -n "$SIMULACION" ]; then
+              echo "$SIMULACION" | psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X -q -P pager=off
+            fi
+            echo "✅ Migración aplicada."
+          fi
