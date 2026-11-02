@@ -1,0 +1,68 @@
+name: Base de datos — migraciones y pruebas SQL
+# Aplica las migraciones nuevas sobre un Postgres limpio y corre las pruebas
+# de src/database/tests/. La migración se aplica dos veces para confirmar que
+# es idempotente (en producción se ejecuta sobre tablas que ya existen).
+
+on:
+  pull_request:
+    paths:
+      - 'src/database/**'
+      - '.github/workflows/db-migrations-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/database/**'
+      - '.github/workflows/db-migrations-ci.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  test-sql:
+    name: Probar migración 003 (alertas de riesgo)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Misma imagen que infrastructure/docker-compose.yml (trae pgvector).
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: agrosmart_test
+          POSTGRES_USER: agrosmart
+          POSTGRES_PASSWORD: agrosmart_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agrosmart -d agrosmart_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: agrosmart
+      PGPASSWORD: agrosmart_ci
+      PGDATABASE: agrosmart_test
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Crear tablas base (como las deja WF1)
+        run: psql -v ON_ERROR_STOP=1 -f src/database/tests/fixtures_base.sql
+
+      - name: Aplicar 003_alertas_riesgo.sql (dos veces, debe ser idempotente)
+        run: |
+          psql -v ON_ERROR_STOP=1 -f src/database/migrations/003_alertas_riesgo.sql
+          psql -v ON_ERROR_STOP=1 -f src/database/migrations/003_alertas_riesgo.sql
+
+      - name: Correr pruebas
+        run: psql -v ON_ERROR_STOP=1 -f src/database/tests/test_003_alertas_riesgo.sql
+
+      # docker-compose monta migrations/ en docker-entrypoint-initdb.d y las
+      # corre en orden al crear el contenedor: 003 no debe romper ese arranque.
+      - name: Compatibilidad con el arranque Docker (001 → 002 → 003)
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE agrosmart_init"
+          for f in src/database/migrations/*.sql; do
+            echo "=== $f"
+            PGDATABASE=agrosmart_init psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
