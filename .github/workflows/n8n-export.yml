@@ -73,7 +73,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if git diff --quiet -- src/n8n-workflows/production/; then
+          # `git diff` no ve archivos sin seguimiento: un workflow exportado por
+          # primera vez (wf-nuevo-revisar-nombre-*.json) quedaba como "sin cambios".
+          if [ -z "$(git status --porcelain -- src/n8n-workflows/production/)" ]; then
             echo "Sin cambios — los workflows exportados ya coinciden con git."
             exit 0
           fi
