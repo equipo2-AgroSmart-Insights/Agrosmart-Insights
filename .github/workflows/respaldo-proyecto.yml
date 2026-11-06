@@ -1,8 +1,7 @@
 name: Respaldo del proyecto (backup + restauración verificada)
-# Reemplaza a backup-postgres.yml, que subía cada semana un pg_dump completo
-# y SIN cifrar como artefacto. En un repo público cualquier cuenta de GitHub
-# puede descargar esos artefactos, y el dump traía las tablas internas de n8n
-# (correos y hashes de contraseña) y API keys dentro de las ejecuciones.
+# Reemplaza a backup-postgres.yml. Principio: en un repo público los
+# artefactos los puede descargar cualquier cuenta de GitHub, así que un
+# respaldo solo se sube cifrado y con lo mínimo necesario para restaurar.
 #
 # Ahora:
 #   1. respaldar: solo tablas de la app (infrastructure/backup/tablas-app.txt)

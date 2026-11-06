@@ -1,10 +1,10 @@
 # Tablas de la aplicación que entran al respaldo (esquema + datos).
 #
-# Quedan fuera a propósito las tablas internas de n8n ("user",
-# credentials_entity, execution_data, workflow_history, ...): guardan correos,
-# hashes de contraseña y payloads de ejecuciones con API keys. En una
-# restauración los workflows se importan desde git y las credenciales se crean
-# de nuevo (docs/w1-backup-restore/MANUAL-RESTAURACION.md).
+# Quedan fuera a propósito las tablas internas de n8n (usuarios,
+# credenciales, historial de ejecuciones): no hacen falta para restaurar y
+# es mejor no respaldar datos personales ni secretos. En una restauración los
+# workflows se importan desde git y las credenciales se crean de nuevo
+# (docs/w1-backup-restore/MANUAL-RESTAURACION.md).
 #
 # También quedan fuera las tablas prueba_* (experimentos de migración).
 #
