@@ -32,10 +32,21 @@ Flujos versionados como código (Sprint 1). Importar en n8n y configurar **Crede
 
 ## Credentials requeridas en n8n
 
-- Postgres account → DB `agrosmart_db`
-- Groq account, Google Gemini, Hugging Face (WF0/WF2)
-- OAuth2 (client credentials) de Copernicus Data Space / Sentinel Hub (WF3)
-- Header Auth del webhook de WF3
+Los JSON buscan las credenciales por nombre: créalas con **exactamente**
+estos nombres antes de importar.
+
+| Nombre | Tipo | Workflows |
+|---|---|---|
+| `Postgres account` | Postgres → DB `agrosmart_db` | WF0, WF1, WF2, WF4, WF5 |
+| `Google Gemini(PaLM) Api account` | Google Gemini (PaLM) API | WF2 |
+| `OpenRouter account` | OpenRouter | WF2 |
+| `langfuse credential` | Basic Auth (public key / secret key) | WF2 |
+| `Copernicus OAuth2 - AgroSmart` | OAuth2 API, client credentials (Copernicus Data Space) | WF3 |
+| `Header Auth account 2` | Header Auth (`X-AgroSmart-Key`) | WF3 |
+
+Además, la key de Jina va dentro de WF0 y WF2 (marcador
+`{{JINA_API_KEY_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}`). Paso a paso completo:
+`docs/w1-backup-restore/MANUAL-RESTAURACION.md`.
 
 ## Validación CI
 
