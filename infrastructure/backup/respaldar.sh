@@ -64,7 +64,8 @@ tar --exclude='./.git' --exclude='*/node_modules' --exclude='*/dist' \
   -czf "$PKG/codigo/agrosmart-insights-codigo.tar.gz" -C "$REPO_ROOT" .
 
 cp "$SCRIPT_DIR/restaurar-bd.sh" "$PKG/"
-cp "$REPO_ROOT/docs/w1-backup-restore/MANUAL-RESTAURACION.md" "$PKG/"
+cp "$REPO_ROOT/docs/w1-backup-restore/MANUAL-RESTAURACION.md" \
+   "$REPO_ROOT/docs/w1-backup-restore/ESTRATEGIA-RESPALDO.md" "$PKG/"
 
 COMMIT=${GITHUB_SHA:-$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo desconocido)}
 N8N_IMAGE=$(grep -oE 'n8nio/n8n:[^[:space:]]+' "$REPO_ROOT/render.yaml" | head -1 || echo desconocida)

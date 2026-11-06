@@ -29,7 +29,7 @@ PKG=$(find "$WORK" -mindepth 1 -maxdepth 1 -type d -name 'agrosmart-respaldo-*' 
 [ -n "$PKG" ] || { echo "::error::El .7z no contiene la carpeta agrosmart-respaldo-*"; exit 1; }
 
 echo "== Contenido del paquete"
-for f in MANIFIESTO.md MANUAL-RESTAURACION.md restaurar-bd.sh \
+for f in MANIFIESTO.md MANUAL-RESTAURACION.md ESTRATEGIA-RESPALDO.md restaurar-bd.sh \
          bd/agrosmart_app.dump bd/conteos.tsv bd/migraciones/003_alertas_riesgo.sql \
          codigo/agrosmart-insights-codigo.tar.gz n8n/README.md; do
   [ -s "$PKG/$f" ] || fallo "Falta o está vacío: $f"
