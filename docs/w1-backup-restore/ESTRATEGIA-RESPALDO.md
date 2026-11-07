@@ -27,7 +27,7 @@ siguiendo el manual, el respaldo no sirve.
 |---|---|---|
 | Claves y contraseñas | No deben viajar en un respaldo | Se crean de nuevo (manual, paso 2) |
 | Tablas internas de n8n (usuarios, credenciales, historial de ejecuciones) | Datos personales y secretos que no hacen falta para restaurar | Los workflows se importan desde git |
-| Servicio local del puente ngrok (WF0, WF1, WF4) | Su código no está en el repositorio | No se puede hasta que se versione (ver Riesgos) |
+| Puente MIDAGRI en ejecución (WF0, WF1, WF4) | Corre en una computadora, no en la nube; su código sí viaja en `codigo/` (`src/midagri-bridge/`, desde el 07/11) | Se levanta con el paso 5.3 del manual (Python + ngrok) |
 
 ## Frecuencia, retención y almacenamiento
 
@@ -54,7 +54,7 @@ Un respaldo que nunca se restauró no está probado. Por eso:
 
 | Métrica | Valor | Nota |
 |---|---|---|
-| Pérdida máxima de datos (RPO) | 7 días | Precios y clima se pueden volver a cargar desde las fuentes públicas (MIDAGRI, Open-Meteo) con WF0/WF1, mientras el puente ngrok esté disponible. |
+| Pérdida máxima de datos (RPO) | 7 días | Precios y clima se pueden volver a cargar desde las fuentes públicas (MIDAGRI, Open-Meteo) con WF0/WF1, mientras el puente MIDAGRI esté encendido. |
 | Tiempo de restauración (RTO) | 2 a 3 horas | Siguiendo el manual. La mayor parte es crear cuentas y esperar despliegues. |
 
 ## Dónde se restaura
@@ -81,7 +81,7 @@ Decisión: ☐ cargar crédito en OpenRouter ☐ restaurar con modelos `:free` (
 |---|---|
 | DevSecOps (DevOps) | Respaldo automático y cifrado, manual de restauración, esta estrategia, entregar el respaldo y la frase al QA |
 | Arquitecto | Revisar que el manual sea coherente con la arquitectura documentada |
-| Técnico (Backend/IA) | Versionar el servicio del puente ngrok; decidir qué modelos usar si no se paga |
+| Técnico (Backend/IA) | Puente MIDAGRI versionado (#191, 07/11); rotar su token; decidir qué modelos usar si no se paga |
 | QA | Restaurar **solo con el manual**, en cuentas propias; validar en privado y luego grabar el video haciéndolo desde cero. Reportar cada paso que no funcionó tal como está escrito. |
 
 Quien restaura no debe ser quien escribió el manual: si lo hace el mismo
@@ -91,7 +91,7 @@ autor, completa sin darse cuenta lo que el manual no dice.
 
 | Riesgo | Impacto | Mitigación |
 |---|---|---|
-| Puente ngrok sin código en el repo | La ingesta diaria y el calendario no traen datos nuevos tras restaurar | Versionar el servicio (Técnico). Mientras tanto se declara como limitación. |
+| El puente MIDAGRI corre en una computadora (no en la nube) | Si está apagado, la ingesta diaria y el calendario no traen datos nuevos | Código versionado desde el 07/11 (#191) y paso 5.3 del manual. Mejora a futuro: desplegarlo en la nube junto a n8n. |
 | Versión de n8n en `render.yaml` distinta de producción | Los workflows no se importan bien | Corregido en el PR #178. Regla: todo cambio de versión en Render se refleja en `render.yaml`. |
 | Al sincronizar el Blueprint, la base queda sin acceso externo (`ipAllowList: []`) | Fallan respaldo, migraciones y evaluaciones | Volver a habilitar el acceso en Render → Networking tras cada sincronización. ☐ Declararlo en `render.yaml`. |
 | Plan gratuito de Render (512 MB) | n8n se reinicia si consume de más | No subir de versión de n8n sin medir memoria. |
