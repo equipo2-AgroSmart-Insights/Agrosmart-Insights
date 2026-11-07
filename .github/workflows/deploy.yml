@@ -42,15 +42,31 @@ jobs:
           cache: npm
           cache-dependency-path: src/frontend/agrosmart-frontend/package-lock.json
 
-      - name: Lint y build frontend (Vercel)
+      - name: Lint y build frontend shell (Vercel)
         working-directory: src/frontend/agrosmart-frontend
         env:
           VITE_N8N_WEBHOOK_URL: ${{ secrets.VITE_N8N_WEBHOOK_URL }}
+          VITE_CHAT_REMOTE_URL: ${{ secrets.VITE_CHAT_REMOTE_URL }}
+          VITE_MONITOREO_REMOTE_URL: ${{ secrets.VITE_MONITOREO_REMOTE_URL }}
+          VITE_MERCADOS_REMOTE_URL: ${{ secrets.VITE_MERCADOS_REMOTE_URL }}
+          VITE_ALERTAS_REMOTE_URL: ${{ secrets.VITE_ALERTAS_REMOTE_URL }}
+          VITE_CALENDARIO_REMOTE_URL: ${{ secrets.VITE_CALENDARIO_REMOTE_URL }}
         run: |
-          export VITE_N8N_WEBHOOK_URL="${VITE_N8N_WEBHOOK_URL:-http://localhost:5678/webhook/v1/query}"
           npm ci
           npm run lint
           npm run build
+
+      - name: Validar build de microfrontends remotos
+        run: |
+          for MFE_DIR in \
+            src/frontend/chat-microfrontend \
+            src/frontend/monitoreo-microfrontend \
+            src/frontend/mercados-microfrontend \
+            src/frontend/alertas-microfrontend \
+            src/frontend/calendario-microfrontend; do
+            echo "=== Compilando $MFE_DIR ==="
+            (cd "$MFE_DIR" && npm ci && npm run build)
+          done
 
       - name: Validar workflows n8n versionados
         run: |
@@ -61,61 +77,6 @@ jobs:
 
       - name: Validar blueprint Render
         run: test -f render.yaml
-
-  deploy-vercel:
-    name: Desplegar Frontend en Vercel
-    runs-on: ubuntu-latest
-    needs: validate-before-deploy
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Instalar Vercel CLI
-        run: npm install -g vercel@59
-
-      - name: Deploy producción Vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VITE_N8N_WEBHOOK_URL: ${{ secrets.VITE_N8N_WEBHOOK_URL }}
-          # Remotes de Module Federation — cada microfrontend se despliega aparte
-          # (proyectos propios en Vercel) y el shell los carga por esta URL.
-          # Sin configurar, el build cae al default de desarrollo (localhost).
-          VITE_CHAT_REMOTE_URL: ${{ secrets.VITE_CHAT_REMOTE_URL }}
-          VITE_MONITOREO_REMOTE_URL: ${{ secrets.VITE_MONITOREO_REMOTE_URL }}
-          VITE_MERCADOS_REMOTE_URL: ${{ secrets.VITE_MERCADOS_REMOTE_URL }}
-          VITE_ALERTAS_REMOTE_URL: ${{ secrets.VITE_ALERTAS_REMOTE_URL }}
-          VITE_CALENDARIO_REMOTE_URL: ${{ secrets.VITE_CALENDARIO_REMOTE_URL }}
-        run: |
-          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "ℹ️ Configura VERCEL_TOKEN, VERCEL_ORG_ID y VERCEL_PROJECT_ID en GitHub Secrets."
-            echo "   Ver docs/sprint-1/SETUP-VERCEL-RENDER.md"
-            exit 0
-          fi
-          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
-            --build-env VITE_N8N_WEBHOOK_URL="$VITE_N8N_WEBHOOK_URL" \
-            --build-env VITE_CHAT_REMOTE_URL="$VITE_CHAT_REMOTE_URL" \
-            --build-env VITE_MONITOREO_REMOTE_URL="$VITE_MONITOREO_REMOTE_URL" \
-            --build-env VITE_MERCADOS_REMOTE_URL="$VITE_MERCADOS_REMOTE_URL" \
-            --build-env VITE_ALERTAS_REMOTE_URL="$VITE_ALERTAS_REMOTE_URL" \
-            --build-env VITE_CALENDARIO_REMOTE_URL="$VITE_CALENDARIO_REMOTE_URL"
-
-      - name: Health check frontend (post-deploy)
-        env:
-          FRONTEND_URL: ${{ secrets.FRONTEND_HEALTH_URL }}
-          N8N_URL: ${{ secrets.N8N_HEALTH_URL }}
-          PHOENIX_URL: ${{ secrets.PHOENIX_HEALTH_URL }}
-        run: |
-          if [ -z "$FRONTEND_URL" ] && [ -z "$N8N_URL" ]; then
-            echo "ℹ️ Sin FRONTEND_HEALTH_URL / N8N_HEALTH_URL — omitiendo health check."
-            exit 0
-          fi
-          chmod +x infrastructure/scripts/health-check.sh
-          infrastructure/scripts/health-check.sh || {
-            echo "❌ Health check falló. rollback.sh solo reinicia el stack Docker local — para Vercel usar 'vercel rollback' o redeploy manual desde su dashboard."
-            exit 1
-          }
 
   deploy-microfrontends:
     name: Desplegar Microfrontends (chat + monitoreo + mercados + alertas + calendario)
@@ -142,8 +103,11 @@ jobs:
             exit 0
           fi
           npm ci
-          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
-            --build-env VITE_N8N_WEBHOOK_URL="$VITE_N8N_WEBHOOK_URL"
+          BUILD_ARGS=()
+          if [ -n "$VITE_N8N_WEBHOOK_URL" ]; then
+            BUILD_ARGS+=(--build-env "VITE_N8N_WEBHOOK_URL=$VITE_N8N_WEBHOOK_URL")
+          fi
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" "${BUILD_ARGS[@]}"
 
       - name: Deploy monitoreo-microfrontend
         working-directory: src/frontend/monitoreo-microfrontend
@@ -155,8 +119,11 @@ jobs:
             exit 0
           fi
           npm ci
-          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
-            --build-env VITE_N8N_WEBHOOK_URL="$VITE_N8N_WEBHOOK_URL"
+          BUILD_ARGS=()
+          if [ -n "$VITE_N8N_WEBHOOK_URL" ]; then
+            BUILD_ARGS+=(--build-env "VITE_N8N_WEBHOOK_URL=$VITE_N8N_WEBHOOK_URL")
+          fi
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" "${BUILD_ARGS[@]}"
 
       - name: Deploy mercados-microfrontend
         working-directory: src/frontend/mercados-microfrontend
@@ -168,8 +135,11 @@ jobs:
             exit 0
           fi
           npm ci
-          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
-            --build-env VITE_N8N_WEBHOOK_URL="$VITE_N8N_WEBHOOK_URL"
+          BUILD_ARGS=()
+          if [ -n "$VITE_N8N_WEBHOOK_URL" ]; then
+            BUILD_ARGS+=(--build-env "VITE_N8N_WEBHOOK_URL=$VITE_N8N_WEBHOOK_URL")
+          fi
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" "${BUILD_ARGS[@]}"
 
       - name: Deploy alertas-microfrontend
         working-directory: src/frontend/alertas-microfrontend
@@ -182,22 +152,97 @@ jobs:
             exit 0
           fi
           npm ci
-          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
-            --build-env VITE_ALERTS_WEBHOOK_URL="$VITE_ALERTS_WEBHOOK_URL"
+          BUILD_ARGS=()
+          if [ -n "$VITE_ALERTS_WEBHOOK_URL" ]; then
+            BUILD_ARGS+=(--build-env "VITE_ALERTS_WEBHOOK_URL=$VITE_ALERTS_WEBHOOK_URL")
+          else
+            echo "⚠️ VITE_ALERTS_WEBHOOK_URL no definido en GitHub Secrets; se usará el valor configurado en Vercel."
+          fi
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" "${BUILD_ARGS[@]}"
 
       - name: Deploy calendario-microfrontend
         working-directory: src/frontend/calendario-microfrontend
         env:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_CALENDARIO }}
-          VITE_CALENDARIO_API_URL: ${{ secrets.VITE_CALENDARIO_API_URL || 'https://agrosmart-n8n.onrender.com/webhook/v1/calendario' }}
+          VITE_CALENDARIO_API_URL: ${{ secrets.VITE_CALENDARIO_API_URL }}
         run: |
           if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
             echo "ℹ️ Configura VERCEL_PROJECT_ID_CALENDARIO en GitHub Secrets — se omite este deploy."
             exit 0
           fi
           npm ci
-          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
-            --build-env VITE_CALENDARIO_API_URL="$VITE_CALENDARIO_API_URL"
+          BUILD_ARGS=()
+          if [ -n "$VITE_CALENDARIO_API_URL" ]; then
+            BUILD_ARGS+=(--build-env "VITE_CALENDARIO_API_URL=$VITE_CALENDARIO_API_URL")
+          else
+            echo "⚠️ VITE_CALENDARIO_API_URL no definido en GitHub Secrets; se usará el valor configurado en Vercel."
+          fi
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" "${BUILD_ARGS[@]}"
+
+  deploy-vercel:
+    name: Desplegar Frontend en Vercel
+    runs-on: ubuntu-latest
+    needs: [validate-before-deploy, deploy-microfrontends]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Instalar Vercel CLI
+        run: npm install -g vercel@59
+
+      - name: Deploy producción Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VITE_N8N_WEBHOOK_URL: ${{ secrets.VITE_N8N_WEBHOOK_URL }}
+          # Remotes de Module Federation — cada microfrontend se despliega aparte
+          # (proyectos propios en Vercel) y el shell los carga por esta URL.
+          # Solo se pasan por --build-env las variables no vacías para no sobrescribir
+          # las configuradas directamente en el dashboard de Vercel.
+          VITE_CHAT_REMOTE_URL: ${{ secrets.VITE_CHAT_REMOTE_URL }}
+          VITE_MONITOREO_REMOTE_URL: ${{ secrets.VITE_MONITOREO_REMOTE_URL }}
+          VITE_MERCADOS_REMOTE_URL: ${{ secrets.VITE_MERCADOS_REMOTE_URL }}
+          VITE_ALERTAS_REMOTE_URL: ${{ secrets.VITE_ALERTAS_REMOTE_URL }}
+          VITE_CALENDARIO_REMOTE_URL: ${{ secrets.VITE_CALENDARIO_REMOTE_URL }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "ℹ️ Configura VERCEL_TOKEN, VERCEL_ORG_ID y VERCEL_PROJECT_ID en GitHub Secrets."
+            echo "   Ver docs/sprint-1/SETUP-VERCEL-RENDER.md"
+            exit 0
+          fi
+          BUILD_ENV_ARGS=()
+          for VAR_NAME in \
+            VITE_N8N_WEBHOOK_URL \
+            VITE_CHAT_REMOTE_URL \
+            VITE_MONITOREO_REMOTE_URL \
+            VITE_MERCADOS_REMOTE_URL \
+            VITE_ALERTAS_REMOTE_URL \
+            VITE_CALENDARIO_REMOTE_URL; do
+            VAR_VAL="${!VAR_NAME}"
+            if [ -n "$VAR_VAL" ]; then
+              BUILD_ENV_ARGS+=(--build-env "${VAR_NAME}=${VAR_VAL}")
+            else
+              echo "⚠️ Secret ${VAR_NAME} vacío en GitHub Secrets; Vercel usará el valor definido en su Dashboard."
+            fi
+          done
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" "${BUILD_ENV_ARGS[@]}"
+
+      - name: Health check frontend (post-deploy)
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_HEALTH_URL }}
+          N8N_URL: ${{ secrets.N8N_HEALTH_URL }}
+          PHOENIX_URL: ${{ secrets.PHOENIX_HEALTH_URL }}
+        run: |
+          if [ -z "$FRONTEND_URL" ] && [ -z "$N8N_URL" ]; then
+            echo "ℹ️ Sin FRONTEND_HEALTH_URL / N8N_HEALTH_URL — omitiendo health check."
+            exit 0
+          fi
+          chmod +x infrastructure/scripts/health-check.sh
+          infrastructure/scripts/health-check.sh || {
+            echo "❌ Health check falló. rollback.sh solo reinicia el stack Docker local — para Vercel usar 'vercel rollback' o redeploy manual desde su dashboard."
+            exit 1
+          }
 
   deploy-render:
     name: Disparar deploy Render (n8n)

@@ -1,4 +1,3 @@
-
 # AgroSmart Insights
 
 ## Documentación de arquitectura de software
@@ -24,9 +23,10 @@ La documentación utiliza el marco arc42 para organizar la descripción del sist
 ## Contenido
 
 - Documentación general de arquitectura basada en arc42.
-- Diagramas de arquitectura C4.
-- Decisiones arquitectónicas.
-- Información sobre los procesos WF0, WF1 y WF2.
+- Diagramas de arquitectura general, RAG y conectividad híbrida (Ngrok).
+- Arquitectura de microfrontends con Module Federation (`agrosmart-frontend` + 5 microfrontends remotos).
+- Decisiones arquitectónicas (ADRs).
+- Información sobre los workflows de n8n (`WF0`, `WF1`, `WF2`, `WF3`, `WF4` y `WF5`).
 
 ## Objetivo
 

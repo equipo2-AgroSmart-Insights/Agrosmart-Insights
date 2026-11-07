@@ -1,0 +1,208 @@
+{
+  "name": "WF5 - Alertas de Riesgo Agrícola",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 14 * * 1-6"
+            }
+          ]
+        }
+      },
+      "id": "b1efb866-7e5c-4baf-bfbb-c4879e213d7c",
+      "name": "Schedule Trigger 14:00 (después de WF1)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -192,
+        112
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "36fabc5c-7c0b-459a-bb3d-51913f620889",
+      "name": "Manual - Evaluar ahora",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.alertas_riesgo_evaluar() AS resultado;",
+        "options": {}
+      },
+      "id": "ae5334ea-ee04-4c12-81d8-f72b9bb4588b",
+      "name": "Postgres - Evaluar reglas",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        208
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v1/alertas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b8749734-614d-45b0-8919-921dda55bdc9",
+      "name": "Webhook POST v1/alertas",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -192,
+        576
+      ],
+      "webhookId": "ed90d30e-8e92-426f-a6d6-0ade26e16595"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza el cuerpo que envía alertas-microfrontend (alertasService.js).\n// No lanza errores: una solicitud inválida llega a SQL como acción 'invalid'\n// y vuelve al navegador como { error } con HTTP 200.\nconst body = $json.body ?? {};\nconst acciones = ['list', 'details', 'update'];\nconst accion = acciones.includes(body.action) ? body.action : 'invalid';\n\nconst alertId = /^\\d{1,18}$/.test(String(body.alert_id ?? '')) ? String(body.alert_id) : '';\nconst status = ['read', 'attended'].includes(body.status) ? body.status : String(body.status ?? '');\nconst sessionId = String(body.session_id ?? '').slice(0, 64);\n\nreturn [{ json: { accion, alert_id: alertId, status, session_id: sessionId } }];\n"
+      },
+      "id": "42a95db4-07b7-4a9c-b6ed-8b2d613895e0",
+      "name": "Code - Validar solicitud",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT CASE $1\n    WHEN 'list'    THEN public.alertas_riesgo_listar()\n    WHEN 'details' THEN public.alertas_riesgo_detalle(NULLIF($2, '')::bigint)\n    WHEN 'update'  THEN public.alertas_riesgo_actualizar(NULLIF($2, '')::bigint, $3, $4)\n    ELSE jsonb_build_object('error', 'Acción no soportada. Usa list, details o update.')\nEND AS resultado;",
+        "options": {
+          "queryReplacement": "={{ [ $json.accion, $json.alert_id, $json.status, $json.session_id ] }}"
+        }
+      },
+      "id": "fa8aa330-55e8-4543-b89d-ec3b0e25b654",
+      "name": "Postgres - list / details / update",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        304,
+        576
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.resultado }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "c8f76e42-0bf8-465c-911d-aa970b3269cc",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        544,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## WF5 · Alertas de riesgo agrícola\n**Cálculo:** lun–sáb 14:00 (America/Lima), después de WF1. Llama a `alertas_riesgo_evaluar()`.\n**API:** `POST /webhook/v1/alertas` con `{ action: list | details | update, session_id, alert_id, status }`.\nLa lógica y las reglas viven en Postgres: `src/database/migrations/003_alertas_riesgo.sql`. Los umbrales se cambian en la tabla `alertas_riesgo_reglas`, no aquí.",
+        "height": 220,
+        "width": 560
+      },
+      "id": "a05423d5-f321-4cb8-99c0-100f6e0b4991",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        -96
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger 14:00 (después de WF1)": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Evaluar reglas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual - Evaluar ahora": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Evaluar reglas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook POST v1/alertas": {
+      "main": [
+        [
+          {
+            "node": "Code - Validar solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Validar solicitud": {
+      "main": [
+        [
+          {
+            "node": "Postgres - list / details / update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - list / details / update": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9a1ad72b-7176-46f1-88a4-c9c990bd7bc5",
+  "meta": null,
+  "id": "98K2m1NAP3nH3L1l"
+}

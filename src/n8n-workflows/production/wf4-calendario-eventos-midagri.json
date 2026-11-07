@@ -1,0 +1,302 @@
+{
+  "name": "WF4 - Calendario de Eventos MIDAGRI",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -288,
+        160
+      ],
+      "id": "383ffb12-23ca-4e07-ba94-7d570b0f0500",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ======================================================\n// WF4 - NORMALIZAR EVENTOS V10\n// Entrada: /calendario-json del bridge\n// Mode: Run Once for All Items\n// ======================================================\n\nconst entrada = $input.first().json ?? {};\n\nif (entrada.ok !== true) {\n  throw new Error(\n    entrada.mensaje ??\n    'El bridge no devolvió un calendario válido.'\n  );\n}\n\nif (!Array.isArray(entrada.eventos)) {\n  throw new Error(\n    'El bridge no devolvió el arreglo eventos.'\n  );\n}\n\nif (!entrada.eventos.length) {\n  throw new Error(\n    'El calendario fue procesado pero no contiene eventos.'\n  );\n}\n\nconst requeridos = [\n  'departamento',\n  'nombre_evento',\n  'fuente_archivo',\n  'hash_evento'\n];\n\nconst salida = [];\n\nfor (const evento of entrada.eventos) {\n\n  const faltantes =\n    requeridos.filter(\n      campo =>\n        evento[campo] === null ||\n        evento[campo] === undefined ||\n        String(evento[campo]).trim() === ''\n    );\n\n  if (faltantes.length) {\n\n    throw new Error(\n      `Evento inválido. Faltan campos: ${faltantes.join(', ')}. ` +\n      `Evento: ${JSON.stringify(evento)}`\n    );\n  }\n\n  salida.push({\n    json: evento\n  });\n}\n\nreturn salida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        32
+      ],
+      "id": "ed56e3fc-9fb2-478a-87bd-8dfcef5ce3f7",
+      "name": "Code - Normalizar eventos"
+    },
+    {
+      "parameters": {
+        "path": "v1/calendario",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        384
+      ],
+      "id": "cdb22a2e-94da-4b7c-97c7-014a95f864ee",
+      "name": "Webhook",
+      "webhookId": "5a2e332d-60f6-420d-b37c-24519b774e97"
+    },
+    {
+      "parameters": {
+        "jsCode": "const query =\n  $json.query ?? {};\n\nfunction texto(v) {\n  if (\n    v === null ||\n    v === undefined ||\n    String(v).trim() === ''\n  ) {\n    return null;\n  }\n\n  return String(v).trim();\n}\n\nfunction fecha(v) {\n\n  const s = texto(v);\n\n  if (!s) return null;\n\n  if (\n    !/^\\d{4}-\\d{2}-\\d{2}$/\n      .test(s)\n  ) {\n\n    throw new Error(\n      `Fecha inválida: ${s}. Usa YYYY-MM-DD.`\n    );\n  }\n\n  return s;\n}\n\n\nreturn [{\n  json: {\n\n    desde:\n      fecha(query.desde),\n\n    hasta:\n      fecha(query.hasta),\n\n    departamento:\n      texto(query.departamento),\n\n    modalidad:\n      texto(query.modalidad),\n\n    entidad:\n      texto(query.entidad),\n\n    busqueda:\n      texto(query.q),\n\n    limite:\n      Math.min(\n        Number(query.limite ?? 200),\n        500\n      )\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        384
+      ],
+      "id": "b4483577-32be-49bc-9452-d8449b87aba2",
+      "name": "Code - Validar filtros"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    id,\n\n    anio,\n    mes,\n    mes_nombre,\n\n    departamento,\n\n    fecha_inicio,\n    fecha_fin,\n\n    hora_inicio,\n    hora_fin,\n\n    nombre_evento,\n\n    distrito_provincia_alcance,\n\n    plataforma_direccion,\n\n    contacto,\n\n    entidad_organizadora,\n\n    modalidad,\n\n    fuente_archivo,\n\n    observaciones_calidad\n\nFROM public.eventos_calendario\n\nWHERE\n\n    (\n      $1::date IS NULL\n      OR fecha_fin >= $1::date\n      OR fecha_inicio >= $1::date\n    )\n\n    AND\n\n    (\n      $2::date IS NULL\n      OR fecha_inicio <= $2::date\n    )\n\n    AND\n\n    (\n      $3::text IS NULL\n      OR LOWER(departamento)\n         = LOWER($3::text)\n    )\n\n    AND\n\n    (\n      $4::text IS NULL\n      OR LOWER(modalidad)\n         = LOWER($4::text)\n    )\n\n    AND\n\n    (\n      $5::text IS NULL\n      OR LOWER(entidad_organizadora)\n         LIKE '%' || LOWER($5::text) || '%'\n    )\n\n    AND\n\n    (\n      $6::text IS NULL\n      OR LOWER(nombre_evento)\n         LIKE '%' || LOWER($6::text) || '%'\n    )\n\nORDER BY\n\n    fecha_inicio ASC NULLS LAST,\n\n    hora_inicio ASC NULLS LAST\n\nLIMIT $7;",
+        "options": {
+          "queryReplacement": "={{[  $json.desde,  $json.hasta,  $json.departamento,  $json.modalidad,  $json.entidad,  $json.busqueda,  $json.limite]}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        176,
+        384
+      ],
+      "id": "034a7987-143e-475e-9088-f728c994a371",
+      "name": "Postgres - Consultar eventos",
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const filas =\n  $input.all()\n    .map(i => i.json ?? {});\n\n\nreturn [{\n  json: {\n\n    total:\n      filas.length,\n\n    eventos:\n      filas.map(r => ({\n\n        id:\n          r.id,\n\n        titulo:\n          r.nombre_evento,\n\n        fecha_inicio:\n          r.fecha_inicio,\n\n        fecha_fin:\n          r.fecha_fin,\n\n        hora_inicio:\n          r.hora_inicio,\n\n        hora_fin:\n          r.hora_fin,\n\n        departamento:\n          r.departamento,\n\n        alcance:\n          r.distrito_provincia_alcance,\n\n        modalidad:\n          r.modalidad,\n\n        lugar_o_plataforma:\n          r.plataforma_direccion,\n\n        entidad_organizadora:\n          r.entidad_organizadora,\n\n        contacto:\n          r.contacto,\n\n        fuente:\n          r.fuente_archivo,\n\n        observaciones:\n          r.observaciones_calidad\n      }))\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        384
+      ],
+      "id": "6e8ba3cd-681b-4f11-a9e3-263b1911b0be",
+      "name": "Code - Formatear respuesta"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        624,
+        384
+      ],
+      "id": "1880adef-44a7-4938-b57a-1cc61a1cf32b",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.eventos_calendario (\n    anio,\n    mes,\n    mes_nombre,\n    departamento,\n\n    fecha_hora_texto,\n\n    fecha_inicio,\n    fecha_fin,\n\n    hora_inicio,\n    hora_fin,\n\n    distrito_provincia_alcance,\n\n    nombre_evento,\n\n    plataforma_direccion,\n    contacto,\n\n    entidad_organizadora,\n    modalidad,\n\n    fuente_archivo,\n    fecha_actualizacion,\n\n    observaciones_calidad,\n\n    hash_evento,\n\n    actualizado_en\n)\nVALUES (\n    $1,\n    $2,\n    $3,\n    $4,\n    $5,\n    $6,\n    $7,\n    $8,\n    $9,\n    $10,\n    $11,\n    $12,\n    $13,\n    $14,\n    $15,\n    $16,\n    $17,\n    $18,\n    $19,\n    CURRENT_TIMESTAMP\n)\n\nON CONFLICT (hash_evento)\n\nDO UPDATE SET\n\n    anio =\n      EXCLUDED.anio,\n\n    mes =\n      EXCLUDED.mes,\n\n    mes_nombre =\n      EXCLUDED.mes_nombre,\n\n    departamento =\n      EXCLUDED.departamento,\n\n    fecha_hora_texto =\n      EXCLUDED.fecha_hora_texto,\n\n    fecha_inicio =\n      EXCLUDED.fecha_inicio,\n\n    fecha_fin =\n      EXCLUDED.fecha_fin,\n\n    hora_inicio =\n      EXCLUDED.hora_inicio,\n\n    hora_fin =\n      EXCLUDED.hora_fin,\n\n    distrito_provincia_alcance =\n      EXCLUDED.distrito_provincia_alcance,\n\n    nombre_evento =\n      EXCLUDED.nombre_evento,\n\n    plataforma_direccion =\n      EXCLUDED.plataforma_direccion,\n\n    contacto =\n      EXCLUDED.contacto,\n\n    entidad_organizadora =\n      EXCLUDED.entidad_organizadora,\n\n    modalidad =\n      EXCLUDED.modalidad,\n\n    fuente_archivo =\n      EXCLUDED.fuente_archivo,\n\n    fecha_actualizacion =\n      EXCLUDED.fecha_actualizacion,\n\n    observaciones_calidad =\n      EXCLUDED.observaciones_calidad,\n\n    actualizado_en =\n      CURRENT_TIMESTAMP;",
+        "options": {
+          "queryReplacement": "={{[  $json.anio,  $json.mes,  $json.mes_nombre,  $json.departamento,  $json.fecha_hora_texto,  $json.fecha_inicio,  $json.fecha_fin,  $json.hora_inicio,  $json.hora_fin,  $json.distrito_provincia_alcance,  $json.nombre_evento,  $json.plataforma_direccion,  $json.contacto,  $json.entidad_organizadora,  $json.modalidad,  $json.fuente_archivo,  $json.fecha_actualizacion,  $json.observaciones_calidad,  $json.hash_evento]}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        480,
+        32
+      ],
+      "id": "5a46dbe7-fe23-4cb7-b93a-e4c014dfeb83",
+      "name": "Postgres - UPSERT eventos",
+      "credentials": {
+        "postgres": {
+          "id": "BEC7bWCGlMIkP0Si",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://sliding-babied-rendering.ngrok-free.dev/calendario-json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "month",
+              "value": "={{ $now.setZone('America/Lima').toFormat('M') }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Bridge-Token",
+              "value": "{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}"
+            },
+            {
+              "name": "ngrok-skip-browser-warning",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -32,
+        160
+      ],
+      "id": "f142fa3b-792c-4376-b020-470a34a656f8",
+      "name": "HTTP Request - Calendario JSON",
+      "retryOnFail": false,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const entrada =\n  $input.first().json ?? {};\n\nconst error =\n  entrada.error ??\n  entrada;\n\nconst statusCode =\n  error.statusCode ??\n  error.httpCode ??\n  entrada.statusCode ??\n  'sin código';\n\nconst mensaje =\n  error.message ??\n  entrada.message ??\n  'No se pudo consultar el calendario MIDAGRI';\n\nthrow new Error(\n  `[WF4 - Calendario MIDAGRI] ` +\n  `Error en HTTP Request. ` +\n  `Estado: ${statusCode}. ` +\n  `Detalle: ${mensaje}. ` +\n  `La actualización fue cancelada y PostgreSQL conserva la última carga válida.`\n);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        224
+      ],
+      "id": "295c75ee-490b-4a91-9c95-f2902b6397c9",
+      "name": "Code - Manejar error calendario"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Calendario JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Normalizar eventos": {
+      "main": [
+        [
+          {
+            "node": "Postgres - UPSERT eventos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code - Validar filtros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Validar filtros": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Consultar eventos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Consultar eventos": {
+      "main": [
+        [
+          {
+            "node": "Code - Formatear respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Formatear respuesta": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Calendario JSON": {
+      "main": [
+        [
+          {
+            "node": "Code - Normalizar eventos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Manejar error calendario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Lima",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "6e1d5676-3d88-4d6f-97b4-4cc96e5b42b9",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "JLjSTApubfEc4jEU"
+}

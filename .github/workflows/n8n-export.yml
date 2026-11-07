@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       workflow_ids:
-        description: "IDs de n8n a exportar, separados por coma (ver Issue de drift). Usar 'todos' para resincronizar los 4 workflows ya versionados."
+        description: "IDs de n8n a exportar, separados por coma (ver Issue de drift). Usar 'todos' para resincronizar todos los workflows ya versionados."
         required: true
         type: string
 
@@ -73,7 +73,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if git diff --quiet -- src/n8n-workflows/production/; then
+          # `git diff` no ve archivos sin seguimiento: un workflow exportado por
+          # primera vez (wf-nuevo-revisar-nombre-*.json) quedaba como "sin cambios".
+          if [ -z "$(git status --porcelain -- src/n8n-workflows/production/)" ]; then
             echo "Sin cambios — los workflows exportados ya coinciden con git."
             exit 0
           fi

@@ -358,6 +358,13 @@ Langfuse permite supervisar las ejecuciones de inteligencia artificial.
 | Observabilidad | Langfuse | Seguimiento de ejecuciones de IA. |
 | Modelos generativos | OpenRouter | Acceso a modelos de lenguaje. |
 
+La aplicación web es un contenedor (**Shell**, `src/frontend/agrosmart-frontend`)
+construido con React 19, Vite 8 y `@originjs/vite-plugin-federation` (Module
+Federation). Carga los cinco microfrontends, desplegados por separado en
+Vercel, y aísla sus fallas mediante `MicrofrontendErrorBoundary`. El Shell
+resuelve la URL del `remoteEntry.js` de cada microfrontend con las variables
+`VITE_*_REMOTE_URL`.
+
 ### 5.3. Nivel 3: descripción de los workflows
 
 **WF0 – Ingesta documental MIDAGRI**
@@ -386,7 +393,9 @@ puedan ser utilizados por los diferentes módulos de la plataforma.
 **WF2 – API de Chat y análisis predictivo**
 
 Este workflow gestiona las consultas realizadas desde el microfrontend
-Chat.
+Chat mediante `POST /webhook/v1/query`. El mismo endpoint atiende también
+a Mercados (comparativa GMML/MMF2) y al análisis agroclimático de
+Monitoreo.
 
 Recibe las solicitudes del usuario, valida la información de sesión,
 identifica el tipo de consulta y determina qué proceso debe ejecutarse.
@@ -405,7 +414,10 @@ Este workflow gestiona los procesos backend relacionados con el módulo
 de Monitoreo Satelital.
 
 Su función es coordinar las operaciones necesarias para procesar o
-consultar información relacionada con el monitoreo.
+consultar información relacionada con el monitoreo: obtiene capas
+raster NDVI de Copernicus Sentinel-2 (CDSE) a través de
+`POST /webhook/v1/satelital/ndvi`, protegido con la cabecera
+`X-AgroSmart-Key`.
 
 La visualización cartográfica se realiza directamente desde el frontend
 mediante MapTiler. Por lo tanto, MapTiler no debe considerarse un
@@ -418,7 +430,8 @@ Calendario.
 
 Permite organizar y proporcionar información relacionada con campañas,
 eventos y actividades agrícolas para su presentación en la aplicación
-web.
+web. Expone `GET /webhook/v1/calendario`, que filtra por rango de fechas,
+departamento, modalidad y entidad organizadora.
 
 **WF5 – Alertas**
 
@@ -430,6 +443,12 @@ identificar y presentar alertas de riesgo.
 
 De acuerdo con la información proporcionada por el equipo, este workflow
 utiliza estructuras de datos relacionadas con alertas_riesgo.
+
+Combina una ejecución programada (lunes a sábado a las 14:00,
+`America/Lima`) que evalúa las reglas configurables con
+`alertas_riesgo_evaluar`, y el webhook `POST /webhook/v1/alertas`, que
+lista alertas, muestra su evidencia histórica y actualiza su estado
+(`pending`, `read`, `attended`).
 
 ### 5.4. Persistencia y estructuras de datos
 
@@ -465,7 +484,11 @@ cualquier modificación.
 Los principales mecanismos de comunicación son:
 
 - El frontend se comunica con los workflows mediante solicitudes HTTP y
-  webhooks.
+  webhooks: Chat y Mercados con WF2 (`/v1/query`), Monitoreo con WF3
+  (`/v1/satelital/ndvi`) y WF2, Alertas con WF5 (`/v1/alertas`) y
+  Calendario con WF4 (`/v1/calendario`). Las URLs se configuran con
+  `VITE_N8N_WEBHOOK_URL`, `VITE_WF3_NDVI_URL`, `VITE_ALERTS_WEBHOOK_URL` y
+  `VITE_CALENDARIO_API_URL`.
 
 - Los workflows consultan y actualizan información en PostgreSQL.
 

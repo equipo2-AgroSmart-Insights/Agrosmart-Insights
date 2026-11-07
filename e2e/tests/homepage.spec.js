@@ -12,6 +12,7 @@ test.describe('Página principal', () => {
     await expect(page.getByText('Nueva Consulta')).toBeVisible();
     await expect(page.getByText('Mercados MIDAGRI')).toBeVisible();
     await expect(page.getByText('Monitoreo Satelital')).toBeVisible();
+    await expect(page.getByText('Alertas de riesgo')).toBeVisible();
     await expect(page.getByText('Calendario Agrícola')).toBeVisible();
   });
 
