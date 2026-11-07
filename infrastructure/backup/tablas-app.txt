@@ -21,3 +21,7 @@ alertas_riesgo_reglas
 alertas_riesgo
 alertas_riesgo_historial
 alertas_riesgo_ejecuciones
+productos_alias_mmf2
+alert_rules
+risk_alerts
+alert_status_history

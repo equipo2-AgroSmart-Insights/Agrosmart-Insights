@@ -260,8 +260,9 @@ haciéndolo otra vez desde cero**, siguiendo este manual paso a paso.
 
 ## Si el equipo elige otra nube (por ejemplo, Azure)
 
-Solo cambian los pasos 5.1 y 7: crea un PostgreSQL con la extensión
-`vector` habilitada, un contenedor con la misma imagen de n8n y un hosting
+Solo cambian los pasos 5.1 y 7: crea un PostgreSQL que permita las
+extensiones de `bd/extensiones.txt` (al 06/11: `vector` y `unaccent`), un
+contenedor con la misma imagen de n8n y un hosting
 estático para Vite. El script `restaurar-bd.sh` y los pasos 6, 8 y 9 son
 idénticos: solo necesitan la cadena de conexión de la base nueva.
 
@@ -271,7 +272,7 @@ idénticos: solo necesitan la cadena de conexión de la base nueva.
 |---|---|
 | `restaurar-bd.sh`: "connection refused" o "timeout" | Tu IP no está en Access Control de la base (paso 5.2.1) |
 | `pg_restore: unsupported version` | Tu `pg_restore` no es la versión 18 |
-| `type "vector" does not exist` | La base no tiene pgvector; el script lo crea, pero el proveedor debe soportarlo |
+| `type "vector" does not exist` o `function unaccent(text) does not exist` | Falta una extensión: el script crea las de `bd/extensiones.txt`, pero el proveedor debe permitirlas |
 | n8n se reinicia solo en Render | Falta de memoria del plan gratuito (512 MB) |
 | Al importar un workflow, nodos con "?" o "Install this node" | La versión de n8n es más antigua que la de producción: revisa la imagen en `render.yaml` |
 | Un nodo de n8n sale en rojo al importar | La credencial no tiene exactamente el nombre de la tabla del paso 6 |

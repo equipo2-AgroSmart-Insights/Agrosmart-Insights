@@ -6,6 +6,9 @@
 \set ON_ERROR_STOP on
 
 CREATE EXTENSION IF NOT EXISTS vector;
+-- Producción también usa unaccent (en resolver_producto_mmf2): la
+-- restauración tiene que recrear todas las extensiones, no solo pgvector.
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 CREATE TABLE public.documentos_rag (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -19,6 +22,15 @@ CREATE TABLE public.producto_alias (id serial PRIMARY KEY, alias text NOT NULL, 
 CREATE TABLE public.regiones_productoras (id serial PRIMARY KEY, region text NOT NULL, latitud double precision, longitud double precision);
 CREATE TABLE public.eventos_calendario (id serial PRIMARY KEY, fecha date NOT NULL, titulo text NOT NULL, detalle jsonb);
 CREATE TABLE public.logs_ingesta (id serial PRIMARY KEY, ejecutado_en timestamptz DEFAULT now(), workflow text, filas integer);
+-- Tablas que aparecieron en producción después del 02/11.
+CREATE TABLE public.productos_alias_mmf2 (id serial PRIMARY KEY, alias text NOT NULL, producto_id integer);
+CREATE TABLE public.alert_rules (id serial PRIMARY KEY, codigo text NOT NULL);
+CREATE TABLE public.risk_alerts (id serial PRIMARY KEY, regla_id integer REFERENCES public.alert_rules (id), estado text);
+CREATE TABLE public.alert_status_history (id serial PRIMARY KEY, alerta_id integer REFERENCES public.risk_alerts (id), estado text);
+INSERT INTO public.productos_alias_mmf2 (alias, producto_id) VALUES ('Mandarina Satsuma', 1);
+INSERT INTO public.alert_rules (codigo) VALUES ('VOL-GMML');
+INSERT INTO public.risk_alerts (regla_id, estado) VALUES (1, 'open');
+INSERT INTO public.alert_status_history (alerta_id, estado) VALUES (1, 'open');
 
 INSERT INTO public.productos_maestro (nombre, unidad)
 VALUES ('Papa amarilla', 'Kilogramo'), ('Cebolla roja', 'Kilogramo'), ('Ajo', 'Kilogramo'), ('Zanahoria', 'Kilogramo');
@@ -55,7 +67,7 @@ LANGUAGE sql STABLE AS $$
     SELECT p_producto, pm.id, pm.nombre,
            CASE WHEN pm.id IS NULL THEN 'sin_mapeo' ELSE 'mapeado' END
     FROM (SELECT 1) AS x
-    LEFT JOIN public.producto_alias pa ON lower(pa.alias) = lower(p_producto)
+    LEFT JOIN public.producto_alias pa ON lower(unaccent(pa.alias)) = lower(unaccent(p_producto))
     LEFT JOIN public.productos_maestro pm ON pm.id = pa.producto_id
 $$;
 

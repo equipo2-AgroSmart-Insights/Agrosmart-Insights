@@ -35,8 +35,12 @@ aplicar_sql() {
   if [ -s "$1" ]; then psql "$TARGET_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "$1" > /dev/null; fi
 }
 
-echo "1/6 Extensión pgvector"
-psql "$TARGET_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS vector"
+echo "1/6 Extensiones de PostgreSQL"
+EXTENSIONES="vector"
+[ -s "$PKG/bd/extensiones.txt" ] && EXTENSIONES=$(tr -d '\r' < "$PKG/bd/extensiones.txt")
+for ext in $EXTENSIONES; do
+  psql "$TARGET_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS \"$ext\""
+done
 
 echo "2/6 Tablas (sin datos)"
 restaurar_seccion pre-data
