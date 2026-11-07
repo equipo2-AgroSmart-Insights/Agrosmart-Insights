@@ -92,6 +92,13 @@ if [ -f "$PKG/bd/funciones.txt" ]; then
     fi
   done < "$PKG/bd/funciones.txt"
 fi
+# Las funciones se crean sin validar su cuerpo (check_function_bodies=off),
+# así que se ejecuta la que usa la ingesta diaria (WF0-MMF2, WF1) para
+# confirmar que funciona sobre las tablas restauradas.
+if grep -qx resolver_producto_mmf2 "$PKG/bd/funciones.txt" 2>/dev/null; then
+  psql "$TARGET_DATABASE_URL" -XAt -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM public.resolver_producto_mmf2('Papa amarilla')" > /dev/null \
+    || fallo "resolver_producto_mmf2() existe pero falla al ejecutarse sobre la base restaurada"
+fi
 N_VISTAS_ESPERADAS=$(grep -c '^CREATE OR REPLACE VIEW' "$PKG/bd/vistas.sql" 2>/dev/null || true)
 N_VISTAS=$(psql "$TARGET_DATABASE_URL" -XAtc "SELECT count(*) FROM pg_views WHERE schemaname = 'public'")
 [ "$N_VISTAS" -ge "${N_VISTAS_ESPERADAS:-0}" ] || fallo "Se esperaban ${N_VISTAS_ESPERADAS} vistas y hay $N_VISTAS"

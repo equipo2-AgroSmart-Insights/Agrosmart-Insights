@@ -81,8 +81,13 @@ echo "== Funciones y vistas"
 SQL_FUNCIONES="FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public' AND p.prokind IN ('f', 'p')
     AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')"
-psql "$SOURCE_DATABASE_URL" -XAt -v ON_ERROR_STOP=1 \
-  -c "SELECT pg_get_functiondef(p.oid) || ';' $SQL_FUNCIONES ORDER BY p.proname, p.oid" > "$PKG/bd/funciones.sql"
+# Igual que hace pg_dump: sin validar cuerpos al crearlas, para que el orden
+# no importe (una función puede llamar a otra que se crea después).
+{
+  echo "SET check_function_bodies = false;"
+  psql "$SOURCE_DATABASE_URL" -XAt -v ON_ERROR_STOP=1 \
+    -c "SELECT pg_get_functiondef(p.oid) || ';' $SQL_FUNCIONES ORDER BY p.proname, p.oid"
+} > "$PKG/bd/funciones.sql"
 psql "$SOURCE_DATABASE_URL" -XAt -v ON_ERROR_STOP=1 \
   -c "SELECT DISTINCT p.proname $SQL_FUNCIONES ORDER BY 1" > "$PKG/bd/funciones.txt"
 psql "$SOURCE_DATABASE_URL" -XAt -v ON_ERROR_STOP=1 \
