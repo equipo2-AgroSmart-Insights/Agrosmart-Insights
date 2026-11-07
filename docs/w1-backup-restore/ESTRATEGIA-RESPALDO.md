@@ -15,7 +15,8 @@ siguiendo el manual, el respaldo no sirve.
 | Componente | Cómo | Dónde queda en el respaldo |
 |---|---|---|
 | Código fuente (frontend, scripts, migraciones, CI/CD) | Copia del commit respaldado | `codigo/` |
-| Datos de la aplicación (14 tablas: precios, clima, productos, alertas, calendario, documentos del chat) | `pg_dump` de esas tablas | `bd/` |
+| Datos de la aplicación (precios, clima, productos, alertas, calendario, documentos del chat) | `pg_dump` de todas las tablas de `public` que no son internas de n8n; se detectan solas en cada respaldo | `bd/` |
+| Funciones y vistas creadas a mano (ej. `resolver_producto_mmf2`, que usan WF0 y WF1) | Definiciones exportadas de la base | `bd/funciones.sql`, `bd/vistas.sql` |
 | Workflows de n8n (7) | JSON versionados en git | `n8n/` |
 | Infraestructura como código | `render.yaml` (base + n8n) y `vercel.json` de cada frontend | Dentro de `codigo/` |
 | Procedimiento | Manual + manifiesto con filas por tabla | Raíz del paquete |
@@ -45,7 +46,7 @@ siguiendo el manual, el respaldo no sirve.
 
 Un respaldo que nunca se restauró no está probado. Por eso:
 
-1. **Cada respaldo** se restaura solo en una base vacía y se comparan las filas de las 14 tablas con las del origen. También se prueba que el cálculo de alertas responda sobre los datos restaurados. Si algo no coincide, se abre un Issue `backup-failure`.
+1. **Cada respaldo** se restaura solo en una base vacía y se comprueba que: las filas de cada tabla coincidan con las del origen, estén todas las funciones y vistas, no se haya colado ninguna tabla interna de n8n y el cálculo de alertas responda sobre los datos restaurados. Si algo no coincide, se abre un Issue `backup-failure`. Si aparece una tabla nueva o desaparece una conocida, el respaldo la incluye igual y avisa.
 2. **Cada cambio** a los scripts de respaldo se prueba en su PR con una base sintética.
 3. **La restauración completa** (nube nueva + manual) la ejecuta el QA, como se describe abajo.
 

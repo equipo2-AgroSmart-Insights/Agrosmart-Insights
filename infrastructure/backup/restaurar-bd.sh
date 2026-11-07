@@ -6,9 +6,11 @@
 #   TARGET_DATABASE_URL=postgresql://usuario:clave@host:5432/base \
 #     bash restaurar-bd.sh <carpeta_del_respaldo>
 #
-# Pasos: 1) crea la extensión pgvector, 2) restaura tablas y datos,
-# 3) aplica 003_alertas_riesgo.sql para recrear las funciones que usa WF5
-# (es idempotente: no duplica tablas ni reglas que ya vinieron en el dump).
+# El orden importa: las funciones en SQL se validan al crearlas (necesitan
+# las tablas) y los triggers necesitan las funciones. Por eso pg_restore va
+# por secciones: tablas vacías → funciones y vistas → datos → índices,
+# restricciones y triggers. Al final se aplica 003_alertas_riesgo.sql, que
+# es idempotente (no duplica tablas ni reglas que ya vinieron en el dump).
 set -euo pipefail
 
 : "${TARGET_DATABASE_URL:?Falta TARGET_DATABASE_URL (cadena de conexión de la base nueva)}"
@@ -26,13 +28,30 @@ if [ "$EXISTENTES" != "0" ]; then
   exit 1
 fi
 
-echo "1/3 Extensión pgvector"
+restaurar_seccion() {
+  pg_restore --dbname "$TARGET_DATABASE_URL" --no-owner --no-privileges --exit-on-error --section="$1" "$DUMP"
+}
+aplicar_sql() {
+  if [ -s "$1" ]; then psql "$TARGET_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "$1" > /dev/null; fi
+}
+
+echo "1/6 Extensión pgvector"
 psql "$TARGET_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS vector"
 
-echo "2/3 Tablas y datos"
-pg_restore --dbname "$TARGET_DATABASE_URL" --no-owner --no-privileges --exit-on-error "$DUMP"
+echo "2/6 Tablas (sin datos)"
+restaurar_seccion pre-data
 
-echo "3/3 Funciones de alertas de riesgo (003)"
-psql "$TARGET_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "$MIG003" > /dev/null
+echo "3/6 Funciones y vistas"
+aplicar_sql "$PKG/bd/funciones.sql"
+aplicar_sql "$PKG/bd/vistas.sql"
+
+echo "4/6 Datos"
+restaurar_seccion data
+
+echo "5/6 Índices, restricciones y triggers"
+restaurar_seccion post-data
+
+echo "6/6 Migración 003 (alertas de riesgo)"
+aplicar_sql "$MIG003"
 
 echo "Base restaurada."
