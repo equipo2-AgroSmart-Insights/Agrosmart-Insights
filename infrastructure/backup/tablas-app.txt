@@ -1,0 +1,26 @@
+# Tablas de la aplicación que entran al respaldo (esquema + datos).
+#
+# Quedan fuera a propósito las tablas internas de n8n (usuarios,
+# credenciales, historial de ejecuciones): no hacen falta para restaurar y
+# es mejor no respaldar datos personales ni secretos. En una restauración los
+# workflows se importan desde git y las credenciales se crean de nuevo
+# (docs/w1-backup-restore/MANUAL-RESTAURACION.md).
+#
+# También quedan fuera las tablas prueba_* (experimentos de migración).
+#
+# Si se crea una tabla nueva de la app: agregarla aquí y en
+# fixture-sintetico.sql (el CI del PR falla si falta en el fixture).
+precios_diarios
+clima_diario
+documentos_rag
+productos_maestro
+producto_maestro
+producto_alias
+productos_alias_mmf
+regiones_productoras
+eventos_calendario
+logs_ingesta
+alertas_riesgo_reglas
+alertas_riesgo
+alertas_riesgo_historial
+alertas_riesgo_ejecuciones
