@@ -1,0 +1,219 @@
+{
+  "name": "WF3 - Modulo de monitoreo (NDVI)",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "\n/*\n AGROSMART - WF3 / S4-02\n Validar consulta NDVI\n\n Acepta:\n 1. bbox: [oeste, sur, este, norte]\n 2. lat y lon: coordenadas de un punto\n\n Devuelve la solicitud compatible con Sentinel Hub.\n*/\n\nconst entrada = $input.first().json.body ?? {};\n\nconst error = (codigo, mensaje) => [{\n  json: {\n    valido: false,\n    estado: \"error\",\n    codigo,\n    mensaje\n  }\n}];\n\nconst numero = v => {\n  if (v === null || v === undefined || v === \"\") {\n    return null;\n  }\n\n  const n = Number(v);\n  return Number.isFinite(n) ? n : null;\n};\n\nlet bbox = null;\nlet tipoConsulta = null;\n\n// ========================================\n// 1. ACEPTAR BBOX O LAT/LON\n// ========================================\n\nif (Array.isArray(entrada.bbox)) {\n\n  if (entrada.bbox.length !== 4) {\n    return error(\n      \"BBOX_INVALIDO\",\n      \"bbox debe tener 4 coordenadas.\"\n    );\n  }\n\n  bbox = entrada.bbox.map(numero);\n  tipoConsulta = \"area\";\n\n} else {\n\n  const lat = numero(entrada.lat);\n  const lon = numero(entrada.lon);\n\n  if (lat === null || lon === null) {\n    return error(\n      \"COORDENADAS_FALTANTES\",\n      \"Envía bbox o las coordenadas lat y lon.\"\n    );\n  }\n\n  // Área aproximada de 5 km por lado.\n  const mitadKm = 2.5;\n  const deltaLat = mitadKm / 111.32;\n\n  const cosLat = Math.cos(lat * Math.PI / 180);\n\n  if (\n    Math.abs(lat) > 89 ||\n    Math.abs(cosLat) < 0.01\n  ) {\n    return error(\n      \"LATITUD_INVALIDA\",\n      \"Latitud no admitida para consulta puntual.\"\n    );\n  }\n\n  const deltaLon =\n    mitadKm / (111.32 * Math.abs(cosLat));\n\n  bbox = [\n    lon - deltaLon,\n    lat - deltaLat,\n    lon + deltaLon,\n    lat + deltaLat\n  ];\n\n  tipoConsulta = \"punto\";\n}\n\n// ========================================\n// 2. VALIDAR COORDENADAS\n// ========================================\n\nconst [oeste, sur, este, norte] = bbox;\n\nif (\n  bbox.some(v => v === null) ||\n  oeste < -180 ||\n  este > 180 ||\n  sur < -90 ||\n  norte > 90 ||\n  oeste >= este ||\n  sur >= norte\n) {\n  return error(\n    \"COORDENADAS_INVALIDAS\",\n    \"Las coordenadas geográficas no son válidas.\"\n  );\n}\n\n// Limitar extensión para evitar consultas grandes.\nif (\n  este - oeste > 0.5 ||\n  norte - sur > 0.5\n) {\n  return error(\n    \"AREA_DEMASIADO_GRANDE\",\n    \"Selecciona una zona de máximo 0.5 grados por lado.\"\n  );\n}\n\n// ========================================\n// 3. VALIDAR FECHAS\n// ========================================\n\nconst inicio = String(entrada.fecha_inicio ?? \"\");\nconst fin = String(entrada.fecha_fin ?? \"\");\n\nconst formato = /^\\d{4}-\\d{2}-\\d{2}$/;\n\nif (!formato.test(inicio) || !formato.test(fin)) {\n  return error(\n    \"FECHAS_INVALIDAS\",\n    \"Envía fecha_inicio y fecha_fin en formato YYYY-MM-DD.\"\n  );\n}\n\nconst fechaInicio = Date.parse(inicio + \"T00:00:00Z\");\nconst fechaFin = Date.parse(fin + \"T00:00:00Z\");\n\nif (\n  !Number.isFinite(fechaInicio) ||\n  !Number.isFinite(fechaFin) ||\n  new Date(fechaInicio).toISOString().slice(0, 10) !== inicio ||\n  new Date(fechaFin).toISOString().slice(0, 10) !== fin ||\n  fechaInicio > fechaFin ||\n  fechaFin > Date.now() ||\n  fechaFin - fechaInicio > 31 * 86400000\n) {\n  return error(\n    \"RANGO_FECHAS_INVALIDO\",\n    \"Consulta un período válido de máximo 31 días hasta hoy.\"\n  );\n}\n\n// ========================================\n// 4. SCRIPT NDVI SENTINEL-2\n// ========================================\n\nconst evalscript = `//VERSION=3\nfunction setup() {\n  return {\n    input: [\"B04\", \"B08\", \"SCL\", \"dataMask\"],\n    output: {\n      bands: 4,\n      sampleType: \"AUTO\"\n    }\n  };\n}\n\nfunction evaluatePixel(s) {\n  if (s.dataMask === 0) {\n    return [0, 0, 0, 0];\n  }\n\n  // Sombras, nubes y nieve.\n  if ([3, 8, 9, 10, 11].includes(s.SCL)) {\n    return [0, 0, 0, 0];\n  }\n\n  const suma = s.B08 + s.B04;\n\n  if (suma <= 0) {\n    return [0, 0, 0, 0];\n  }\n\n  const ndvi = (s.B08 - s.B04) / suma;\n\n  if (ndvi < 0.2)\n    return [0.75, 0.25, 0.15, 1];\n\n  if (ndvi < 0.4)\n    return [0.95, 0.75, 0.20, 1];\n\n  if (ndvi < 0.6)\n    return [0.45, 0.75, 0.25, 1];\n\n  return [0.10, 0.55, 0.20, 1];\n}`;\n\n// ========================================\n// 5. PREPARAR PETICIÓN SENTINEL HUB\n// ========================================\n\nconst solicitud = {\n  input: {\n    bounds: {\n      bbox,\n      properties: {\n        crs: \"http://www.opengis.net/def/crs/EPSG/0/4326\"\n      }\n    },\n    data: [{\n      type: \"sentinel-2-l2a\",\n      dataFilter: {\n        timeRange: {\n          from: inicio + \"T00:00:00Z\",\n          to: fin + \"T23:59:59Z\"\n        },\n        mosaickingOrder: \"leastCC\"\n      }\n    }]\n  },\n  output: {\n    width: 512,\n    height: 512,\n    responses: [{\n      identifier: \"default\",\n      format: {\n        type: \"image/png\"\n      }\n    }]\n  },\n  evalscript\n};\n\nreturn [{\n  json: {\n    valido: true,\n    estado: \"correcto\",\n    indicador: \"NDVI\",\n    region: String(entrada.region ?? \"\"),\n    tipo_consulta: tipoConsulta,\n    bbox,\n    fecha_inicio: inicio,\n    fecha_fin: fin,\n    solicitud_sentinel: solicitud\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        48
+      ],
+      "id": "55e44122-4fe0-4278-9284-e3c840ab6c7b",
+      "name": "Code - Validar consulta NDVI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sh.dataspace.copernicus.eu/process/v1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "image/png"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.solicitud_sentinel }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        864,
+        -96
+      ],
+      "id": "f0e7ae6c-988a-4c5d-bc4f-0b68884ac0e1",
+      "name": "HTTP - Sentinel Hub NDVI",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "nSjPIWAbhBg2H4WJ",
+          "name": "Copernicus OAuth2 - AgroSmart"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "responseDataSource": "set",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1104,
+        -96
+      ],
+      "id": "c5c12b68-184e-4e39-bb8a-722d83efc308",
+      "name": "Respond to Webhook - Imagen NDVI"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v1/satelital/ndvi",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        160,
+        48
+      ],
+      "id": "c4a75c70-90a4-44d7-85c6-2cdda79f5366",
+      "name": "Webhook - Consultar NDVI",
+      "webhookId": "238cb4fa-2051-4aab-a08b-2fe1c1ce7e93",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VLqDYY8C5WAfMcCQ",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e1e6fa4f-01f1-40ed-bbcb-4a6469fde359",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        608,
+        48
+      ],
+      "id": "e6adc9ea-3228-4eb3-88b6-c7a3aded228d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  estado: $json.estado,\n  codigo: $json.codigo,\n  mensaje: $json.mensaje\n} }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        144
+      ],
+      "id": "464a30e0-13cc-4357-be8e-76a3fa2b8244",
+      "name": "Respond - Error NDVI"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code - Validar consulta NDVI": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - Sentinel Hub NDVI": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook - Imagen NDVI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Consultar NDVI": {
+      "main": [
+        [
+          {
+            "node": "Code - Validar consulta NDVI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP - Sentinel Hub NDVI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - Error NDVI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "29640440-d775-4169-8de1-74c0d5be07e9",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "etpPAbuZ25K3u3W9"
+}

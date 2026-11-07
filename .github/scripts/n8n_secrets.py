@@ -14,6 +14,14 @@ SECRET_PATTERNS = [
     (re.compile(r'jina_[a-zA-Z0-9_-]{20,}'), '{{JINA_API_KEY_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}'),
     (re.compile(r'AIza[a-zA-Z0-9_-]{20,}'), '{{SECRETO_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}'),
     (re.compile(r'sk-or-v1-[a-zA-Z0-9]{20,}'), '{{SECRETO_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}'),
+    # Mismos proveedores que ya detecta n8n-validate-ci.yml. Sin estos, el
+    # export empujaba la rama con el secreto al repo público y recién el CI
+    # del PR lo marcaba: tarde.
+    (re.compile(r'gsk_[a-zA-Z0-9]{20,}'), '{{SECRETO_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}'),
+    (re.compile(r'hf_[a-zA-Z0-9]{20,}'), '{{SECRETO_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}'),
+    (re.compile(r'ghp_[a-zA-Z0-9]{36}'), '{{SECRETO_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}'),
+    (re.compile(r'(postgres(?:ql)?://[^:/\s"\']+:)[^@\s"\']+@'),
+     lambda m: m.group(1) + '{{PASSWORD_SE_DEBE_MOVER_A_CREDENCIAL}}@'),
     (re.compile(r'NanamiKento'), '{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}'),
     (re.compile(r'maptiler\.com[^"\']*?[?&]key=[a-zA-Z0-9_-]{10,}'),
      lambda m: m.group(0).split('key=')[0] + 'key={{MAPTILER_API_KEY_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}'),
