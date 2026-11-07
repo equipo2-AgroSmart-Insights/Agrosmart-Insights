@@ -141,7 +141,7 @@ N8N_IMAGE=$(grep -oE 'n8nio/n8n:[^[:space:]]+' "$REPO_ROOT/render.yaml" | head -
   echo
   echo "- Valores de secretos y API keys: se crean de nuevo en la cuenta nueva (ver manual, sección 2)."
   echo "- Tablas internas de n8n (usuarios, credenciales cifradas, historial de ejecuciones)."
-  echo "- El servicio local expuesto por ngrok que usan WF0, WF1 y WF4 (su código no está en el repositorio)."
+  echo "- El puente MIDAGRI en ejecución: su código viaja en codigo/ (src/midagri-bridge/), pero hay que encenderlo en una computadora con ngrok (manual, paso 5.3)."
 } > "$PKG/MANIFIESTO.md"
 
 echo "== Cifrando"
