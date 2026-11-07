@@ -73,13 +73,19 @@ contar_filas > "$WORK/despues.tsv"
 SERVER_VERSION=$(psql "$SOURCE_DATABASE_URL" -XAtc "SHOW server_version")
 cp "$REPO_ROOT"/src/database/migrations/*.sql "$PKG/bd/migraciones/"
 
+# Extensiones que usa la base (pgvector para el chat, unaccent en
+# resolver_producto_mmf2...). La restauración las crea todas antes de nada.
+psql "$SOURCE_DATABASE_URL" -XAt -v ON_ERROR_STOP=1 \
+  -c "SELECT extname FROM pg_extension WHERE extname <> 'plpgsql' ORDER BY 1" > "$PKG/bd/extensiones.txt"
+
 # pg_dump --table no incluye funciones ni vistas, y hay funciones creadas a
 # mano fuera de las migraciones que usan los workflows (ej.
 # resolver_producto_mmf2 en WF0-MMF2 y WF1). Se excluyen las que trae una
-# extensión (pgvector), que se recrean con CREATE EXTENSION.
+# extensión (se recrean con CREATE EXTENSION) y las internas de n8n.
 echo "== Funciones y vistas"
 SQL_FUNCIONES="FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public' AND p.prokind IN ('f', 'p')
+    AND p.proname !~ '^(increment_workflow_version)$'
     AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')"
 # Igual que hace pg_dump: sin validar cuerpos al crearlas, para que el orden
 # no importe (una función puede llamar a otra que se crea después).
@@ -119,6 +125,7 @@ N8N_IMAGE=$(grep -oE 'n8nio/n8n:[^[:space:]]+' "$REPO_ROOT/render.yaml" | head -
   echo "- PostgreSQL de origen: $SERVER_VERSION"
   echo "- Imagen de n8n en render.yaml: \`$N8N_IMAGE\`"
   echo "- Workflows de n8n incluidos: $N_WORKFLOWS"
+  echo "- Extensiones de PostgreSQL: $(paste -sd' ' "$PKG/bd/extensiones.txt")"
   echo "- Funciones de la base: $N_FUNCIONES ($(paste -sd' ' "$PKG/bd/funciones.txt"))"
   echo "- Vistas: $N_VISTAS"
   [ -z "$NUEVAS" ] || echo "- ⚠️ Tablas nuevas (no estaban en tablas-app.txt): $NUEVAS"

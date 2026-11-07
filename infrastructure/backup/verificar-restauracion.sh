@@ -75,8 +75,12 @@ EXTRAS=$(comm -23 \
 echo "== Funciones de WF5 sobre los datos restaurados"
 psql "$TARGET_DATABASE_URL" -XAtc "SELECT alertas_riesgo_evaluar(NULL, true) IS NOT NULL" | grep -qx t \
   || fallo "alertas_riesgo_evaluar() no respondió sobre la base restaurada"
-psql "$TARGET_DATABASE_URL" -XAtc "SELECT count(*) FROM pg_extension WHERE extname = 'vector'" | grep -qx 1 \
-  || fallo "Falta la extensión pgvector en la base restaurada"
+EXTENSIONES="vector"
+[ -s "$PKG/bd/extensiones.txt" ] && EXTENSIONES=$(tr -d '\r' < "$PKG/bd/extensiones.txt")
+for ext in $EXTENSIONES; do
+  psql "$TARGET_DATABASE_URL" -XAtc "SELECT count(*) FROM pg_extension WHERE extname = '$ext'" | grep -qx 1 \
+    || fallo "Falta la extensión $ext en la base restaurada"
+done
 
 echo "== Funciones y vistas restauradas"
 N_FN=0
