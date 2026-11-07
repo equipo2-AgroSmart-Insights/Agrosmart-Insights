@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const anioTarget = 2024;\nconst mesTarget = 1;\n\n// Hora de Lima\nconst ahoraLima = new Date(\n  new Date().toLocaleString(\"en-US\", {\n    timeZone: \"America/Lima\"\n  })\n);\n\n// Para histórico usamos hasta ayer,\n// porque el día actual todavía puede estar incompleto.\nconst ayer = new Date(ahoraLima);\nayer.setDate(ayer.getDate() - 1);\n\nconst inicioMes =\n  new Date(anioTarget, mesTarget - 1, 1);\n\nconst finMes =\n  new Date(anioTarget, mesTarget, 0);\n\n// Elegimos el menor:\n// fin del mes o ayer.\nconst finReal =\n  finMes < ayer\n    ? finMes\n    : ayer;\n\nfunction formatoFecha(d) {\n  const y = d.getFullYear();\n\n  const m =\n    String(d.getMonth() + 1)\n      .padStart(2, \"0\");\n\n  const dia =\n    String(d.getDate())\n      .padStart(2, \"0\");\n\n  return `${y}-${m}-${dia}`;\n}\n\n// Si intentaras cargar un mes futuro,\n// no mandamos nada a Open-Meteo.\nif (inicioMes > finReal) {\n  return [];\n}\n\nreturn [{\n  json: {\n    start_date: formatoFecha(inicioMes),\n    end_date: formatoFecha(finReal)\n  }\n}];"
+        "jsCode": "const anioTarget = 2026;\nconst mesTarget = 11;\n\n// Hora de Lima\nconst ahoraLima = new Date(\n  new Date().toLocaleString(\"en-US\", {\n    timeZone: \"America/Lima\"\n  })\n);\n\n// Para histórico usamos hasta ayer,\n// porque el día actual todavía puede estar incompleto.\nconst ayer = new Date(ahoraLima);\nayer.setDate(ayer.getDate() - 1);\n\nconst inicioMes =\n  new Date(anioTarget, mesTarget - 1, 1);\n\nconst finMes =\n  new Date(anioTarget, mesTarget, 0);\n\n// Elegimos el menor:\n// fin del mes o ayer.\nconst finReal =\n  finMes < ayer\n    ? finMes\n    : ayer;\n\nfunction formatoFecha(d) {\n  const y = d.getFullYear();\n\n  const m =\n    String(d.getMonth() + 1)\n      .padStart(2, \"0\");\n\n  const dia =\n    String(d.getDate())\n      .padStart(2, \"0\");\n\n  return `${y}-${m}-${dia}`;\n}\n\n// Si intentaras cargar un mes futuro,\n// no mandamos nada a Open-Meteo.\nif (inicioMes > finReal) {\n  return [];\n}\n\nreturn [{\n  json: {\n    start_date: formatoFecha(inicioMes),\n    end_date: formatoFecha(finReal)\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -140,12 +140,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\n\nconst anioTarget = 2024;\nconst mesTarget = 1;\n\n\nconst resultados = [];\n\n// Validar año y mes.\nif (\n  !Number.isInteger(anioTarget) ||\n  !Number.isInteger(mesTarget) ||\n  mesTarget < 1 ||\n  mesTarget > 12\n) {\n  throw new Error('Año o mes invalido');\n}\n\nconst ultimoDia = new Date(\n  Date.UTC(anioTarget, mesTarget, 0)\n).getUTCDate();\n\n// Generar fechas.\nfor (let dia = 1; dia <= ultimoDia; dia++) {\n\n  const fecha = new Date(\n    Date.UTC(anioTarget, mesTarget - 1, dia)\n  );\n\n  const fechaTexto =\n    fecha.toISOString().slice(0, 10);\n\n  const diaSemana = fecha.getUTCDay();\n\n  // Saltar sabados y domingos.\n  if (diaSemana === 0 || diaSemana === 6) {\n    continue;\n  }\n\n\n  resultados.push({\n    json: {\n      fecha_objetivo: fechaTexto,\n      anio: anioTarget,\n      mes: mesTarget\n    }\n  });\n}\n\n// Verificar que exista al menos una fecha.\nif (resultados.length === 0) {\n  throw new Error(\n    'No se generaron fechas. Revisa el mes, año y fechaPrueba.'\n  );\n}\n\nconsole.log(\n  'Fechas generadas:',\n  resultados.map(x => x.json.fecha_objetivo)\n);\nreturn resultados;\n"
+        "jsCode": "\n\nconst anioTarget = 2026;\nconst mesTarget = 11;\n\n\nconst resultados = [];\n\n// Validar año y mes.\nif (\n  !Number.isInteger(anioTarget) ||\n  !Number.isInteger(mesTarget) ||\n  mesTarget < 1 ||\n  mesTarget > 12\n) {\n  throw new Error('Año o mes invalido');\n}\n\nconst ultimoDia = new Date(\n  Date.UTC(anioTarget, mesTarget, 0)\n).getUTCDate();\n\n// Generar fechas.\nfor (let dia = 1; dia <= ultimoDia; dia++) {\n\n  const fecha = new Date(\n    Date.UTC(anioTarget, mesTarget - 1, dia)\n  );\n\n  const fechaTexto =\n    fecha.toISOString().slice(0, 10);\n\n  const diaSemana = fecha.getUTCDay();\n\n  // Saltar sabados y domingos.\n  if (diaSemana === 0 || diaSemana === 6) {\n    continue;\n  }\n\n\n  resultados.push({\n    json: {\n      fecha_objetivo: fechaTexto,\n      anio: anioTarget,\n      mes: mesTarget\n    }\n  });\n}\n\n// Verificar que exista al menos una fecha.\nif (resultados.length === 0) {\n  throw new Error(\n    'No se generaron fechas. Revisa el mes, año y fechaPrueba.'\n  );\n}\n\nconsole.log(\n  'Fechas generadas:',\n  resultados.map(x => x.json.fecha_objetivo)\n);\nreturn resultados;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1248,
+        1280,
         240
       ],
       "name": "Generar URLs del Mes",
@@ -1094,7 +1094,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "bfdd125c-6119-40b7-b24d-1a12f482959b",
+  "versionId": "281e55fa-dd1c-41fd-b18b-7483ffa84fea",
   "meta": {
     "templateCredsSetupCompleted": true
   },
