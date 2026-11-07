@@ -367,7 +367,7 @@
           "parameters": [
             {
               "name": "X-Bridge-Token",
-              "value": "{{BRIDGE_TOKEN}}"
+              "value": "{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}"
             },
             {
               "name": "ngrok-skip-browser-warning",
@@ -705,7 +705,7 @@
           "parameters": [
             {
               "name": "X-Bridge-Token",
-              "value": "{{BRIDGE_TOKEN}}"
+              "value": "{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}"
             },
             {
               "name": "ngrok-skip-browser-warning",
