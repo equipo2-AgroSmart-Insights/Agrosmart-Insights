@@ -30,7 +30,7 @@ PKG=$(find "$WORK" -mindepth 1 -maxdepth 1 -type d -name 'agrosmart-respaldo-*' 
 
 echo "== Contenido del paquete"
 for f in MANIFIESTO.md MANUAL-RESTAURACION.md ESTRATEGIA-RESPALDO.md restaurar-bd.sh \
-         bd/agrosmart_app.dump bd/conteos.tsv bd/migraciones/003_alertas_riesgo.sql \
+         bd/agrosmart_app.dump bd/conteos.tsv bd/funciones.sql bd/migraciones/003_alertas_riesgo.sql \
          codigo/agrosmart-insights-codigo.tar.gz n8n/README.md; do
   [ -s "$PKG/$f" ] || fallo "Falta o está vacío: $f"
 done
@@ -66,16 +66,48 @@ while IFS=$'\t' read -r tabla minimo maximo; do
   echo "| $tabla | $esperado | $restauradas | $estado |" >> "$RESUMEN"
 done < <(tail -n +2 "$PKG/bd/conteos.tsv")
 
+echo "== Solo tablas de la app (ninguna interna de n8n)"
+EXTRAS=$(comm -23 \
+  <(psql "$TARGET_DATABASE_URL" -XAtc "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY 1" | sort) \
+  <(tail -n +2 "$PKG/bd/conteos.tsv" | cut -f1 | sort) | paste -sd' ' -)
+[ -z "$EXTRAS" ] || fallo "La base restaurada tiene tablas que no son de la app: $EXTRAS"
+
 echo "== Funciones de WF5 sobre los datos restaurados"
 psql "$TARGET_DATABASE_URL" -XAtc "SELECT alertas_riesgo_evaluar(NULL, true) IS NOT NULL" | grep -qx t \
   || fallo "alertas_riesgo_evaluar() no respondió sobre la base restaurada"
 psql "$TARGET_DATABASE_URL" -XAtc "SELECT count(*) FROM pg_extension WHERE extname = 'vector'" | grep -qx 1 \
   || fallo "Falta la extensión pgvector en la base restaurada"
 
+echo "== Funciones y vistas restauradas"
+N_FN=0
+N_FN_OK=0
+if [ -f "$PKG/bd/funciones.txt" ]; then
+  while read -r fn; do
+    [ -n "$fn" ] || continue
+    N_FN=$((N_FN + 1))
+    if psql "$TARGET_DATABASE_URL" -XAtc "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = '$fn'" | grep -qvx 0; then
+      N_FN_OK=$((N_FN_OK + 1))
+    else
+      fallo "Falta la función $fn en la base restaurada"
+    fi
+  done < "$PKG/bd/funciones.txt"
+fi
+# Las funciones se crean sin validar su cuerpo (check_function_bodies=off),
+# así que se ejecuta la que usa la ingesta diaria (WF0-MMF2, WF1) para
+# confirmar que funciona sobre las tablas restauradas.
+if grep -qx resolver_producto_mmf2 "$PKG/bd/funciones.txt" 2>/dev/null; then
+  psql "$TARGET_DATABASE_URL" -XAt -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM public.resolver_producto_mmf2('Papa amarilla')" > /dev/null \
+    || fallo "resolver_producto_mmf2() existe pero falla al ejecutarse sobre la base restaurada"
+fi
+N_VISTAS_ESPERADAS=$(grep -c '^CREATE OR REPLACE VIEW' "$PKG/bd/vistas.sql" 2>/dev/null || true)
+N_VISTAS=$(psql "$TARGET_DATABASE_URL" -XAtc "SELECT count(*) FROM pg_views WHERE schemaname = 'public'")
+[ "$N_VISTAS" -ge "${N_VISTAS_ESPERADAS:-0}" ] || fallo "Se esperaban ${N_VISTAS_ESPERADAS} vistas y hay $N_VISTAS"
+
 {
   echo
   echo "- Workflows de n8n en el paquete: $N_WF (JSON válidos)"
   echo "- Código fuente: tar.gz íntegro"
+  echo "- Funciones restauradas: $N_FN_OK de $N_FN · vistas: $N_VISTAS de ${N_VISTAS_ESPERADAS:-0}"
   echo "- \`alertas_riesgo_evaluar()\` responde sobre los datos restaurados"
 } >> "$RESUMEN"
 cat "$RESUMEN"
