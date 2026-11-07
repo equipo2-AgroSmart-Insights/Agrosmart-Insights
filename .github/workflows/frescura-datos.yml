@@ -1,0 +1,115 @@
+name: Frescura de Datos (precios MIDAGRI)
+# Origen: del 30/10 al 07/11/2026 no entró ningún precio nuevo y nadie lo
+# notó. El túnel ngrok del puente MIDAGRI estaba apagado; WF1 recibía un 404
+# y lo trataba como "boletín aún no disponible", así que cada ejecución
+# terminaba en success. El health check (solo HTTP 200) y el drift check
+# (solo estructura de los workflows) tampoco miran los datos.
+#
+# Este chequeo mira el resultado: la fecha del precio más reciente por
+# mercado. Si tiene más de UMBRAL_DIAS_HABILES días hábiles de atraso, la
+# corrida queda en rojo y abre un Issue `datos-desactualizados`.
+#
+# Corre de lunes a viernes a las 14:30 (America/Lima), después de la última
+# ventana de WF1 (10:00 a 13:00).
+
+on:
+  schedule:
+    - cron: '30 19 * * 1-5'
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - '.github/workflows/frescura-datos.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  frescura:
+    name: Revisar la fecha del último precio
+    runs-on: ubuntu-latest
+    env:
+      HAS_DB_SECRET: ${{ secrets.RENDER_DATABASE_URL != '' }}
+      UMBRAL_DIAS_HABILES: 2
+    steps:
+      - name: Exigir el secret
+        if: ${{ env.HAS_DB_SECRET != 'true' }}
+        run: |
+          echo "::error::RENDER_DATABASE_URL no está configurado: sin él no se puede revisar la frescura de los datos."
+          exit 1
+
+      - name: Instalar psql
+        run: command -v psql > /dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client)
+
+      - name: Consultar el último precio por mercado
+        id: revisar
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+        run: |
+          set -o pipefail
+          # Días hábiles (lunes a viernes) entre el último precio y hoy en Lima.
+          psql "$DATABASE_URL" -X -A -t -F $'\t' -v ON_ERROR_STOP=1 -c "
+            WITH hoy AS (SELECT (now() AT TIME ZONE 'America/Lima')::date AS d),
+                 ult AS (SELECT mercado, max(fecha) AS ultima
+                         FROM public.precios_diarios WHERE mercado IS NOT NULL GROUP BY mercado)
+            SELECT u.mercado, u.ultima,
+                   (SELECT count(*) FROM generate_series(u.ultima + 1, h.d, interval '1 day') g
+                     WHERE extract(isodow FROM g) < 6)
+            FROM ult u CROSS JOIN hoy h
+            ORDER BY u.mercado" > frescura.tsv
+
+          {
+            echo "### Frescura de precios ($(TZ=America/Lima date +%d/%m/%Y\ %H:%M) Lima)"
+            echo
+            echo "| Mercado | Último precio | Días hábiles de atraso | |"
+            echo "|---|---|---|---|"
+          } > reporte.md
+          ATRASADOS=0
+          while IFS=$'\t' read -r mercado ultima atraso; do
+            if [ "$atraso" -gt "$UMBRAL_DIAS_HABILES" ]; then estado="❌"; ATRASADOS=$((ATRASADOS + 1)); else estado="✅"; fi
+            echo "| $mercado | $ultima | $atraso | $estado |" >> reporte.md
+          done < frescura.tsv
+          [ -s frescura.tsv ] || { echo "No hay ningún precio en precios_diarios." >> reporte.md; ATRASADOS=1; }
+          {
+            echo
+            echo "Umbral: más de $UMBRAL_DIAS_HABILES días hábiles. Si un mercado lo supera, revisar primero que el puente MIDAGRI esté encendido: \`https://<url-ngrok>/health\` (ver \`src/midagri-bridge/README.md\`) y las últimas ejecuciones de WF1 en n8n."
+          } >> reporte.md
+          cat reporte.md
+          cat reporte.md >> "$GITHUB_STEP_SUMMARY"
+          [ "$ATRASADOS" -eq 0 ]
+
+      # En un PR solo se muestra el resultado: no abre Issues ni falla.
+      - name: Abrir o actualizar issue
+        if: ${{ steps.revisar.outcome == 'failure' && github.event_name != 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label datos-desactualizados --state open --json number --jq '.[0].number')
+          BODY="Detectado por \`frescura-datos.yml\`: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          $(cat reporte.md 2>/dev/null || echo 'La consulta a la base falló; revisar el log de la corrida.')"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Precios de MIDAGRI desactualizados" --label datos-desactualizados --body "$BODY"
+          fi
+
+      - name: Cerrar issue si los datos volvieron a estar al día
+        if: ${{ steps.revisar.outcome == 'success' && github.event_name != 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label datos-desactualizados --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "Resuelto: la corrida del $(date -u +%Y-%m-%d) confirma precios al día."
+            gh issue close "$EXISTING" --repo "$GITHUB_REPOSITORY"
+          fi
+
+      # A diferencia del drift check, la corrida queda en rojo: un "success"
+      # que esconde datos viejos es justo lo que dejó pasar este problema.
+      - name: Marcar la corrida en rojo si hay atraso
+        if: ${{ steps.revisar.outcome == 'failure' && github.event_name != 'pull_request' }}
+        run: |
+          echo "::error::Hay precios con más de $UMBRAL_DIAS_HABILES días hábiles de atraso (ver resumen)."
+          exit 1
