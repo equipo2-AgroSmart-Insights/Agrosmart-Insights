@@ -1,5 +1,4 @@
-<img src=".\docs-architecture\docs\arquitectura\media/media/image1.png"
-style="width:5.90556in;height:1.63333in" />
+﻿<img src="media/image1.png" style="width:5.90556in;height:1.63333in" />
 
 **ESCUELA PROFESIONAL DE INGENIERÍA DE COMPUTACIÓN Y SISTEMAS**   \
    \
@@ -20,1908 +19,992 @@ ING. NORMA VIRGINIA LEÓN LESCANO   \
 Cristhian Raul Pimentel Tovar   \
 Arquitecto de Software   \
    \
-**FECHA: **26/10/2026   \
+**FECHA: **6/11/2026   \
    \
 **LIMA – PERÚ**
 
-1.  **Introducción y objetivos**
+## Contenido
 
-    1.  **Propósito del documento**
+[TOC]
 
-El propósito de este informe es para poder documentar la arquitectura de
-software de AgroSmart Insights utilizando la estructura de arc42.
+## 1. INTRODUCCIÓN Y OBJETIVOS
 
-Se escribirá sobre los objetivos del sistema, restricciones, el contexto
-de negocio y técnico, tecnologías usadas, componentes, el flujo de
-ejecución, el despliegue, las decisiones de la arquitectura, requisitos
-de calidad y principales riesgos que se fueron encontrando durante el
-desarrollo del software.
+### 1.1. Visión general
 
-También proporcionara una visión general del sistema, para así poder
-facilitar la comprensión de las decisiones técnicas que se fueron
-tomando para el desarrollo, las pruebas, el mantenimiento y la como fue
-evolucionando la solución planteada.
+AgroSmart-Insights es una plataforma tecnológica orientada al análisis y
+seguimiento de información agrícola. Su propósito es integrar diferentes
+fuentes de datos, automatizar procesos y proporcionar herramientas que
+permitan a los usuarios consultar información relevante para la toma de
+decisiones dentro del sector agrícola.
 
-2.  **Descripción general del sistema**
+La solución está desarrollada mediante una arquitectura que separa la
+interfaz de usuario, los procesos de automatización, el almacenamiento
+de información y los servicios de inteligencia artificial.
 
-    La plataforma AgroSmart Insights es una inteligencia agrícola que
-    proporciona y utiliza datos de precios de los productos, información
-    meteorológica y documentos para poder proporcionar consultas
-    informativas y análisis para la toma de decisiones.
+El sistema cuenta actualmente con cinco microfrontends y seis workflows
+desarrollados en n8n, los cuales permiten organizar las funcionalidades
+de la plataforma y facilitar la comunicación entre sus diferentes
+componentes.
 
-    Nuestra solución combina una interfaz web, flujos automatizados de
-    ingesta de datos, servicios de inteligencia artificial y una base de
-    datos con la capacidad de búsqueda vectorial. El propósito de la
-    interfaz web es facilitar el acceso a la información agrícola
-    proporcionada por MIGRADI.
+La arquitectura utiliza tecnologías como React, Vite, PostgreSQL,
+pgvector, n8n, Render, Vercel y Langfuse. Asimismo, incorpora servicios
+externos como MIDAGRI, Open-Meteo y OpenRouter para obtener información
+y procesar consultas mediante modelos de inteligencia artificial.
 
-    Esta plataforma posee módulos funcionales relacionados con el
-    monitoreo, las consultas en lenguaje natural (NLQ), el análisis del
-    mercado comparativo.
+### 1.2. Objetivos del sistema
 
-    La información se procesa mediante workflows de n8n, que coordinan
-    la adquisición de datos, el almacenamiento y la atención de
-    consultas.
+Los principales objetivos de AgroSmart-Insights son:
 
-3.  **Requisitos funcionales**
-
-| **N °** | **Requisitos funcionales** | **Descripción** |
-|:--:|:--:|:--:|
-| RF-01 | Consulta de lenguaje natural | Permite que el usuario formule preguntas sobre precios, periodos y condiciones agrícolas |
-| RF-03 | Consulta de precios | Proporcionar información sobre los precios almacenados y responder preguntas sobre valores específicos e históricos |
-| RF-04 | Análisis predictivos | procesar consultas relacionadas con las tendencias, posibles escenarios futuros, según las capacidades desarrolladas |
-| RF-05 | Información meteorológica | Integrar datos para proporcionar contexto sobre las condiciones climáticas |
-| RF-06 | Ingesta automatizada | Ejecutar procesos programados para obtener datos y poder transformarlo y almacenarlos |
-| RF-07 | Monitoreo | Presentar información visual relevante para observar las condiciones del dominio |
-| RF-08 | Análisis de mercados | Facilita la consulta y el análisis de precios y las tendencias del producto |
-| RF-09 | Recuperación de conocimientos | **Co**nsultar documentos, mediante técnicas de recuperación de información y la búsqueda vectorial |
-
-**1.4. Objetivos de calidad**
-
-El sistema busca alcanzar los siguientes objetivos de calidad:
-
-- **Precisión:** proporcionar respuestas numéricas que coincidan con los
-  valores de referencia de los datos agrícolas.
-
-- **Rendimiento:** mantener tiempos de respuesta adecuados para las
-  consultas interactivas.
-
-- **Trazabilidad:** registrar información suficiente para analizar el
-  comportamiento de las consultas y detectar errores.
-
-- **Mantenibilidad:** separar responsabilidades entre la interfaz, la
-  automatización, el almacenamiento y los servicios de IA.
-
-- **Escalabilidad:** permitir que los componentes puedan evolucionar sin
-  necesidad de reconstruir toda la solución.
-
-- **Seguridad:** proteger credenciales, conexiones, endpoints y datos de
-  acceso.
-
-- **Eficiencia económica:** controlar el consumo de tokens, las llamadas
-  a APIs y los recursos de infraestructura.
-
-- **Disponibilidad de información:** automatizar la actualización de los
-  datos cuando las fuentes y la infraestructura lo permitan.
-
-**Metas de calidad del Sprint 2**
-
-Se han definido los siguientes objetivos para evaluar el comportamiento
-de las consultas:
-
-| **Indicador** | **Meta planteada** | **Método de evaluación** |
-|:---|:---|:---|
-| Precisión numérica | 100 % en el conjunto de referencia de 50 preguntas | Comparar las respuestas con los valores de Ground Truth de PostgreSQL. |
-| Latencia p95 | Menor de 4 segundos | Medir el percentil 95 de los tiempos de respuesta. |
-| Consumo de tokens | Medición del promedio por interacción | Registrar el consumo por consulta y analizar su evolución. |
-| Trazabilidad | Registrar las interacciones evaluadas | Verificar la disponibilidad de los registros y métricas en Langfuse. |
-
-Estas metas constituyen criterios de evaluación del proyecto; no deben
-interpretarse como resultados ya alcanzados sin disponer de las pruebas
-correspondientes. La latencia también debe medirse bajo condiciones
-documentadas y con una definición clara de qué etapas incluye.
-
-**1.5. Stakeholders**
-
-Los principales interesados en el sistema son:
-
-<table>
-<colgroup>
-<col style="width: 40%" />
-<col style="width: 59%" />
-</colgroup>
-<thead>
-<tr>
-<th><blockquote>
-<p><strong>Stakeholder</strong></p>
-</blockquote></th>
-<th><blockquote>
-<p><strong>Interés principal</strong></p>
-</blockquote></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><blockquote>
-<p>Usuarios de la plataforma</p>
-</blockquote></td>
-<td><blockquote>
-<p>Consultar información agrícola de forma sencilla y obtener respuestas
-útiles.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Equipo de desarrollo</p>
-</blockquote></td>
-<td><blockquote>
-<p>Implementar, mantener y ampliar los módulos funcionales.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Arquitectura de Software</p>
-</blockquote></td>
-<td><blockquote>
-<p>Garantizar coherencia arquitectónica, documentar decisiones y
-controlar las dependencias técnicas.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>QA y pruebas</p>
-</blockquote></td>
-<td><blockquote>
-<p>Validar requisitos, precisión numérica, latencia y comportamiento
-ante errores.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Responsable de infraestructura y despliegue</p>
-</blockquote></td>
-<td><blockquote>
-<p>Mantener configuraciones, servicios, conexiones y procesos de
-publicación.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Docente evaluador</p>
-</blockquote></td>
-<td><blockquote>
-<p>Verificar que el diseño, las decisiones y los resultados técnicos
-estén justificados.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Proveedores de datos y servicios externos</p>
-</blockquote></td>
-<td><blockquote>
-<p>Proporcionar información agrícola, meteorológica, modelos y servicios
-de infraestructura.</p>
-</blockquote></td>
-</tr>
-</tbody>
-</table>
-
-**2. Restricciones**
-
-**2.1. Restricciones técnicas**
-
-La arquitectura se encuentra condicionada por las tecnologías y los
-servicios utilizados durante el desarrollo:
-
-1.  **Frontend:** React y Vite para la construcción de la aplicación
-    web.
-
-2.  **Automatización:** n8n para orquestar los procesos de ingesta y las
-    consultas.
-
-3.  **Almacenamiento:** PostgreSQL con pgvector para los datos
-    estructurados y la recuperación vectorial.
-
-4.  **Infraestructura cloud:** Vercel para el frontend y Render para los
-    servicios y la base de datos previstos en el despliegue.
-
-5.  **Fuentes de datos:** MIDAGRI para información agrícola y Open-Meteo
-    para datos meteorológicos.
-
-6.  **Inteligencia artificial:** integración con proveedores y modelos
-    externos, entre ellos Gemini, Grok y servicios conectados mediante
-    OpenRouter.
-
-7.  **Observabilidad:** Langfuse como plataforma de seguimiento de las
-    interacciones con modelos de IA.
-
-8.  **Control de versiones:** Git y GitHub para gestionar el código
-    fuente y la colaboración.
-
-La disponibilidad efectiva de cada integración debe verificarse en la
-configuración vigente del repositorio y de los servicios desplegados.
-
-**2.2. Restricciones de infraestructura**
-
-Durante el desarrollo se identificaron dificultades para ejecutar la
-ingesta de documentos de MIDAGRI desde un entorno completamente alojado
-en la nube.
-
-Como respuesta, se trabajó con una arquitectura híbrida temporal:
-algunos procesos de ingesta se ejecutan en una instancia local de n8n,
-mientras que PostgreSQL puede permanecer alojado en Render y recibir los
-datos mediante una conexión externa.
-
-Esta decisión introduce dependencias respecto al equipo local, la
-conectividad, las credenciales y la disponibilidad del proceso de
-ejecución.
-
-También se evaluó la ejecución completamente local para las pruebas de
-desarrollo. En ese escenario, Docker Compose permite levantar los
-servicios necesarios en el equipo del desarrollador sin depender de
-Render para cada prueba.
-
-Estos escenarios corresponden a distintos modos de operación y deben
-documentarse por separado para evitar confundir el entorno local de
-pruebas con el despliegue de referencia.
-
-**2.3. Restricciones económicas**
-
-El proyecto depende de servicios que pueden tener límites de uso o
-costes asociados, como proveedores de modelos de lenguaje, APIs
-externas, alojamiento cloud y almacenamiento.
-
-Por ello, la arquitectura debe considerar:
-
-- El consumo de tokens por consulta.
-
-- El número de llamadas a proveedores externos.
-
-- El tamaño de los documentos procesados.
-
-- El almacenamiento y la recuperación de vectores.
-
-- Los recursos asignados a los servicios de n8n y PostgreSQL.
-
-- El volumen de registros generados por la observabilidad.
-
-La optimización debe considerar el coste total del flujo y no solamente
-el precio de cada modelo.
-
-**2.4. Restricciones organizativas y académicas**
-
-El desarrollo se realiza en el contexto de un proyecto universitario con
-entregables por sprint, historias de usuario y revisiones docentes.
-
-Las decisiones arquitectónicas deben ser explicables y estar vinculadas
-con los requisitos del proyecto. La incorporación de nuevas tecnologías
-debe justificarse por su utilidad, complejidad y coste de mantenimiento.
-
-Se considera relevante documentar las decisiones mediante ADRs y
-mantener una separación clara entre desarrollo, pruebas y despliegue.
-
-**2.5. Restricciones legales y de seguridad**
-
-No se dispone de evidencia suficiente para afirmar que el proyecto esté
-sujeto a una certificación específica o que haya completado una
-auditoría formal de cumplimiento normativo.
-
-Sin embargo, deben contemplarse las buenas prácticas de protección de
-datos y seguridad aplicables al entorno de uso:
-
-- No exponer claves de APIs ni credenciales de bases de datos en el
-  código fuente.
-
-- Gestionar secretos mediante variables de entorno o mecanismos seguros
-  del proveedor.
-
-- Limitar el acceso a endpoints y servicios administrativos.
-
-- Validar las entradas recibidas por los webhooks.
-
-- Proteger las conexiones externas a PostgreSQL.
-
-- Revisar las políticas de retención de los registros enviados a
-  herramientas de observabilidad.
-
-- Verificar los términos de uso de las APIs y las fuentes de datos
+- Integrar información agrícola procedente de diferentes fuentes
   externas.
 
-**3. Context & Scope — Contexto y alcance**
+- Proporcionar información sobre precios y mercados agrícolas.
 
-**3.1. Contexto de negocio**
+- Facilitar el monitoreo satelital mediante herramientas de
+  visualización geográfica.
 
-La información agrícola se distribuye entre boletines, bases de datos y
-servicios meteorológicos. Consultar y relacionar estos datos manualmente
-puede dificultar la obtención de información oportuna para analizar
-precios y condiciones del mercado.
+- Permitir consultas en lenguaje natural mediante un asistente
+  inteligente.
 
-AgroSmart Insights busca reducir esa fragmentación mediante una interfaz
-que permite formular consultas y obtener respuestas apoyadas en
-información almacenada y servicios externos.
+- Proporcionar información sobre campañas y eventos agrícolas mediante
+  un calendario.
 
-La plataforma no reemplaza las fuentes oficiales ni garantiza por sí
-misma que una predicción sea correcta. Su utilidad depende de la
-actualización de los datos, la calidad del procesamiento y la validación
-de las respuestas.
+- Generar y presentar alertas relacionadas con riesgos agrícolas.
 
-**3.2. Contexto técnico**
+- Automatizar los procesos de ingesta, procesamiento y consulta mediante
+  workflows.
 
-El sistema se relaciona con los siguientes actores y servicios externos:
+- Utilizar técnicas RAG para recuperar información relevante y mejorar
+  las respuestas del asistente.
 
-- Usuarios que interactúan con la aplicación web.
+- Facilitar el seguimiento del rendimiento y comportamiento de los
+  modelos de inteligencia artificial.
 
-- MIDAGRI, como fuente de información agrícola y boletines de precios.
+### 1.3. Actores y partes interesadas
 
-- Open-Meteo, como proveedor de información meteorológica.
+| **Actor** | **Responsabilidad** |
+|:--:|:--:|
+| Usuarios de la plataforma | Consultar información y utilizar las funcionalidades disponibles. |
+| Equipo de desarrollo | Implementar y mantener los componentes del sistema. |
+| Arquitecto de Software | Definir, documentar y supervisar la estructura de la arquitectura. |
+| DevOps | Gestionar infraestructura, despliegues y configuración de servicios. |
+| QA | Verificar el funcionamiento de las funcionalidades y validar los procesos de recuperación. |
 
-- Proveedores de modelos de lenguaje y servicios de IA.
+### 1.4. Alcance de la documentación
 
-- OpenRouter, utilizado como punto de integración con modelos
-  disponibles mediante su API.
+Este documento describe la arquitectura actual de AgroSmart-Insights,
+incluyendo sus componentes principales, organización de microfrontends,
+workflows, integración con servicios externos, almacenamiento de
+información, mecanismos de inteligencia artificial, infraestructura y
+decisiones arquitectónicas.
 
-- Langfuse, para la observabilidad de las interacciones con modelos.
+El documento también identifica los riesgos técnicos y las mejoras
+necesarias para mantener la estabilidad, seguridad y evolución del
+sistema.
 
-- Vercel y Render, para el alojamiento de los componentes
-  correspondientes.
+## 2. RESTRICCIONES ARQUITECTÓNICAS
 
-**3.3. Alcance del sistema**
+### 2.1. Restricciones tecnológicas
 
-El alcance comprende:
+La arquitectura del proyecto está condicionada por las siguientes
+tecnologías:
 
-- Aplicación web y sus módulos funcionales.
+| **Componente** | **Tecnología** | **Descripción** |
+|:--:|:--:|:--:|
+| Frontend | React | Biblioteca utilizada para desarrollar la interfaz. |
+| Herramienta frontend | Vite | Herramienta de desarrollo y construcción de la aplicación. |
+| Lenguaje | JavaScript | Lenguaje utilizado en el desarrollo frontend. |
+| Automatización | n8n | Plataforma encargada de ejecutar los workflows. |
+| Infraestructura backend | Render | Servicio donde se ejecutan los procesos de automatización. |
+| Base de datos | PostgreSQL | Sistema encargado del almacenamiento de información. |
+| Búsqueda vectorial | pgvector | Extensión que permite almacenar y consultar embeddings. |
+| Despliegue frontend | Vercel | Plataforma utilizada para publicar la aplicación web. |
+| Observabilidad | Langfuse | Herramienta para supervisar las ejecuciones de inteligencia artificial. |
+| Modelos generativos | OpenRouter | Servicio utilizado para acceder a los modelos de inteligencia artificial. |
 
-- Automatización de la ingesta y procesamiento de datos.
+### 2.2. Restricciones de integración
 
-- API de consulta y clasificación de preguntas.
+El sistema depende de diferentes servicios externos para obtener
+información y ejecutar determinadas funcionalidades.
 
-- Recuperación de información desde PostgreSQL y pgvector.
+Entre las principales restricciones se encuentran:
 
-- Integración con modelos de IA.
+- La disponibilidad de las API externas.
 
-- Integración con fuentes meteorológicas y agrícolas.
-
-- Registro de métricas y evaluación de calidad.
-
-- Infraestructura necesaria para ejecutar los componentes.
-
-Quedan fuera del alcance garantizado aquellas capacidades que no estén
-implementadas o verificadas, como una predicción de precisión
-certificada, una disponibilidad contractual del 99,9 %, un sistema
-formal de autenticación empresarial o un calendario alimentado
-automáticamente por fuentes que todavía no hayan sido integradas.
-
-**4. Estrategia de solución**
-
-**4.1. Estrategia arquitectónica general**
-
-La solución utiliza una arquitectura distribuida e híbrida que separa la
-interfaz web, la orquestación de procesos, el almacenamiento y los
-servicios externos de inteligencia artificial.
-
-La elección responde a la necesidad de integrar fuentes heterogéneas,
-automatizar tareas periódicas y permitir que la interfaz consuma
-servicios de procesamiento sin concentrar toda la lógica en el frontend.
-
-La arquitectura puede describirse como una combinación de:
-
-- Aplicación web basada en componentes.
-
-- Módulos funcionales en el frontend.
-
-- Workflows de automatización.
-
-- Persistencia relacional y recuperación vectorial.
-
-- Integraciones mediante APIs.
-
-- Observabilidad especializada para modelos de IA.
-
-La organización modular del frontend no implica necesariamente que cada
-módulo sea un microfrontend desplegado de forma independiente. De igual
-manera, dividir los workflows de n8n no significa automáticamente que
-cada uno constituya un microservicio independiente.
-
-**4.2. Tecnologías seleccionadas**
-
-<table>
-<colgroup>
-<col style="width: 30%" />
-<col style="width: 69%" />
-</colgroup>
-<thead>
-<tr>
-<th><blockquote>
-<p><strong>Tecnología</strong></p>
-</blockquote></th>
-<th><blockquote>
-<p><strong>Responsabilidad arquitectónica</strong></p>
-</blockquote></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><blockquote>
-<p>React</p>
-</blockquote></td>
-<td><blockquote>
-<p>Construcción de la interfaz de usuario.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Vite</p>
-</blockquote></td>
-<td><blockquote>
-<p>Desarrollo y compilación del frontend.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>n8n</p>
-</blockquote></td>
-<td><blockquote>
-<p>Orquestación de ingesta, clasificación y procesamiento de
-consultas.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>PostgreSQL</p>
-</blockquote></td>
-<td><blockquote>
-<p>Almacenamiento persistente de información estructurada.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>pgvector</p>
-</blockquote></td>
-<td><blockquote>
-<p>Almacenamiento y recuperación de representaciones vectoriales.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>MIDAGRI</p>
-</blockquote></td>
-<td><blockquote>
-<p>Fuente de datos agrícolas y boletines de precios.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Open-Meteo</p>
-</blockquote></td>
-<td><blockquote>
-<p>Fuente de información meteorológica.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Gemini y Grok</p>
-</blockquote></td>
-<td><blockquote>
-<p>Integraciones con proveedores de IA mencionados durante el
-desarrollo; la función y ruta activas deben verificarse.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>OpenRouter</p>
-</blockquote></td>
-<td><blockquote>
-<p>Acceso a modelos a través de una API unificada, cuando está
-configurado en el flujo.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Jina Embeddings v3</p>
-</blockquote></td>
-<td><blockquote>
-<p>Modelo de embeddings mencionado en la actualización más reciente para
-representar semánticamente el contenido.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Langfuse</p>
-</blockquote></td>
-<td><blockquote>
-<p>Seguimiento y análisis de interacciones con modelos de IA.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Docker Compose</p>
-</blockquote></td>
-<td><blockquote>
-<p>Ejecución coordinada de servicios locales durante el desarrollo.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>GitHub</p>
-</blockquote></td>
-<td><blockquote>
-<p>Control de versiones, colaboración y gestión del código.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Vercel</p>
-</blockquote></td>
-<td><blockquote>
-<p>Alojamiento previsto para el frontend.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Render</p>
-</blockquote></td>
-<td><blockquote>
-<p>Alojamiento previsto para servicios y base de datos cloud.</p>
-</blockquote></td>
-</tr>
-</tbody>
-</table>
-
-La lista refleja las tecnologías identificadas en el proceso. La versión
-exacta de cada dependencia, su estado de producción y la configuración
-efectiva deben confirmarse en los archivos y servicios actuales.
-
-**4.3. Estrategia de ingesta de datos**
-
-Se separan los procesos de ingesta de conocimiento documental y de
-actualización de datos operativos.
-
-**WF0 — Ingesta de conocimiento para RAG**
-
-Está orientado a incorporar documentos de referencia, especialmente
-boletines y materiales agrícolas, para habilitar su recuperación durante
-las consultas. El proceso debe contemplar extracción, transformación,
-generación de embeddings y persistencia de la información procesada.
-
-**WF1 — Ingesta diaria de precios y clima**
-
-Está orientado a actualizar datos agrícolas y meteorológicos mediante
-procesos programados. Se ha trabajado con consultas a MIDAGRI y
-Open-Meteo, verificación de fechas y procesamiento por lotes de regiones
-meteorológicas.
-
-**WF2 — API de chat y análisis predictivo**
-
-Es el flujo de atención de consultas. Recibe las solicitudes de la
-interfaz, clasifica la intención, ejecuta las ramas correspondientes,
-consulta datos y herramientas y devuelve una respuesta.
-
-La separación permite actualizar la información con independencia de las
-consultas interactivas y facilita identificar en qué etapa se produce un
-error.
-
-**4.4. Estrategia de observabilidad**
-
-Langfuse se considera el componente principal de observabilidad para las
-interacciones de IA. Su función es permitir el análisis de las
-consultas, los modelos empleados, las latencias y el consumo de tokens,
-en la medida en que la instrumentación y los datos disponibles lo
-permitan.
-
-Durante el proceso se evaluó Arize Phoenix, pero la decisión posterior
-fue retirarlo y mantener Langfuse como plataforma de observabilidad,
-evitando mantener dos herramientas para una misma finalidad sin una
-justificación suficiente.
-
-**4.5. Organización del desarrollo**
-
-La arquitectura debe coordinarse con las responsabilidades de frontend,
-backend, automatización y QA.
-
-El rol de Arquitectura de Software se centra en:
-
-- Mantener la visión general de los componentes.
-
-- Documentar las decisiones y sus consecuencias.
-
-- Revisar las dependencias y los contratos de comunicación.
-
-- Asegurar que los requisitos de calidad se traduzcan en mediciones.
-
-- Coordinar la integración entre módulos.
-
-- Identificar riesgos técnicos antes de que se conviertan en problemas
-  de implementación.
-
-Las pruebas funcionales, la revisión del código y las validaciones de
-seguridad deben integrarse al flujo de trabajo del repositorio.
-
-**5. Building Block View — Vista de bloques de construcción**
-
-**5.1. Nivel 1: bloques principales**
-
-El primer nivel presenta los grandes componentes de la solución.
-
-<table style="width:99%;">
-<colgroup>
-<col style="width: 38%" />
-<col style="width: 61%" />
-</colgroup>
-<thead>
-<tr>
-<th><blockquote>
-<p><strong>Bloque</strong></p>
-</blockquote></th>
-<th><blockquote>
-<p><strong>Responsabilidad</strong></p>
-</blockquote></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><blockquote>
-<p>Frontend web</p>
-</blockquote></td>
-<td><blockquote>
-<p>Interfaz que recibe preguntas y presenta resultados.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Capa de API y automatización</p>
-</blockquote></td>
-<td><blockquote>
-<p>Gestiona las solicitudes y coordina la ejecución de los procesos.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Ingesta de datos</p>
-</blockquote></td>
-<td><blockquote>
-<p>Obtiene y prepara información agrícola y meteorológica.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Persistencia</p>
-</blockquote></td>
-<td><blockquote>
-<p>Almacena precios, documentos y representaciones vectoriales.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Servicios de IA</p>
-</blockquote></td>
-<td><blockquote>
-<p>Clasifican preguntas y generan respuestas mediante modelos
-externos.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Observabilidad</p>
-</blockquote></td>
-<td><blockquote>
-<p>Registra información para analizar latencia, tokens y calidad.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>Infraestructura</p>
-</blockquote></td>
-<td><blockquote>
-<p>Proporciona los entornos de ejecución y comunicación entre
-componentes.</p>
-</blockquote></td>
-</tr>
-</tbody>
-</table>
-
-**5.2. Nivel 2: componentes internos**
-
-**5.2.1. Frontend**
-
-El frontend está construido con React y Vite. Se ha organizado alrededor
-de cuatro módulos funcionales:
-
-1.  **Monitoreo:** visualización de información e indicadores
-    relevantes.
-
-2.  **Chat SQL:** interfaz para consultas en lenguaje natural
-    relacionadas con los datos disponibles.
-
-3.  **Mercados:** consulta y análisis de información de precios
-    agrícolas.
-
-4.  **Calendario:** módulo previsto para presentar fechas y eventos de
-    campañas agrícolas.
-
-> El módulo Calendario se encuentra documentado como parte del alcance
-> funcional, pero su implementación completa y su fuente de datos deben
-> verificarse antes de considerarlo terminado.
->
-> La comunicación con el backend se realiza mediante solicitudes HTTP a
-> los webhooks configurados. Durante el desarrollo se identificó un
-> error de configuración asociado a VITE_N8N_WEBHOOK_URL, lo que
-> evidencia la necesidad de validar las variables de entorno en cada
-> ambiente.
-
-**5.2.2. WF0: ingesta de conocimiento documental**
-
-Responsabilidades principales:
-
-- Obtener documentos de referencia.
-
-- Procesar el contenido textual.
-
-- Preparar los fragmentos documentales.
-
-- Generar embeddings mediante el modelo configurado.
-
-- Guardar la información necesaria para su recuperación posterior.
-
-El almacenamiento vectorial se ha asociado con PostgreSQL y pgvector. La
-tabla documentos_rag fue identificada como parte del diseño de
-recuperación de conocimiento.
-
-**5.2.3. WF1: ingesta diaria de precios y clima**
-
-Responsabilidades principales:
-
-- Ejecutar tareas de actualización programadas.
-
-- Comprobar las fechas de los datos disponibles.
-
-- Obtener información agrícola desde las fuentes configuradas.
-
-- Consultar datos meteorológicos para las regiones contempladas.
-
-- Procesar la información por lotes.
-
-- Persistir los resultados en PostgreSQL.
-
-Se trabajó con un esquema de ejecución de lunes a viernes en varias
-horas del día y con la consulta de 14 regiones meteorológicas,
-procesadas en lotes de cinco, cinco y cuatro regiones. Estos valores
-corresponden al diseño de ingesta trabajado y deben cotejarse con el
-workflow activo.
-
-**5.2.4. WF2: API de chat y análisis predictivo**
-
-WF2 es el componente central de procesamiento interactivo.
-
-Entre sus responsabilidades se encuentran:
-
-- Recibir solicitudes mediante un webhook HTTP.
-
-- Validar la existencia de body.session_id.
-
-- Clasificar la intención de la consulta.
-
-- Seleccionar una rama de procesamiento.
-
-- Consultar datos estructurados o documentos recuperados.
-
-- Invocar las herramientas y los modelos configurados.
-
-- Construir y devolver una respuesta.
-
-- Registrar métricas de observabilidad cuando la instrumentación está
-  activa.
-
-Se identificó que el webhook utiliza el método POST y la ruta v1/query.
-El flujo contempla una respuesta de error cuando falta el identificador
-de sesión, con el mensaje Sesión inválida o ausente y código 401. La
-semántica exacta del código y la validación de sesiones deben revisarse
-con la implementación vigente.
-
-La clasificación de consultas distingue las siguientes categorías:
-
-<table>
-<colgroup>
-<col style="width: 41%" />
-<col style="width: 58%" />
-</colgroup>
-<thead>
-<tr>
-<th><blockquote>
-<p><strong>Tipo</strong></p>
-</blockquote></th>
-<th><blockquote>
-<p><strong>Propósito</strong></p>
-</blockquote></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><blockquote>
-<p>precio_puntual</p>
-</blockquote></td>
-<td><blockquote>
-<p>Consulta de precios específicos.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>tendencia_prediccion</p>
-</blockquote></td>
-<td><blockquote>
-<p>Consultas sobre tendencias o escenarios futuros.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>clima</p>
-</blockquote></td>
-<td><blockquote>
-<p>Preguntas relacionadas con condiciones meteorológicas.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>analisis_satelital_riesgo</p>
-</blockquote></td>
-<td><blockquote>
-<p>Consultas explícitas sobre mapas, imágenes satelitales o análisis
-espacial.</p>
-</blockquote></td>
-</tr>
-<tr>
-<td><blockquote>
-<p>general</p>
-</blockquote></td>
-<td><blockquote>
-<p>Preguntas que no corresponden a las categorías anteriores.</p>
-</blockquote></td>
-</tr>
-</tbody>
-</table>
-
-También se contemplan valores de período como hoy, historico, futuro o
-null, junto con atributos como producto y lugar.
-
-La clasificación determina qué herramientas o ramas se ejecutan. Esto
-permite evitar que todas las preguntas se procesen mediante un único
-camino indiferenciado.
-
-**5.2.5. PostgreSQL y pgvector**
-
-La base de datos proporciona persistencia para los datos estructurados y
-los documentos empleados en la recuperación de conocimiento.
-
-Las tablas relacionadas con precios, como precios_diarios, forman parte
-del contexto de evaluación numérica. La tabla documentos_rag se ha
-identificado para la recuperación de documentos.
-
-Las responsabilidades de almacenamiento deben mantenerse separadas
-conceptualmente:
-
-- Datos estructurados para consultas numéricas y filtros.
-
-- Documentos y metadatos para el conocimiento documental.
-
-- Embeddings para recuperación semántica.
-
-- Registros de evaluación para comparar respuestas contra datos de
-  referencia, cuando se implementen.
-
-El uso de pgvector permite almacenar y consultar vectores dentro de
-PostgreSQL, evitando introducir necesariamente una base de datos
-vectorial separada.
-
-**5.2.6. Servicios de inteligencia artificial**
-
-La arquitectura contempla modelos para interpretar preguntas y generar
-respuestas, así como un modelo de embeddings para la recuperación
-semántica.
-
-Se ha trabajado con integraciones relacionadas con Gemini, Grok, Hugging
-Face y OpenRouter. En las actualizaciones más recientes se mencionó Jina
-Embeddings v3 para embeddings y un modelo denominado por el usuario como
-“Link 3.0 Flash” conectado mediante OpenRouter.
-
-Dado que los proveedores y modelos han cambiado durante el desarrollo,
-la configuración exacta de cada nodo debe verificarse antes de fijar sus
-nombres y responsabilidades definitivas en la documentación de
-producción.
-
-Es importante distinguir dos funciones diferentes:
-
-- **Modelo de lenguaje:** interpreta instrucciones, clasifica o genera
-  texto.
-
-- **Modelo de embeddings:** transforma textos en vectores que permiten
-  recuperar información semánticamente relacionada.
-
-Cambiar el modelo de embeddings no determina automáticamente el número
-de tokens de contexto del modelo de lenguaje. El límite de contexto
-depende del modelo de lenguaje configurado.
-
-**5.3. Nivel 3: implementación y repositorio**
-
-El código se mantiene en el repositorio de GitHub del proyecto. La
-estructura de trabajo identificada incluye directorios de
-infraestructura, documentación y código fuente, además de archivos de
-configuración y scripts auxiliares.
-
-El frontend se encuentra dentro de la estructura
-src/frontend/agrosmart-frontend. La infraestructura local contempla
-Docker Compose para coordinar servicios durante las pruebas.
-
-En este nivel deben documentarse, según el estado real del repositorio:
-
-- Archivos de configuración del frontend.
-
-- Definición y exportación de workflows de n8n.
-
-- Esquemas SQL y scripts de inicialización.
-
-- Configuración de variables de entorno.
-
-- Pruebas automatizadas.
-
-- Scripts de evaluación de precisión y rendimiento.
-
-- Archivos de despliegue y configuración de CI/CD.
-
-La documentación no debe asumir que todos estos elementos se encuentran
-completos o actualizados sin una revisión del código.
-
-**6. Vista de ejecución**
-
-Esta sección describe cómo colaboran los componentes durante las
-operaciones principales del sistema.
-
-**6.1. Flujo de consulta en lenguaje natural**
-
-El flujo lógico de una consulta es el siguiente:
-
-1.  El usuario formula una pregunta desde el frontend.
-
-2.  El frontend construye una solicitud HTTP y la envía al webhook de
-    WF2.
-
-3.  WF2 valida los datos requeridos, incluido el identificador de
-    sesión.
-
-4.  El clasificador identifica el producto, el período, el lugar y el
-    tipo de consulta.
-
-5.  El flujo selecciona la rama adecuada.
-
-6.  La rama consulta las herramientas disponibles, la base de datos o el
-    sistema de recuperación documental.
-
-7.  El modelo de lenguaje genera o estructura la respuesta utilizando la
-    información recuperada.
-
-8.  WF2 devuelve la respuesta al frontend.
-
-9.  El usuario visualiza el resultado.
-
-10. Cuando la instrumentación está habilitada, la interacción se
-    registra para su análisis en Langfuse.
-
-El orden exacto de las llamadas al modelo, las herramientas y la base de
-datos depende de la rama del workflow.
-
-**6.3. Flujo de ingesta documental mediante WF0**
-
-1.  Se activa el proceso de ingesta documental.
-
-2.  Se obtiene el documento de la fuente configurada.
-
-3.  Se extrae y prepara el texto.
-
-4.  Se divide el contenido en fragmentos apropiados para la
-    recuperación.
-
-5.  Se generan embeddings mediante el modelo configurado.
-
-6.  Se almacenan los vectores, el contenido y los metadatos necesarios
-    en PostgreSQL con pgvector.
-
-7.  Los documentos quedan disponibles para las consultas de
-    recuperación.
-
-La calidad de este proceso depende de la extracción correcta del
-documento, la consistencia de los metadatos y la compatibilidad entre el
-modelo de embeddings utilizado para indexar y el utilizado para
-consultar.
-
-**6.4. Flujo de actualización de precios y clima mediante WF1**
-
-1.  Se activa el workflow según el calendario configurado.
-
-2.  Se verifica si los datos correspondientes a la fecha objetivo ya
-    fueron procesados.
-
-3.  Se consulta la fuente agrícola disponible.
-
-4.  Se obtiene la información meteorológica para las regiones
-    configuradas.
-
-5.  Se procesan los datos y se normalizan los campos necesarios.
-
-6.  Se insertan o actualizan los registros en PostgreSQL.
-
-7.  Los datos actualizados quedan disponibles para WF2.
-
-La estrategia debe considerar operaciones idempotentes, control de
-duplicados y registro de errores para evitar que una ejecución repetida
-genere información inconsistente.
-
-**6.5. Manejo de errores**
-
-Se identificaron o deben contemplarse los siguientes escenarios:
-
-- Solicitudes sin identificador de sesión.
-
-- Webhooks mal configurados o rutas inexistentes.
-
-- Fallos de conectividad con proveedores externos.
-
-- Límites de uso de las APIs.
-
-- Errores al descargar o extraer boletines.
-
-- Fallos de autenticación o conexión a PostgreSQL.
-
-- Datos incompletos o fechas no disponibles.
-
-- Respuestas de IA que no coinciden con la información de referencia.
-
-Cada error debe disponer de un tratamiento definido: reintento cuando
-corresponda, registro técnico, respuesta controlada al usuario y
-mecanismos de recuperación que no dupliquen datos.
-
-**7. Vista de despliegue**
-
-**7.1. Arquitectura de despliegue prevista**
-
-La arquitectura de referencia contempla la separación de la interfaz
-web, la automatización y la persistencia.
-
-- **Vercel:** alojamiento del frontend.
-
-- **Render:** alojamiento de PostgreSQL y de los servicios cloud
-  previstos.
-
-- **n8n:** ejecución de los workflows de ingesta y consulta.
-
-- **Servicios externos:** proveedores de IA, OpenRouter, MIDAGRI y
-  Open-Meteo.
-
-- **Langfuse:** plataforma externa de observabilidad, según la
-  configuración desplegada.
-
-La ubicación definitiva de cada workflow debe documentarse a partir de
-las instancias efectivamente activas. Durante el desarrollo se han
-utilizado tanto ejecuciones locales como configuraciones cloud.
-
-**7.2. Arquitectura híbrida**
-
-Una decisión relevante fue trabajar temporalmente con una arquitectura
-híbrida para resolver las dificultades de ingesta desde el entorno
-cloud.
-
-En este esquema, WF0 y WF1 pueden ejecutarse en n8n local para acceder a
-los documentos y realizar el procesamiento, mientras PostgreSQL
-permanece en Render y recibe los datos mediante una conexión externa.
-
-La ventaja es que permite continuar el desarrollo sin bloquear la
-ingesta por las limitaciones del entorno cloud.
-
-Las principales desventajas son:
-
-- Dependencia de que el equipo local esté encendido.
-
-- Dependencia de la conexión a Internet.
-
-- Mayor complejidad para monitorizar ejecuciones.
-
-- Necesidad de proteger las conexiones externas a la base de datos.
-
-- Menor autonomía operativa respecto a un despliegue totalmente cloud.
-
-Por tanto, la arquitectura híbrida debe entenderse como una decisión
-operativa documentada, cuyo alcance exacto depende del entorno que se
-encuentre activo.
+- Los límites de solicitudes establecidos por los proveedores.
 
-**7.3. Entorno local de desarrollo**
+- Las restricciones de acceso a determinados documentos de MIDAGRI.
 
-Se ha trabajado con Docker Compose para ejecutar servicios localmente.
-El entorno identificado contempla PostgreSQL con pgvector y n8n;
-anteriormente también se utilizó Arize Phoenix, que posteriormente se
-decidió retirar.
+- La disponibilidad de los modelos de inteligencia artificial.
 
-Durante las pruebas se identificó un error de autenticación de
-PostgreSQL relacionado con el usuario postgres y la configuración de las
-variables DB_POSTGRESDB\_\*. Este problema provocaba reinicios del
-contenedor de n8n y hacía que la interfaz local dejara de responder.
+- La correcta configuración de las credenciales y variables de entorno.
 
-La incidencia muestra la importancia de mantener sincronizadas las
-credenciales, la configuración de los contenedores y las variables de
-entorno.
+- La conectividad entre los servicios desplegados en diferentes
+  plataformas.
 
-**7.4. Variables de entorno y configuración**
+### 2.3. Restricciones operativas
 
-La configuración debe separarse por entorno para evitar mezclar valores
-locales con valores de producción.
+El funcionamiento de la plataforma depende de la correcta configuración
+de Vercel, Render, n8n, PostgreSQL y los servicios externos.
 
-Entre los elementos que deben gestionarse se encuentran:
+Los cambios realizados directamente en los servicios cloud o en la base
+de datos deben quedar documentados y registrados para evitar diferencias
+entre la infraestructura desplegada y la configuración almacenada en el
+repositorio Git.
 
-- URL del webhook de n8n.
+## 3. CONTEXTO Y ALCANCE
 
-- Credenciales de PostgreSQL.
+### 3.1. Contexto de negocio
 
-- Claves de los proveedores de IA.
+AgroSmart-Insights busca proporcionar una plataforma centralizada para
+consultar y analizar información relacionada con el sector agrícola.
 
-- Configuración de OpenRouter.
+La solución permite trabajar con información de precios, condiciones
+climáticas, monitoreo satelital, campañas agrícolas y alertas de riesgo.
 
-- Parámetros de conexión a Langfuse.
+Mediante la integración de fuentes externas y herramientas de
+inteligencia artificial, el sistema facilita el acceso a información que
+puede apoyar la planificación y toma de decisiones.
 
-- Direcciones de los servicios y puertos.
+### 3.2. Sistemas externos
 
-- Parámetros de seguridad y autenticación.
+La plataforma interactúa con los siguientes servicios:
 
-El error VITE_N8N_WEBHOOK_URL no está configurada detectado en el
-frontend confirma que la configuración del entorno es un requisito
-operativo importante.
+| **Sistema externo** | **Función dentro del proyecto** |
+|:--:|:--:|
+| MIDAGRI | Proporciona información agrícola, especialmente precios y documentos en formato PDF. |
+| Open-Meteo | Proporciona información meteorológica para los procesos relacionados con el clima. |
+| OpenRouter | Permite acceder a los modelos generativos utilizados por el asistente. |
+| MapTiler | Proporciona servicios cartográficos para la visualización de mapas en el frontend. |
+| Copernicus | Fuente relacionada con información e imágenes satelitales. |
 
-Las claves y contraseñas no deben almacenarse en el repositorio ni
-incorporarse a los diagramas de arquitectura.
+### 3.3. Límites del sistema
 
-**7.5. Consideraciones para producción**
+Dentro del alcance de AgroSmart-Insights se encuentran:
 
-Antes de considerar estable el despliegue, deben verificarse:
+- La aplicación web.
 
-1.  La ubicación efectiva de WF0, WF1 y WF2.
+- Los cinco microfrontends.
 
-2.  La conectividad entre los workflows y PostgreSQL.
+- Los seis workflows de n8n.
 
-3.  La protección de las conexiones externas.
+- La base de datos PostgreSQL.
 
-4.  La disponibilidad de los endpoints requeridos.
+- La extensión pgvector.
 
-5.  La configuración de las variables de entorno.
+- La integración con modelos generativos.
 
-6.  La persistencia de los datos ante reinicios.
+- La implementación del enfoque RAG.
 
-7.  La política de respaldos y recuperación.
+- La herramienta de observabilidad Langfuse.
 
-8.  Los límites de recursos y el consumo de memoria.
+Los servicios externos, como MIDAGRI, Open-Meteo, OpenRouter, MapTiler y
+Copernicus, se consideran dependencias externas del sistema.
 
-9.  La monitorización de errores y latencias.
+### 3.4. Usuarios y canales de acceso
 
-10. La posibilidad de desplegar y actualizar los servicios de forma
-    controlada.
+El principal canal de acceso es la aplicación web, desarrollada con
+React y Vite y desplegada mediante Vercel.
 
-**8. Crosscutting Concepts — Conceptos transversales**
+Desde esta interfaz, los usuarios pueden ingresar a los diferentes
+módulos y utilizar las funcionalidades disponibles.
 
-**8.1. Gestión de sesiones**
+La comunicación con los procesos backend se realiza mediante endpoints y
+webhooks que permiten ejecutar los workflows correspondientes en n8n.
 
-Las consultas de WF2 utilizan un identificador de sesión para distinguir
-las interacciones y asociar el contexto correspondiente.
+## 4. ESTRATEGIA DE SOLUCIÓN
 
-El flujo valida la presencia de body.session_id. La gestión de sesiones
-debe garantizar que el contexto de un usuario no se mezcle con el de
-otro.
+### 4.1. Separación por responsabilidades
 
-Se identificó una configuración de memoria conversacional mediante una
-clave de sesión. La implementación definitiva debe comprobar que la
-clave se derive correctamente de la solicitud y no utilice un
-identificador fijo compartido por todos los usuarios.
+La arquitectura de AgroSmart-Insights se organiza en diferentes capas
+que permiten distribuir las responsabilidades del sistema.
 
-**8.2. Recuperación aumentada por generación (RAG)**
+Capa de presentación
 
-La recuperación aumentada por generación permite que el modelo de
-lenguaje utilice información recuperada desde una base documental.
+Está desarrollada con React y Vite. Organiza la interfaz mediante cinco
+microfrontends especializados.
 
-En AgroSmart Insights, el proceso combina:
+Capa de automatización
 
-1.  Preparación y fragmentación de documentos.
+Utiliza n8n para ejecutar seis workflows encargados de gestionar
+procesos de ingesta, consultas y funcionalidades específicas.
 
-2.  Generación de embeddings.
+Capa de almacenamiento
 
-3.  Almacenamiento vectorial en PostgreSQL con pgvector.
+Utiliza PostgreSQL para almacenar información estructurada y pgvector
+para almacenar y consultar representaciones vectoriales.
 
-4.  Recuperación de fragmentos relevantes.
+Capa de inteligencia artificial
 
-5.  Construcción del contexto para el modelo de lenguaje.
+Implementa un enfoque RAG que permite recuperar información relevante
+desde la base de datos y utilizarla como contexto para generar
+respuestas.
 
-6.  Generación de la respuesta.
+Capa de observabilidad
 
-El objetivo es mejorar la pertinencia de las respuestas mediante
-información relacionada con la consulta, sin asumir que la recuperación
-elimina por completo las alucinaciones.
+Utiliza Langfuse para supervisar las ejecuciones de inteligencia
+artificial, incluyendo trazas, latencia, consumo de tokens y errores.
 
-**8.3. Clasificación de consultas**
+### 4.2. Organización de los microfrontends
 
-El clasificador permite seleccionar la rama de ejecución en función de
-la intención del usuario.
+La aplicación está organizada en cinco microfrontends:
 
-La salida debe mantener una estructura predecible, con campos como
-producto, período, tipo de consulta y lugar. Se ha trabajado con una
-salida JSON estricta para facilitar el procesamiento posterior en n8n.
+| **Microfrontend** | **Función** |
+|:--:|:--:|
+| Monitoreo Satelital | Permite visualizar información geográfica y funcionalidades relacionadas con el monitoreo satelital. |
+| Mercados | Presenta información relacionada con precios y mercados agrícolas. |
+| Chat | Permite realizar consultas en lenguaje natural mediante un asistente inteligente. |
+| Calendario | Presenta campañas, eventos y actividades agrícolas. |
+| Alertas | Permite consultar alertas relacionadas con riesgos y condiciones agrícolas. |
 
-La validación debe incluir preguntas ambiguas, errores ortográficos,
-entradas incompletas y consultas que no correspondan a las capacidades
-disponibles.
+Esta organización permite separar las funcionalidades de la interfaz y
+facilitar su mantenimiento y evolución.
 
-**8.4. Integración de servicios externos**
+### 4.3. Estrategia de automatización mediante n8n
 
-Las APIs de proveedores externos deben tratarse como dependencias que
-pueden fallar, responder lentamente o imponer límites de uso.
+El backend utiliza seis workflows para organizar los procesos
+principales de la plataforma.
 
-Se recomienda:
+Cada workflow tiene una responsabilidad funcional específica y permite
+conectar diferentes servicios, consultar información y ejecutar
+operaciones sobre la base de datos.
 
-- Definir tiempos de espera.
+La distribución es la siguiente:
 
-- Registrar los errores relevantes.
+| **Workflow** |          **Función principal**           |
+|:------------:|:----------------------------------------:|
+|     WF0      |      Ingesta documental de MIDAGRI.      |
+|     WF1      |    Ingesta diaria de precios y clima.    |
+|     WF2      |    API de Chat y análisis predictivo.    |
+|     WF3      | Procesos backend de Monitoreo Satelital. |
+|     WF4      |  Procesos relacionados con Calendario.   |
+|     WF5      |    Procesos relacionados con Alertas.    |
 
-- Limitar los reintentos.
+### 4.4. Estrategia de inteligencia artificial
 
-- Evitar reintentos que dupliquen operaciones de escritura.
+El sistema utiliza el enfoque RAG (Retrieval-Augmented Generation),
+también conocido como generación aumentada por recuperación.
 
-- Validar la estructura de las respuestas.
+Esta técnica permite que el asistente no dependa únicamente del
+conocimiento interno del modelo generativo, sino que también pueda
+consultar información almacenada en la base de datos.
 
-- Medir el coste y la latencia de cada proveedor.
+El proceso consiste en preparar documentos, dividirlos en fragmentos,
+generar embeddings y almacenarlos en PostgreSQL mediante pgvector.
 
-- Mantener las credenciales fuera del código.
+Cuando el usuario realiza una consulta, el sistema recupera los
+fragmentos más relevantes y los utiliza como contexto para generar una
+respuesta.
 
-Si se utiliza OpenRouter para acceder a un modelo, la documentación debe
-identificar tanto el proveedor de acceso como el modelo final invocado.
-No deben confundirse ambos conceptos.
+Para la generación de respuestas, el proyecto utiliza OpenRouter como
+plataforma de acceso a modelos de inteligencia artificial.
 
-**8.5. Seguridad**
+La configuración comunicada contempla:
 
-La seguridad debe aplicarse a toda la arquitectura, no solo al frontend.
+- Ling 3.0 Flash: modelo principal.
 
-Las principales áreas de control son:
+- Qwen 3.6 Plus: modelo alternativo de respaldo (failover).
 
-- Validación de solicitudes entrantes.
+El mecanismo de failover permite utilizar un modelo alternativo cuando
+el principal presenta problemas de disponibilidad o ejecución, siempre
+que esta lógica esté correctamente configurada en el backend.
 
-- Protección de webhooks.
+### 4.5. Estrategia de despliegue
 
-- Gestión de sesiones.
+La arquitectura utiliza diferentes plataformas para desplegar y ejecutar
+sus componentes.
 
-- Gestión segura de credenciales.
+El frontend se publica mediante Vercel, mientras que los workflows de
+n8n se ejecutan en Render.
 
-- Restricción de conexiones a PostgreSQL.
+PostgreSQL se utiliza como sistema de almacenamiento y Langfuse como
+herramienta de observabilidad.
 
-- Revisión de dependencias.
+La configuración de infraestructura debe mantenerse documentada y
+sincronizada con el repositorio para facilitar la administración y
+recuperación del sistema.
 
-- Control de permisos en el repositorio.
+## 5. VISTA DE BLOQUES DE CONSTRUCCIÓN
 
-- Protección de datos sensibles en los registros.
+### 5.1. Nivel 1: sistema completo
 
-- Validación de las entradas y salidas de los modelos.
+AgroSmart-Insights se compone de una aplicación web que permite a los
+usuarios acceder a sus funcionalidades mediante cinco microfrontends.
 
-El hecho de que un endpoint esté desplegado no significa que se
-encuentre protegido. Los mecanismos de autenticación y autorización
-deben documentarse a partir de su implementación efectiva.
+La aplicación se comunica con una capa backend desarrollada mediante
+workflows de n8n, encargada de coordinar las operaciones y conexiones
+con servicios externos.
 
-**8.6. Observabilidad**
+Los resultados y la información procesada se almacenan en PostgreSQL,
+mientras que pgvector permite realizar búsquedas vectoriales utilizadas
+por el sistema RAG.
 
-Langfuse es la plataforma seleccionada para centralizar la
-observabilidad de las interacciones de IA.
+Además, OpenRouter proporciona acceso a los modelos generativos y
+Langfuse permite supervisar las ejecuciones de inteligencia artificial.
 
-El diseño de medición debe permitir analizar:
+### 5.2. Nivel 2: componentes principales
 
-- Latencia por interacción.
+| **Componente** | **Tecnología** | **Responsabilidad** |
+|:--:|:--:|:--:|
+| Aplicación web | React + Vite | Presentación y navegación principal. |
+| Monitoreo Satelital | Microfrontend | Visualización geográfica y funciones de monitoreo. |
+| Mercados | Microfrontend | Consulta de información de precios. |
+| Chat | Microfrontend | Consultas mediante lenguaje natural. |
+| Calendario | Microfrontend | Consulta de campañas y eventos. |
+| Alertas | Microfrontend | Presentación de alertas agrícolas. |
+| Automatización | n8n | Ejecución de workflows. |
+| Base de datos | PostgreSQL | Almacenamiento de información. |
+| Búsqueda vectorial | pgvector | Almacenamiento y recuperación de embeddings. |
+| Observabilidad | Langfuse | Seguimiento de ejecuciones de IA. |
+| Modelos generativos | OpenRouter | Acceso a modelos de lenguaje. |
 
-- Consumo de tokens de entrada y salida.
+### 5.3. Nivel 3: descripción de los workflows
 
-- Modelo utilizado.
+**WF0 – Ingesta documental MIDAGRI**
 
-- Errores de generación o recuperación.
+Este workflow se encarga de obtener y procesar documentos provenientes
+de MIDAGRI.
 
-- Calidad de la respuesta frente a datos de referencia.
+Su finalidad es preparar la información documental para que pueda
+utilizarse posteriormente en el sistema RAG.
 
-- Coste estimado de las llamadas, cuando el proveedor proporcione
-  información suficiente.
+El proceso contempla la obtención de documentos, extracción de
+contenido, división en fragmentos, generación de embeddings y
+almacenamiento de la información en PostgreSQL con pgvector.
 
-La latencia total debe distinguirse de la latencia del modelo. Una
-consulta puede consumir tiempo en el frontend, el webhook, la base de
-datos, la recuperación vectorial y el proveedor de IA.
+**WF1 – Ingesta diaria de precios y clima**
 
-**9. Decisiones arquitectónicas**
+Este workflow se encarga de actualizar información relacionada con
+precios agrícolas y condiciones climáticas.
 
-Las decisiones más relevantes se resumen en la siguiente tabla. Los
-registros constituyen una consolidación del proceso conocido; no todos
-corresponden necesariamente a ADRs formales ya creados en el
+Utiliza MIDAGRI como fuente de información de precios y Open-Meteo como
+fuente de información meteorológica.
+
+Los datos obtenidos se procesan y almacenan en la base de datos para que
+puedan ser utilizados por los diferentes módulos de la plataforma.
+
+**WF2 – API de Chat y análisis predictivo**
+
+Este workflow gestiona las consultas realizadas desde el microfrontend
+Chat.
+
+Recibe las solicitudes del usuario, valida la información de sesión,
+identifica el tipo de consulta y determina qué proceso debe ejecutarse.
+
+Dependiendo de la consulta, puede recuperar información documental
+mediante RAG, consultar información almacenada en PostgreSQL o utilizar
+servicios de inteligencia artificial.
+
+La generación de respuestas utiliza OpenRouter, con Ling 3.0 Flash como
+modelo principal y Qwen 3.6 Plus como alternativa de respaldo, de
+acuerdo con la configuración comunicada por el equipo.
+
+**WF3 – Monitoreo Satelital**
+
+Este workflow gestiona los procesos backend relacionados con el módulo
+de Monitoreo Satelital.
+
+Su función es coordinar las operaciones necesarias para procesar o
+consultar información relacionada con el monitoreo.
+
+La visualización cartográfica se realiza directamente desde el frontend
+mediante MapTiler. Por lo tanto, MapTiler no debe considerarse un
+proceso de ingesta o procesamiento ejecutado dentro de n8n.
+
+**WF4 – Calendario**
+
+Este workflow gestiona los procesos relacionados con el módulo
+Calendario.
+
+Permite organizar y proporcionar información relacionada con campañas,
+eventos y actividades agrícolas para su presentación en la aplicación
+web.
+
+**WF5 – Alertas**
+
+Este workflow gestiona los procesos relacionados con el módulo de
+Alertas.
+
+Su responsabilidad es procesar y administrar información utilizada para
+identificar y presentar alertas de riesgo.
+
+De acuerdo con la información proporcionada por el equipo, este workflow
+utiliza estructuras de datos relacionadas con alertas_riesgo.
+
+### 5.4. Persistencia y estructuras de datos
+
+La plataforma utiliza PostgreSQL como sistema principal de
+almacenamiento.
+
+La extensión pgvector permite almacenar embeddings y realizar búsquedas
+por similitud, facilitando la recuperación de información utilizada por
+el sistema RAG.
+
+Entre las estructuras identificadas se encuentra documentos_rag,
+utilizada para almacenar información documental destinada a la
+recuperación.
+
+En el módulo de alertas se utilizan tablas relacionadas con
+alertas_riesgo.
+
+También se han identificado las siguientes tablas:
+
+- alert_rules
+
+- risk_alerts
+
+- alert_status_history
+
+Estas tablas fueron creadas manualmente y su utilización desde el
+repositorio no está confirmada. Por ello, su conservación o eliminación
+debe ser evaluada por el equipo de desarrollo y DevOps antes de realizar
+cualquier modificación.
+
+### 5.5. Interfaces entre componentes
+
+Los principales mecanismos de comunicación son:
+
+- El frontend se comunica con los workflows mediante solicitudes HTTP y
+  webhooks.
+
+- Los workflows consultan y actualizan información en PostgreSQL.
+
+- Los procesos de ingesta consumen información de servicios externos.
+
+- El sistema RAG recupera información mediante pgvector.
+
+- OpenRouter proporciona acceso a los modelos generativos.
+
+- Langfuse recibe información de observabilidad de las ejecuciones de
+  inteligencia artificial.
+
+## 6. VISTA DE EJECUCIÓN
+
+### 6.1. Flujo general de una interacción
+
+El funcionamiento general de la plataforma sigue el siguiente proceso:
+
+1.  El usuario ingresa a AgroSmart-Insights desde la aplicación web.
+
+2.  Selecciona uno de los cinco microfrontends disponibles.
+
+3.  El frontend envía una solicitud al endpoint o webhook
+    correspondiente.
+
+4.  n8n recibe la solicitud y ejecuta el workflow asociado.
+
+5.  El workflow realiza las operaciones necesarias, como consultar la
+    base de datos o consumir servicios externos.
+
+6.  PostgreSQL almacena o proporciona la información requerida.
+
+7.  El resultado se devuelve al frontend.
+
+8.  La aplicación presenta la información al usuario.
+
+### 6.2. Flujo de consulta del Chat mediante RAG
+
+El flujo de consulta del asistente inteligente funciona de la siguiente
+manera:
+
+1.  El usuario ingresa una pregunta desde el microfrontend Chat.
+
+2.  La solicitud llega al WF2 mediante el endpoint correspondiente.
+
+3.  El workflow valida los datos de sesión y procesa la consulta.
+
+4.  El sistema identifica el tipo de consulta y determina qué
+    información necesita.
+
+5.  Cuando corresponde utilizar RAG, se realiza una búsqueda de
+    fragmentos relevantes en PostgreSQL mediante pgvector.
+
+6.  La información recuperada se incorpora como contexto para el modelo
+    generativo.
+
+7.  OpenRouter permite acceder al modelo configurado para generar la
+    respuesta.
+
+8.  El resultado se devuelve al usuario.
+
+9.  Langfuse registra las trazas y métricas disponibles de la ejecución.
+
+Es importante señalar que RAG permite proporcionar información de
+referencia al modelo, pero no garantiza por sí solo que todas las
+respuestas sean correctas. Para evaluar la exactitud se requiere
+comparar las respuestas con información de referencia o Ground Truth.
+
+### 6.3. Flujo de ingesta documental
+
+El proceso de ingesta documental se ejecuta mediante WF0.
+
+Su funcionamiento general contempla:
+
+1.  Obtener documentos provenientes de MIDAGRI.
+
+2.  Extraer el contenido de los documentos.
+
+3.  Preparar y dividir la información en fragmentos.
+
+4.  Generar embeddings mediante el modelo de representación vectorial
+    configurado.
+
+5.  Almacenar los fragmentos y sus metadatos en PostgreSQL.
+
+6.  Registrar sus representaciones vectoriales mediante pgvector.
+
+De esta manera, la información queda disponible para las consultas
+posteriores del sistema RAG.
+
+El modelo de embeddings debe documentarse de manera independiente de los
+modelos generativos utilizados por el Chat.
+
+### 6.4. Flujo de ingesta de precios y clima
+
+El WF1 se encarga de obtener y actualizar información procedente de
+fuentes externas.
+
+Para ello utiliza:
+
+- MIDAGRI, para obtener información de precios agrícolas.
+
+- Open-Meteo, para obtener información meteorológica.
+
+Una vez obtenida la información, el workflow realiza el procesamiento
+correspondiente y almacena los resultados en PostgreSQL.
+
+Esta información puede ser utilizada posteriormente por los módulos de
+Mercados, Chat y otras funcionalidades que requieran datos agrícolas.
+
+### 6.5. Flujos de módulos especializados
+
+WF3 – Monitoreo Satelital
+
+Ejecuta los procesos backend relacionados con el monitoreo satelital. La
+interfaz utiliza MapTiler directamente para mostrar información
+cartográfica.
+
+WF4 – Calendario
+
+Gestiona las operaciones relacionadas con campañas, eventos y
+actividades agrícolas.
+
+WF5 – Alertas
+
+Gestiona los procesos de alertas de riesgo y utiliza las estructuras de
+almacenamiento correspondientes al módulo.
+
+**6.6. Manejo de errores**
+
+Los workflows deben contemplar mecanismos para identificar errores
+durante la ejecución.
+
+Entre los principales escenarios se encuentran:
+
+- Fallas de conexión con servicios externos.
+
+- Errores de comunicación con PostgreSQL.
+
+- Problemas de disponibilidad de modelos generativos.
+
+- Errores durante la descarga o procesamiento de documentos.
+
+- Solicitudes incompletas o inválidas.
+
+- Fallas en la ejecución de los workflows.
+
+El sistema debe registrar los errores y permitir su identificación para
+facilitar el mantenimiento y la recuperación de los servicios.
+
+## 7. VISTA DE DESPLIEGUE
+
+### 7.1. Infraestructura principal
+
+La arquitectura de despliegue está distribuida entre diferentes
+servicios:
+
+| **Componente** | **Plataforma** | **Función** |
+|:--:|:--:|:--:|
+| Aplicación frontend | Vercel | Publicación de la aplicación web. |
+| Automatización backend | Render | Ejecución de los workflows n8n. |
+| Base de datos | PostgreSQL | Almacenamiento de información. |
+| Búsqueda vectorial | pgvector | Recuperación de información mediante vectores. |
+| Observabilidad | Langfuse | Supervisión de ejecuciones de IA. |
+| Modelos generativos | OpenRouter | Acceso a modelos de lenguaje. |
+
+### 7.2. Comunicación entre servicios
+
+La aplicación frontend se comunica con los workflows alojados en Render
+mediante endpoints y webhooks.
+
+Los workflows realizan operaciones sobre PostgreSQL y se conectan con
+los servicios externos que requieren para obtener información.
+
+Las comunicaciones entre servicios deben utilizar conexiones seguras y
+mecanismos adecuados para proteger las credenciales.
+
+### 7.3. Puente de comunicación mediante Ngrok
+
+Durante la integración del proyecto se implementó un mecanismo de
+comunicación mediante Ngrok.
+
+Este mecanismo permite exponer temporalmente un servicio que se ejecuta
+en un equipo local para que pueda ser utilizado desde un workflow
+alojado en Render.
+
+Su utilización está relacionada con las restricciones de acceso
+encontradas durante la descarga de documentos de MIDAGRI desde el
+entorno cloud.
+
+Ngrok funciona como un túnel de comunicación que permite conectar ambos
+entornos. No realiza directamente la descarga ni el procesamiento de los
+documentos.
+
+Esta solución presenta una dependencia operativa, ya que requiere que el
+equipo local, el servicio auxiliar, la conexión a Internet y el túnel
+permanezcan disponibles.
+
+Además, el código y la configuración de este puente no se encuentran
+completamente representados en el repositorio del proyecto, según lo
+informado por DevOps.
+
+### 7.4. Configuración y seguridad
+
+Las credenciales, claves API, tokens y URLs de webhooks deben
+gestionarse mediante variables de entorno o mecanismos seguros de
+configuración.
+
+No se deben almacenar datos sensibles directamente en el código fuente
+ni publicarlos en el repositorio.
+
+Los servicios deben utilizar los permisos mínimos necesarios para
+realizar sus operaciones.
+
+### 7.5. Consideraciones para producción y respaldos
+
+El proyecto cuenta con una estrategia de respaldo documentada en el
+archivo ESTRATEGIA-RESPALDO.md.
+
+Este documento establece los procedimientos relacionados con la
+protección y recuperación de la información del sistema.
+
+La estrategia debe contemplar los datos almacenados en PostgreSQL y los
+recursos necesarios para reconstruir el entorno de trabajo.
+
+Sin embargo, es importante diferenciar entre tener un procedimiento
+documentado y haber comprobado que funciona correctamente.
+
+Por ello, el equipo de QA debe ejecutar pruebas de restauración
+utilizando cuentas y entornos de prueba, verificar la información
+recuperada y compararla con el archivo MANIFIESTO.md.
+
+Asimismo, se debe controlar que los cambios realizados directamente en
+Render o PostgreSQL queden registrados y sincronizados con el
 repositorio.
 
-<table style="width:99%;">
-<colgroup>
-<col style="width: 11%" />
-<col style="width: 22%" />
-<col style="width: 26%" />
-<col style="width: 39%" />
-</colgroup>
-<thead>
-<tr>
-<th style="text-align: left;"><p><strong>ID</strong></p></th>
-<th style="text-align: left;"><p><strong>Decisión</strong></p></th>
-<th style="text-align: left;"><p><strong>Justificación</strong></p></th>
-<th style="text-align: left;"><blockquote>
-<p><strong>Consecuencia principal</strong></p>
-</blockquote></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;"><p>ADR-01</p></td>
-<td style="text-align: left;"><p>Utilizar React y Vite en el
-frontend</p></td>
-<td style="text-align: left;"><p>Facilitar la construcción y evolución
-de la interfaz.</p></td>
-<td style="text-align: left;"><p>Requiere gestionar correctamente las
-variables de entorno y la integración con los webhooks.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR-02</p></td>
-<td style="text-align: left;"><p>Utilizar n8n para orquestar los
-procesos</p></td>
-<td style="text-align: left;"><p>Permitir la automatización y
-visualización de flujos complejos.</p></td>
-<td style="text-align: left;"><p>La lógica debe mantenerse ordenada y
-los workflows deben versionarse y probarse.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR-03</p></td>
-<td style="text-align: left;"><p>Utilizar PostgreSQL con
-pgvector</p></td>
-<td style="text-align: left;"><p>Unificar datos estructurados y
-recuperación vectorial.</p></td>
-<td style="text-align: left;"><p>Simplifica la infraestructura, pero
-exige administrar índices, esquemas y rendimiento.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR-04</p></td>
-<td style="text-align: left;"><p>Separar WF0, WF1 y WF2</p></td>
-<td style="text-align: left;"><p>Diferenciar ingesta documental,
-actualización diaria y consultas interactivas.</p></td>
-<td style="text-align: left;"><p>Facilita el mantenimiento, pero
-requiere coordinar contratos y dependencias.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR-05</p></td>
-<td style="text-align: left;"><p>Mantener una arquitectura híbrida
-durante la ingesta</p></td>
-<td style="text-align: left;"><p>Superar dificultades de acceso y
-procesamiento de documentos desde el entorno cloud.</p></td>
-<td style="text-align: left;"><p>Permite continuar el desarrollo, aunque
-introduce dependencia del equipo local.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR-06</p></td>
-<td style="text-align: left;"><p>Utilizar Vercel y Render en la
-estrategia cloud</p></td>
-<td style="text-align: left;"><p>Separar el alojamiento del frontend y
-los servicios de datos e infraestructura.</p></td>
-<td style="text-align: left;"><p>Exige administrar conectividad,
-configuración y despliegues entre servicios.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR-07</p></td>
-<td style="text-align: left;"><p>Incorporar un mecanismo RAG</p></td>
-<td style="text-align: left;"><p>Recuperar información documental
-relevante para las consultas.</p></td>
-<td style="text-align: left;"><p>La calidad depende de la ingesta, los
-embeddings y la recuperación.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR-08</p></td>
-<td style="text-align: left;"><p>Incorporar Langfuse y retirar
-Phoenix</p></td>
-<td style="text-align: left;"><p>Concentrar la observabilidad de las
-interacciones de IA.</p></td>
-<td style="text-align: left;"><p>Reduce la duplicidad de herramientas,
-pero requiere una instrumentación consistente.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR-09</p></td>
-<td style="text-align: left;"><p>Evaluar y ajustar los modelos de IA y
-embeddings</p></td>
-<td style="text-align: left;"><p>Mejorar el procesamiento de consultas y
-la recuperación semántica.</p></td>
-<td style="text-align: left;"><p>Obliga a validar compatibilidad,
-calidad, coste y rendimiento ante cambios de modelos.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR-10</p></td>
-<td style="text-align: left;"><p>Medir precisión y rendimiento con un
-conjunto de referencia</p></td>
-<td style="text-align: left;"><p>Evitar evaluar la calidad únicamente
-por impresiones subjetivas.</p></td>
-<td style="text-align: left;"><p>Requiere datos de referencia confiables
-y pruebas reproducibles.</p></td>
-</tr>
-</tbody>
-</table>
+Documento relacionado: ESTRATEGIA-RESPALDO.md.
 
-**9.1. Registro detallado de decisiones**
+## 8. CONCEPTOS TRANSVERSALES
 
-**ADR-04 — Separación de workflows**
+### 8.1. Seguridad
 
-**Contexto:** la ingesta de datos y la atención de consultas tienen
-necesidades diferentes. La ingesta es periódica y depende de fuentes
-externas; las consultas requieren una respuesta interactiva.
+La seguridad del sistema se basa en proteger la información y controlar
+el acceso a los diferentes componentes.
 
-**Decisión:** dividir las responsabilidades entre WF0, WF1 y WF2.
+Se deben considerar las siguientes medidas:
 
-**Consecuencias positivas:**
+- Protección de credenciales y claves API.
 
-- Mayor claridad de responsabilidades.
+- Validación de solicitudes recibidas por los webhooks.
 
-- Posibilidad de ejecutar y depurar procesos por separado.
+- Control de sesiones de usuario.
 
-- Menor dependencia entre la actualización de datos y la consulta
-  interactiva.
+- Protección de las conexiones con la base de datos.
 
-**Consecuencias negativas:**
+- Gestión adecuada de permisos.
 
-- Más componentes que mantener.
+- Evitar la exposición innecesaria de servicios locales.
 
-- Necesidad de controlar la consistencia de los datos.
+### 8.2. Observabilidad
 
-- Dependencia de contratos claros entre los procesos.
+AgroSmart-Insights utiliza Langfuse como herramienta de observabilidad
+para las funcionalidades relacionadas con inteligencia artificial.
 
-**ADR-05 — Arquitectura híbrida para la ingesta**
+Esta herramienta permite realizar seguimiento de:
 
-**Contexto:** durante el desarrollo se presentaron dificultades para
-procesar y obtener documentos de MIDAGRI desde el entorno cloud.
+- Trazas de ejecución.
 
-**Decisión:** ejecutar determinados procesos de ingesta localmente y
-mantener la posibilidad de escribir los resultados en PostgreSQL alojado
-en Render.
+- Latencia de las consultas.
 
-**Consecuencias positivas:**
+- Consumo de tokens.
 
-- Permite continuar las pruebas.
+- Errores durante la generación de respuestas.
 
-- Aprovecha el entorno local para procesos que presentan dificultades en
-  la nube.
+- Comportamiento de las ejecuciones instrumentadas.
 
-**Consecuencias negativas:**
+La medición de alucinaciones requiere un proceso adicional de
+evaluación, donde las respuestas del asistente se comparan con
+información de referencia.
 
-- La ingesta puede detenerse si el equipo local no está disponible.
+### 8.3. Gestión de datos
 
-- Aumenta la complejidad operativa.
+La información obtenida de fuentes externas se procesa y almacena en
+PostgreSQL.
 
-- Es necesario proteger la conexión externa a la base de datos.
+Los datos deben mantener información relacionada con su procedencia y
+contexto, permitiendo facilitar su consulta y actualización.
 
-> **Evolución futura:** evaluar una alternativa de ejecución gestionada
-> en la nube que elimine la dependencia del equipo local.
->
-> **ADR-08 — Langfuse como plataforma de observabilidad**
->
-> **Contexto:** se había considerado Arize Phoenix y posteriormente se
-> decidió retirarlo.
->
-> **Decisión:** mantener Langfuse como plataforma principal de
-> observabilidad de las interacciones con IA.
->
-> **Consecuencias positivas:**
+Los cambios realizados en las estructuras de la base de datos deben
+quedar documentados mediante scripts, migraciones o archivos de
+configuración versionados.
 
-- Centralización de las métricas de IA.
+### 8.4. Inteligencia artificial y RAG
 
-- Menor duplicidad de herramientas.
+La arquitectura RAG permite combinar la recuperación de información con
+la generación de respuestas mediante modelos de lenguaje.
 
-- Facilita relacionar el rendimiento con el comportamiento de los
-  modelos.
+Su funcionamiento requiere diferenciar tres componentes:
 
-> **Consecuencias negativas:**
+1.  Modelo de embeddings: transforma los documentos en representaciones
+    vectoriales.
 
-- La utilidad de las métricas depende de la instrumentación.
+2.  pgvector: almacena y permite consultar las representaciones
+    vectoriales.
 
-- Deben controlarse el coste y la retención de los registros.
+3.  Modelo generativo: utiliza la información recuperada para generar
+    respuestas.
 
-- Los datos registrados deben protegerse adecuadamente.
+Estos componentes cumplen funciones diferentes y deben mantenerse
+identificados dentro de la documentación técnica.
 
-**ADR-09 — Evolución de modelos de IA y embeddings**
+### 8.5. Configuración de modelos y failover
 
-**Contexto:** durante el desarrollo se han revisado las integraciones
-con proveedores de modelos y la estrategia de embeddings. La
-actualización más reciente menciona Jina Embeddings v3 y el acceso a un
-modelo de lenguaje mediante OpenRouter.
+La configuración comunicada por el equipo utiliza OpenRouter como
+plataforma de acceso a modelos generativos.
 
-**Decisión:** mantener una arquitectura que permita configurar y cambiar
-modelos sin rediseñar toda la aplicación.
+Los modelos contemplados son:
 
-**Consecuencias positivas:**
+- Ling 3.0 Flash como modelo principal.
 
-- Mayor flexibilidad para evaluar alternativas.
+- Qwen 3.6 Plus como modelo alternativo de respaldo.
 
-- Posibilidad de comparar calidad, latencia y consumo.
+El mecanismo de failover permite cambiar al modelo alternativo cuando el
+modelo principal presenta problemas de disponibilidad o ejecución.
 
-- Menor acoplamiento de la arquitectura a un único proveedor.
+Esta configuración debe mantenerse sincronizada con los parámetros
+reales del backend, verificando los identificadores exactos de los
+modelos y las condiciones que activan el cambio.
 
-**Consecuencias negativas:**
+### 8.6. Documentación y control de cambios
 
-- Las APIs y los modelos pueden tener comportamientos diferentes.
+La documentación arquitectónica debe actualizarse cada vez que se
+incorporen nuevos componentes, se modifiquen los workflows o se realicen
+cambios importantes en la infraestructura.
 
-- Los cambios de embeddings pueden requerir regenerar los vectores
-  existentes.
+Los cambios deben registrarse en Git mediante ramas y pull requests,
+permitiendo revisar y aprobar las modificaciones antes de incorporarlas
+a la rama principal.
 
-- Los cambios de modelo pueden modificar la calidad, el coste y la
-  latencia.
+## 9. DECISIONES ARQUITECTÓNICAS
 
-- La configuración debe mantenerse sincronizada con la documentación.
+Esta sección registra las principales decisiones relacionadas con la
+estructura y funcionamiento de AgroSmart-Insights.
 
-**Control requerido:** cada cambio de modelo debe registrarse con el
-identificador exacto, fecha, motivo, pruebas realizadas y resultado de
-la comparación.
+Las decisiones que todavía requieren aprobación deben mantenerse
+identificadas como pendientes hasta que el equipo las confirme.
 
-**10. Requisitos de calidad**
+| **ID** | **Decisión arquitectónica** | **Estado** |
+|:--:|:--:|:--:|
+| ADR-01 | Organizar la aplicación mediante cinco microfrontends. | Implementada, según la arquitectura actual. |
+| ADR-02 | Utilizar seis workflows en n8n para automatizar los procesos del sistema. | Implementada, según la arquitectura actual. |
+| ADR-03 | Utilizar PostgreSQL como sistema principal de almacenamiento. | Implementada. |
+| ADR-04 | Incorporar pgvector para la recuperación vectorial del sistema RAG. | Implementada. |
+| ADR-05 | Utilizar OpenRouter para acceder a los modelos generativos. | Configuración comunicada; verificar identificadores y failover. |
+| ADR-06 | Utilizar Langfuse para observabilidad de IA. | Implementada. |
+| ADR-07 | Utilizar Ngrok como puente temporal de comunicación con un servicio local. | Implementada como solución operativa; requiere evaluación. |
+| ADR-08 | Definir la infraestructura cloud definitiva. | Pendiente de decisión formal. |
+| ADR-09 | Determinar si se conservan las tablas de alertas en inglés. | Pendiente de revisión. |
 
-**10.1. Rendimiento**
+### 9.1. Decisión sobre infraestructura cloud
 
-El objetivo de rendimiento definido para el Sprint 2 es mantener el
-percentil 95 de latencia por debajo de cuatro segundos.
+El equipo debe evaluar las alternativas de infraestructura considerando:
 
-Para evaluar este requisito, se debe establecer un protocolo
-reproducible que contemple:
+- Costos de alojamiento.
 
-- Un conjunto representativo de consultas.
+- Disponibilidad de los servicios.
 
-- El número de ejecuciones.
+- Capacidad de procesamiento.
 
-- La latencia total observada por el usuario.
+- Facilidad de mantenimiento.
 
-- La latencia por etapa, cuando esté disponible.
+- Seguridad.
 
-- Las condiciones de concurrencia.
+- Escalabilidad.
 
-- Los errores y los tiempos de espera.
+- Estrategia de respaldo y recuperación.
 
-El percentil 95 significa que el 95 % de las observaciones está en o por
-debajo del valor medido. No equivale al tiempo promedio ni garantiza que
-todas las consultas terminen en menos de cuatro segundos.
+La decisión final debe documentarse mediante un registro de decisión
+arquitectónica o ADR, indicando la alternativa seleccionada y las
+razones que justifican su elección.
 
-**10.2. Precisión numérica**
+### 9.2. Decisión sobre el uso de OpenRouter
 
-Se ha definido un conjunto de 50 preguntas sobre precios agrícolas para
-comparar las respuestas del sistema con datos de referencia almacenados
-en PostgreSQL.
+El uso de OpenRouter requiere evaluar los costos asociados al consumo de
+modelos generativos.
 
-El objetivo es obtener una precisión numérica del 100 % en ese conjunto.
+La evaluación debe considerar:
 
-La evaluación debe definir previamente:
+- Consumo de tokens.
 
-- El producto consultado.
+- Disponibilidad de los modelos.
 
-- El mercado o lugar cuando corresponda.
+- Calidad de las respuestas.
 
-- La fecha de referencia.
+- Latencia.
 
-- La unidad de medida.
+- Límites de uso.
 
-- La moneda.
+- Costos de los modelos.
 
-- El valor esperado.
+- Funcionamiento del mecanismo de failover.
 
-- Las reglas para aceptar formatos equivalentes.
+La decisión de contratar un plan o asumir costos recurrentes debe ser
+aprobada por el equipo y documentada formalmente.
 
-Una respuesta que utiliza el producto correcto pero la fecha equivocada
-no debe considerarse correcta. De igual manera, las unidades deben
-compararse de forma consistente.
+### 9.3. Decisión sobre las tablas de alertas
 
-La evaluación debe distinguir la exactitud numérica de la utilidad
-general de una respuesta generada por IA.
+Se han identificado dos grupos de estructuras relacionadas con alertas.
 
-**10.3. Consumo de tokens**
+Por un lado, WF5 utiliza las estructuras correspondientes a
+alertas_riesgo.
 
-Se debe medir el promedio de tokens utilizados por interacción,
-diferenciando cuando sea posible:
+Por otro lado, existen las tablas alert_rules, risk_alerts y
+alert_status_history, cuya utilización desde el repositorio no está
+confirmada.
 
-- Tokens de entrada.
+Antes de eliminar o modificar estas estructuras, el equipo debe revisar
+sus dependencias, información almacenada y relación con los procesos
+desplegados.
 
-- Tokens de salida.
+## 10. REQUISITOS DE CALIDAD
 
-- Consumo por modelo.
+### 10.1. Rendimiento
 
-- Número de llamadas por consulta.
+El sistema debe proporcionar respuestas dentro de tiempos adecuados para
+mantener una experiencia de usuario satisfactoria.
 
-- Coste estimado.
+Para las consultas del asistente se ha establecido como referencia de
+evaluación una latencia p95 inferior a cuatro segundos.
 
-- Consultas con consumo anormalmente elevado.
+Este objetivo debe comprobarse mediante pruebas de rendimiento y no debe
+considerarse una garantía hasta contar con resultados medidos.
 
-El cambio de un modelo de lenguaje o de embeddings no garantiza por sí
-solo una reducción del consumo. Para comparar alternativas, deben
-utilizarse las mismas preguntas y condiciones de prueba.
+### 10.2. Exactitud de las respuestas
 
-**10.4. Escenarios de calidad**
+Las respuestas generadas por el asistente deben mantener coherencia con
+la información almacenada y las fuentes utilizadas.
 
-| **Escenario** | **Estímulo** | **Respuesta esperada** | **Métrica** |
-|----|----|----|----|
-| Consulta de precio | El usuario pregunta el precio de un producto para una fecha determinada. | Se devuelve el valor correspondiente a los datos disponibles. | Precisión numérica. |
-| Consulta meteorológica | El usuario pregunta por las condiciones climáticas de una región. | Se devuelve información meteorológica disponible y pertinente. | Exactitud de la fuente y latencia. |
-| Consulta documental | El usuario pregunta sobre un tema tratado en los documentos indexados. | Se recuperan fragmentos relevantes y se genera una respuesta basada en ellos. | Relevancia de recuperación y calidad de respuesta. |
-| Sesión inválida | Se envía una solicitud sin el identificador de sesión requerido. | La solicitud se rechaza de forma controlada. | Comportamiento de validación. |
-| Proveedor no disponible | La API del modelo no responde o devuelve un error. | El sistema registra el fallo y devuelve un error controlado o utiliza una alternativa si está configurada. | Tasa de errores y tiempo de recuperación. |
-| Ingesta repetida | El mismo conjunto de datos se procesa nuevamente. | No se generan duplicados ni inconsistencias. | Integridad de los registros. |
-| Consulta de alta latencia | Una consulta tarda más de lo esperado. | Se registra información que permite identificar la etapa problemática. | Latencia por etapa y trazabilidad. |
+Para evaluar la exactitud se requiere utilizar un conjunto de preguntas
+y respuestas de referencia denominado Ground Truth.
 
-**10.5. Mantenibilidad y escalabilidad**
+Las pruebas deben permitir identificar errores numéricos, respuestas
+incorrectas y posibles alucinaciones.
 
-La arquitectura debe facilitar que las mejoras de un componente no
-obliguen a modificar todos los demás.
+### 10.3. Disponibilidad
 
-Para ello, se recomienda mantener contratos de comunicación estables,
-separar las variables de entorno, versionar los workflows y documentar
-las dependencias externas.
+La plataforma depende de la disponibilidad de sus servicios principales
+y externos.
 
-La escalabilidad debe evaluarse mediante pruebas de carga y mediciones
-del consumo de recursos. No puede deducirse únicamente del uso de
-servicios cloud o de la separación en workflows.
+Por ello, deben considerarse mecanismos para gestionar errores de
+conexión, indisponibilidad de proveedores y fallas durante la ejecución
+de los workflows.
 
-**10.6. Seguridad y confiabilidad**
+El uso de un modelo alternativo mediante failover también forma parte de
+las medidas de continuidad del servicio de inteligencia artificial.
 
-Los criterios de calidad deben incluir pruebas de validación de
-entradas, protección de credenciales, gestión de errores y recuperación
-de servicios.
+### 10.4. Mantenibilidad
 
-También se debe verificar que las respuestas de IA no sustituyan
-silenciosamente valores ausentes por números inventados y que el sistema
-pueda reconocer cuándo no dispone de datos suficientes.
+La separación de funcionalidades mediante microfrontends y workflows
+permite organizar el sistema por responsabilidades.
 
-**11. Riesgos y deuda técnica**
+Para mantener esta ventaja, cada componente debe contar con una función
+definida y una documentación actualizada.
 
-**11.1. Matriz de riesgos**
+### 10.5. Recuperabilidad
 
-La siguiente matriz representa una evaluación cualitativa inicial. Las
-probabilidades y los impactos son estimaciones de trabajo, no resultados
-de un análisis formal de incidentes.
+La información del sistema debe contar con mecanismos de respaldo y
+procedimientos de restauración.
 
-| **ID** | **Riesgo** | **Probabilidad** | **Impacto** | **Mitigación** |
-|:---|:---|:---|:---|:---|
-| R-01 | Dependencia de n8n local para la ingesta | Alta en el esquema híbrido | Alto | Planificar una ejecución cloud estable y monitorizar las tareas programadas. |
-| R-02 | Fallos en la extracción de boletines de MIDAGRI | Media-alta | Alto | Validar el contenido extraído, registrar errores y mantener pruebas con documentos reales. |
-| R-03 | Respuestas numéricas incorrectas | Media | Alto | Utilizar Ground Truth, consultas de referencia y pruebas automatizadas. |
-| R-04 | Cambios o límites en proveedores de IA | Media | Alto | Medir errores y latencia, controlar versiones y documentar alternativas configuradas. |
-| R-05 | Incremento del consumo de tokens | Media | Medio-alto | Medir consumo por interacción, revisar prompts y optimizar las llamadas. |
-| R-06 | Inconsistencias en embeddings tras un cambio de modelo | Media | Alto | Versionar el modelo de embeddings y planificar la reindexación cuando sea necesaria. |
-| R-07 | Configuración incorrecta de variables de entorno | Media | Alto | Validar la configuración antes del despliegue y mantener plantillas de ejemplo sin secretos. |
-| R-08 | Errores de autenticación o conectividad de PostgreSQL | Media | Alto | Revisar credenciales, SSL, permisos y pruebas de conexión. |
-| R-09 | Falta de observabilidad en algunas ramas | Media | Medio-alto | Instrumentar las rutas de ejecución y comprobar que los registros lleguen a Langfuse. |
-| R-10 | Confusión entre estado planificado e implementado | Media | Medio | Mantener una matriz de trazabilidad de requisitos, componentes y pruebas. |
+La recuperación debe validarse mediante pruebas que permitan comprobar
+que los datos y configuraciones pueden reconstruirse correctamente.
 
-**11.2. Deuda técnica identificada o potencial**
+### 10.6. Seguridad
 
-**DT-01. Dependencia del entorno local**
+La plataforma debe proteger sus credenciales, controlar el acceso a los
+servicios y evitar la exposición innecesaria de información sensible.
 
-La ejecución local de la ingesta permite superar obstáculos temporales,
-pero dificulta garantizar continuidad operativa.
+También debe garantizar que las solicitudes recibidas por los endpoints
+y webhooks sean validadas antes de ejecutar operaciones.
 
-**Acción recomendada:** definir una estrategia de migración a un entorno
-cloud gestionado y documentar los requisitos de red, recursos y
-permisos.
+## 11. RIESGOS Y DEUDA TÉCNICA
 
-**DT-02. Evolución de modelos sin registro centralizado**
+La arquitectura actual presenta algunos riesgos que deben ser
+considerados para garantizar la estabilidad y evolución del proyecto.
 
-Los cambios de proveedores y modelos pueden hacer que la documentación
-deje de representar el comportamiento real del sistema.
+| **Riesgo identificado** | **Posible impacto** | **Tratamiento recomendado** |
+|:--:|:--:|:--:|
+| Dependencia del puente Ngrok. | La ingesta puede detenerse si el equipo local o el túnel dejan de funcionar. | Evaluar una alternativa estable alojada en infraestructura controlada. |
+| Cambios manuales en PostgreSQL y Render que no están registrados en Git. | Diferencias entre el entorno real y la documentación o los respaldos. | Versionar configuraciones, scripts y migraciones. |
+| Procedimiento de respaldo sin validación integral. | Riesgo de no poder recuperar correctamente la información. | Realizar pruebas de restauración con QA. |
+| Configuración de failover no contrastada con el entorno desplegado. | La documentación puede no representar el comportamiento real del backend. | Verificar los modelos y las condiciones de conmutación. |
+| Tablas de alertas duplicadas o sin uso confirmado. | Riesgo de mantener estructuras innecesarias o eliminar información requerida. | Revisar dependencias antes de modificarlas. |
+| Dependencia de servicios externos. | Una interrupción o cambio en las API puede afectar las funcionalidades. | Implementar mecanismos de control de errores y monitoreo. |
+| Modelo de embeddings no confirmado en esta versión documental. | La documentación del flujo RAG puede quedar incompleta. | Revisar la configuración actual de WF0 y WF2. |
 
-**Acción recomendada:** mantener un registro de modelos y
-configuraciones que incluya identificador exacto, proveedor, finalidad,
-fecha de cambio y resultados de pruebas.
+### 11.1. Deuda técnica prioritaria
 
-**DT-03. Instrumentación incompleta**
+Las principales actividades de mejora identificadas son:
 
-La existencia de Langfuse no garantiza que todas las ramas estén
-instrumentadas ni que las métricas sean comparables.
+1.  Documentar completamente el funcionamiento del puente Ngrok.
 
-**Acción recomendada:** establecer un esquema común de trazas y
-verificar la captura de latencia, tokens y errores.
+2.  Evaluar una alternativa estable para reemplazar la dependencia de un
+    equipo local.
 
-**DT-04. Contratos de integración**
+3.  Registrar los cambios manuales realizados en Render y PostgreSQL.
 
-Los cambios en la estructura de solicitudes, las variables de entorno o
-los nodos de n8n pueden afectar al frontend.
+4.  Validar la estrategia de respaldo mediante pruebas reales de
+    restauración.
 
-**Acción recomendada:** documentar el contrato de la API, validar las
-entradas y mantener pruebas de integración.
+5.  Confirmar los identificadores exactos de los modelos generativos.
 
-**DT-05. Calendario agrícola**
+6.  Verificar el modelo de embeddings utilizado actualmente.
 
-El módulo Calendario necesita una fuente de fechas fiable y una
-definición clara de qué constituye una campaña o evento agrícola.
+7.  Formalizar las decisiones relacionadas con infraestructura cloud y
+    costos de OpenRouter.
 
-**Acción recomendada:** identificar la fuente de datos, validar su
-periodicidad y establecer cómo se extraen, normalizan y actualizan las
-fechas antes de dar el módulo por terminado.
+8.  Resolver la situación de las tablas de alertas que no presentan
+    referencias confirmadas en el repositorio.
 
-**DT-06. Evaluación reproducible**
+## 12. GLOSARIO
 
-Una evaluación de 50 preguntas puede resultar insuficiente si las
-preguntas, los datos de referencia o las condiciones de ejecución
-cambian sin control.
+| **Término** | **Definición** |
+|:---|:---|
+| arc42 | Plantilla utilizada para documentar la arquitectura de un sistema de software. |
+| Microfrontend | Módulo independiente de la interfaz web que representa una funcionalidad específica. |
+| Workflow | Secuencia de pasos automatizados que ejecuta un proceso. |
+| n8n | Plataforma utilizada para automatizar procesos e integrar servicios. |
+| PostgreSQL | Sistema gestor de bases de datos relacional. |
+| pgvector | Extensión de PostgreSQL que permite almacenar y consultar vectores. |
+| Embedding | Representación numérica de un texto utilizada para realizar búsquedas por similitud. |
+| RAG | Técnica que combina recuperación de información y generación de respuestas. |
+| OpenRouter | Plataforma que permite acceder a diferentes modelos de inteligencia artificial. |
+| Failover | Mecanismo que permite cambiar a un servicio alternativo cuando el principal falla. |
+| Langfuse | Herramienta para observar y analizar ejecuciones de aplicaciones basadas en IA. |
+| Ngrok | Servicio que permite crear túneles de comunicación hacia servicios locales. |
+| ADR | Registro formal de una decisión arquitectónica. |
+| Ground Truth | Conjunto de información de referencia utilizado para evaluar la exactitud de un sistema. |
+| Manifiesto de respaldo | Documento que enumera los elementos que deben incluirse y verificarse durante un respaldo o restauración. |
 
-**Acción recomendada:** versionar el conjunto de preguntas, los valores
-de referencia y los resultados de cada ejecución.
 
-**12. Glosario**
 
-<table style="width:99%;">
-<colgroup>
-<col style="width: 19%" />
-<col style="width: 80%" />
-</colgroup>
-<thead>
-<tr>
-<th style="text-align: left;"><p><strong>Término</strong></p></th>
-<th style="text-align: left;"><blockquote>
-<p><strong>Definición</strong></p>
-</blockquote></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;"><p>arc42</p></td>
-<td style="text-align: left;"><p>Plantilla para estructurar la
-documentación de arquitectura de software.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>API</p></td>
-<td style="text-align: left;"><p>Interfaz que permite la comunicación
-entre componentes o sistemas.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>ADR</p></td>
-<td style="text-align: left;"><p>Architecture Decision Record; registro
-de una decisión arquitectónica y sus consecuencias.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Backend</p></td>
-<td style="text-align: left;"><p>Componentes que procesan solicitudes,
-ejecutan lógica y acceden a los datos.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Embedding</p></td>
-<td style="text-align: left;"><p>Representación numérica de un contenido
-que permite comparar su similitud semántica.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Ground Truth</p></td>
-<td style="text-align: left;"><p>Conjunto de valores de referencia
-utilizados para verificar la corrección de una respuesta.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Hugging Face</p></td>
-<td style="text-align: left;"><p>Plataforma y ecosistema de modelos,
-herramientas y servicios de inteligencia artificial.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Jina Embeddings v3</p></td>
-<td style="text-align: left;"><p>Modelo de embeddings mencionado en las
-actualizaciones del proyecto para representar semánticamente el
-contenido.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Langfuse</p></td>
-<td style="text-align: left;"><p>Plataforma de observabilidad y
-evaluación de aplicaciones que utilizan modelos de lenguaje.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>LLM</p></td>
-<td style="text-align: left;"><p>Large Language Model; modelo de
-lenguaje de gran tamaño capaz de interpretar y generar texto.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>MIDAGRI</p></td>
-<td style="text-align: left;"><p>Ministerio de Desarrollo Agrario y
-Riego del Perú, fuente relevante para información agrícola.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>n8n</p></td>
-<td style="text-align: left;"><p>Plataforma de automatización basada en
-workflows.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Open-Meteo</p></td>
-<td style="text-align: left;"><p>Servicio que proporciona datos y
-pronósticos meteorológicos mediante API.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>OpenRouter</p></td>
-<td style="text-align: left;"><p>Servicio de acceso a modelos de IA
-mediante una interfaz de API unificada.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>pgvector</p></td>
-<td style="text-align: left;"><p>Extensión de PostgreSQL para almacenar
-y consultar vectores.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>PostgreSQL</p></td>
-<td style="text-align: left;"><p>Sistema gestor de bases de datos
-relacional.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>p95</p></td>
-<td style="text-align: left;"><p>Percentil 95; valor por debajo del cual
-se encuentra el 95 % de las mediciones.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>RAG</p></td>
-<td style="text-align: left;"><p>Retrieval-Augmented Generation; técnica
-que combina recuperación de información con generación mediante un
-modelo de lenguaje.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Render</p></td>
-<td style="text-align: left;"><p>Plataforma de alojamiento de
-aplicaciones y servicios.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>React</p></td>
-<td style="text-align: left;"><p>Biblioteca de JavaScript para construir
-interfaces de usuario.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Token</p></td>
-<td style="text-align: left;"><p>Unidad de texto procesada por un modelo
-de lenguaje; no equivale necesariamente a una palabra.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Vercel</p></td>
-<td style="text-align: left;"><p>Plataforma de alojamiento y despliegue
-de aplicaciones web.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>WF0</p></td>
-<td style="text-align: left;"><p>Workflow de ingesta de conocimiento
-documental para recuperación RAG.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>WF1</p></td>
-<td style="text-align: left;"><p>Workflow de actualización de precios
-agrícolas y datos meteorológicos.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>WF2</p></td>
-<td style="text-align: left;"><p>Workflow que recibe y procesa las
-consultas del usuario mediante una API de chat y análisis.</p></td>
-</tr>
-<tr>
-<td style="text-align: left;"><p>Workflow</p></td>
-<td style="text-align: left;"><p>Secuencia de nodos o tareas conectadas
-para ejecutar un proceso.</p></td>
-</tr>
-</tbody>
-</table>
-
-**Conclusiones**
-
-La arquitectura de AgroSmart Insights se ha orientado a integrar datos
-agrícolas, información meteorológica y modelos de inteligencia
-artificial mediante una plataforma web y procesos automatizados.
-
-La separación entre WF0, WF1 y WF2 permite distinguir la ingesta
-documental, la actualización de información operativa y la atención de
-consultas. PostgreSQL con pgvector proporciona una base común para la
-persistencia estructurada y la recuperación semántica. La incorporación
-de Langfuse responde a la necesidad de observar y evaluar el
-comportamiento de los modelos de IA.
-
-Uno de los principales aprendizajes arquitectónicos del proyecto ha sido
-la necesidad de adaptar el despliegue a las dificultades reales de las
-fuentes de datos. La arquitectura híbrida permitió continuar el trabajo
-de ingesta, aunque introduce dependencias que deben resolverse antes de
-considerar la operación completamente autónoma.
-
-Asimismo, la evolución de los proveedores y modelos demuestra la
-importancia de mantener las decisiones documentadas y de evaluar los
-cambios mediante pruebas reproducibles. La selección de una tecnología
-no debe basarse exclusivamente en su disponibilidad, sino también en su
-rendimiento, coste, compatibilidad y facilidad de mantenimiento.
-
-Finalmente, los objetivos de precisión numérica del 100 % sobre el
-conjunto de referencia de 50 preguntas y de latencia p95 inferior a
-cuatro segundos ofrecen criterios concretos para evaluar el Sprint 2. Su
-cumplimiento deberá demostrarse con resultados medidos y trazables.
+
