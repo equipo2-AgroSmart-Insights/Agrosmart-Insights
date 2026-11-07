@@ -38,7 +38,6 @@ estos nombres antes de importar.
 | Nombre | Tipo | Workflows |
 |---|---|---|
 | `Postgres account` | Postgres → DB `agrosmart_db` | WF0, WF1, WF2, WF4, WF5 |
-| `Google Gemini(PaLM) Api account` | Google Gemini (PaLM) API | WF2 |
 | `OpenRouter account` | OpenRouter | WF2 |
 | `langfuse credential` | Basic Auth (public key / secret key) | WF2 |
 | `Copernicus OAuth2 - AgroSmart` | OAuth2 API, client credentials (Copernicus Data Space) | WF3 |
