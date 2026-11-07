@@ -1,4 +1,4 @@
-﻿name: Publish MkDocs Documentation
+name: Publish MkDocs Documentation
 
 on:
   push:
@@ -45,7 +45,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Preparar archivos del sitio
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs-architecture/site
 
