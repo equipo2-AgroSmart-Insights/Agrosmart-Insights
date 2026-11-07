@@ -367,7 +367,7 @@
           "parameters": [
             {
               "name": "X-Bridge-Token",
-              "value": "{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}"
+              "value": "{{BRIDGE_TOKEN}}"
             },
             {
               "name": "ngrok-skip-browser-warning",
@@ -411,7 +411,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return [{\n  json: {\n    ok: false,\n    estado: \"BOLETIN_NO_DISPONIBLE\",\n    fecha: $json.fecha_objetivo,\n    mensaje: `El boletín MIDAGRI del ${$json.fecha_objetivo} todavía no está disponible. Se intentará nuevamente en el siguiente horario programado.`\n  }\n}];"
+        "jsCode": "\nconst fecha = $('Code - preparar fecha MIDAGRI')\n  .first().json.fecha_objetivo;\n\nreturn [{\n  json: {\n    ok: false,\n    estado: 'BOLETIN_NO_DISPONIBLE',\n    mercado: 'GMML',\n    fecha,\n    ingesta_realizada: false,\n    mensaje:\n      `El puente está accesible, pero MIDAGRI todavía ` +\n      `no tiene disponible el boletín GMML del ${fecha}. ` +\n      `No se cargaron precios nuevos.`\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -436,11 +436,12 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.error.status }}",
-                    "rightValue": "=404",
+                    "leftValue": "={{ /BOLETIN_NO_DISPONIBLE/i.test(JSON.stringify($json.error ?? $json)) }}",
+                    "rightValue": "={{ /BOLETIN_NO_DISPONIBLE/i.test(JSON.stringify($json.error ?? $json)) }}",
                     "operator": {
-                      "type": "number",
-                      "operation": "equals"
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
                     },
                     "id": "012a3f6a-c127-4a60-912b-d880447be422"
                   }
@@ -459,11 +460,12 @@
                 "conditions": [
                   {
                     "id": "7fdcd05d-94b0-4c1a-b66f-459cdb278cae",
-                    "leftValue": "={{ $json.error.status }}",
+                    "leftValue": "={{ /ERR_NGROK_3200|endpoint.{0,40}offline|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|EAI_AGAIN|socket hang up/i.test(JSON.stringify($json.error ?? $json)) }}",
                     "rightValue": "=502",
                     "operator": {
-                      "type": "number",
-                      "operation": "equals"
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
                     }
                   }
                 ],
@@ -488,7 +490,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return [{\n  json: {\n    ok: false,\n    tipo_error: \"ERROR_CONEXION\",\n    status: 502,\n    fecha: $json.fecha_objetivo,\n    mensaje: `No se pudo completar la conexión con el servicio de descarga de MIDAGRI para la fecha ${$json.fecha_objetivo}. El flujo finalizará y volverá a intentarlo en el siguiente horario programado.`\n  }\n}];"
+        "jsCode": "\nconst fecha = $('Code - preparar fecha MIDAGRI')\n  .first().json.fecha_objetivo;\n\nconst error = $input.first().json.error ?? {};\n\nconst status = Number(\n  error.httpCode ??\n  error.statusCode ??\n  error.status ??\n  0\n);\n\nreturn [{\n  json: {\n    ok: false,\n    estado: 'PUENTE_INACTIVO',\n    mercado: 'GMML',\n    fecha,\n    codigo_http: status || null,\n    ingesta_realizada: false,\n    requiere_revision: true,\n    mensaje:\n      'No fue posible establecer conexión con el ' +\n      'puente Python/ngrok de MIDAGRI. ' +\n      'Verifica que el bridge y ngrok estén activos ' +\n      'y que la URL configurada sea correcta. ' +\n      'No se descargó el boletín ni se actualizaron precios.'\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -501,7 +503,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return [{\n  json: {\n    ok: false,\n    tipo_error: \"ERROR_INESPERADO\",\n    status: $json.error?.status ?? null,\n    fecha: $json.fecha_objetivo,\n    mensaje: `Se produjo un error inesperado durante la descarga del boletín MIDAGRI para la fecha ${$json.fecha_objetivo}.`,\n    detalle: $json.error?.message ?? \"Sin detalle disponible\"\n  }\n}];"
+        "jsCode": "\nconst fecha = $('Code - preparar fecha MIDAGRI')\n  .first().json.fecha_objetivo;\n\nconst error = $input.first().json.error ?? {};\n\nconst status = Number(\n  error.httpCode ??\n  error.statusCode ??\n  error.status ??\n  0\n);\n\nconst detalle = String(\n  error.message ??\n  'Sin información adicional'\n);\n\nreturn [{\n  json: {\n    ok: false,\n    estado: 'ERROR_DESCARGA_SIN_CLASIFICAR',\n    mercado: 'GMML',\n    fecha,\n    codigo_http: status || null,\n    ingesta_realizada: false,\n    requiere_revision: true,\n    mensaje:\n      'La descarga del boletín MIDAGRI no pudo ' +\n      'completarse. No se confirmó si el problema ' +\n      'corresponde al túnel, a la fuente o al servicio. ' +\n      'No se actualizaron los precios.',\n    detalle_tecnico: detalle.slice(0, 300)\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -677,7 +679,7 @@
       "typeVersion": 2,
       "position": [
         1152,
-        -160
+        -176
       ],
       "id": "cfe5e5d0-f703-4a31-98d9-3786f09e37e3",
       "name": "Code - Parser MMF2 Prueba"
@@ -703,7 +705,7 @@
           "parameters": [
             {
               "name": "X-Bridge-Token",
-              "value": "{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}"
+              "value": "{{BRIDGE_TOKEN}}"
             },
             {
               "name": "ngrok-skip-browser-warning",
@@ -754,113 +756,10 @@
       "typeVersion": 1.1,
       "position": [
         944,
-        -160
+        -176
       ],
       "id": "5bc0f1d9-2315-40e3-ac44-65e39207f6b0",
       "name": "Extract from File"
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{\n  json: {\n    ok: false,\n    estado: \"BOLETIN_NO_DISPONIBLE\",\n    fecha: $json.fecha_objetivo,\n    mensaje: `El boletín MIDAGRI del ${$json.fecha_objetivo} todavía no está disponible. Se intentará nuevamente en el siguiente horario programado.`\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1200,
-        128
-      ],
-      "id": "bdac456f-17b1-42d4-8730-e089507d1505",
-      "name": "Code - Boletín aún no disponible1"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.error.status }}",
-                    "rightValue": "=404",
-                    "operator": {
-                      "type": "number",
-                      "operation": "equals"
-                    },
-                    "id": "012a3f6a-c127-4a60-912b-d880447be422"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "id": "7fdcd05d-94b0-4c1a-b66f-459cdb278cae",
-                    "leftValue": "={{ $json.error.status }}",
-                    "rightValue": "=502",
-                    "operator": {
-                      "type": "number",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              }
-            }
-          ]
-        },
-        "looseTypeValidation": true,
-        "options": {
-          "fallbackOutput": "extra"
-        }
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.4,
-      "position": [
-        944,
-        144
-      ],
-      "id": "0e0e6b97-935f-4394-9316-6f116aeec6e1",
-      "name": "Switch1"
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{\n  json: {\n    ok: false,\n    tipo_error: \"ERROR_CONEXION\",\n    status: 502,\n    fecha: $json.fecha_objetivo,\n    mensaje: `No se pudo completar la conexión con el servicio de descarga de MIDAGRI para la fecha ${$json.fecha_objetivo}. El flujo finalizará y volverá a intentarlo en el siguiente horario programado.`\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1408,
-        160
-      ],
-      "id": "e10f2657-be50-482d-b4a2-de4afe7ee3bf",
-      "name": "Code - Error conexión MIDAGRI1"
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{\n  json: {\n    ok: false,\n    tipo_error: \"ERROR_INESPERADO\",\n    status: $json.error?.status ?? null,\n    fecha: $json.fecha_objetivo,\n    mensaje: `Se produjo un error inesperado durante la descarga del boletín MIDAGRI para la fecha ${$json.fecha_objetivo}.`,\n    detalle: $json.error?.message ?? \"Sin detalle disponible\"\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1600,
-        192
-      ],
-      "id": "58901a1a-2b17-4345-b5e2-d3cbba32f6d0",
-      "name": "Code - Error inesperado MIDAGRI1"
     },
     {
       "parameters": {
@@ -874,7 +773,7 @@
       "typeVersion": 2.7,
       "position": [
         1360,
-        -160
+        -176
       ],
       "id": "ab5cec19-de4e-4208-904d-73746232b46f",
       "name": "Execute a SQL query Buscar producto_id",
@@ -893,7 +792,7 @@
       "typeVersion": 2,
       "position": [
         1552,
-        -160
+        -176
       ],
       "id": "9db839f1-f109-4251-815e-a1b7877c9f5c",
       "name": "Code in JavaScript Unir producto maestro"
@@ -1057,7 +956,7 @@
       "typeVersion": 2.7,
       "position": [
         1984,
-        -160
+        -176
       ],
       "id": "2640c8d1-d714-4f4c-8256-7b2039a83ff4",
       "name": "Insert or update rows in a table2",
@@ -1076,7 +975,7 @@
       "typeVersion": 2,
       "position": [
         1760,
-        -160
+        -176
       ],
       "id": "c8182511-3d43-4552-8676-f80aebdebb97",
       "name": "Code - Validar MMF2"
@@ -1089,10 +988,115 @@
       "typeVersion": 2,
       "position": [
         1552,
-        0
+        -16
       ],
       "id": "189e2837-d217-4eaa-af9a-db6ecd0dad36",
       "name": "Code - Diagnosticar IDs WF1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst fecha = $('Code - preparar fecha MIDAGRI')\n  .first().json.fecha_objetivo;\n\nreturn [{\n  json: {\n    ok: false,\n    estado: 'BOLETIN_NO_DISPONIBLE',\n    mercado: 'MMF2',\n    fecha,\n    ingesta_realizada: false,\n    mensaje:\n      `El puente está accesible, pero MIDAGRI todavía ` +\n      `no tiene disponible el boletín MMF2 del ${fecha}. ` +\n      `No se cargaron precios nuevos.`\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        128
+      ],
+      "id": "87cad9c4-99fb-4e3e-87a7-aa1605f3f875",
+      "name": "Code - Boletín aún no disponible1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ /BOLETIN_NO_DISPONIBLE/i.test(JSON.stringify($json.error ?? $json)) }}",
+                    "rightValue": "={{ /BOLETIN_NO_DISPONIBLE/i.test(JSON.stringify($json.error ?? $json)) }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "012a3f6a-c127-4a60-912b-d880447be422"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7fdcd05d-94b0-4c1a-b66f-459cdb278cae",
+                    "leftValue": "={{ /ERR_NGROK_3200|endpoint.{0,40}offline|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|EAI_AGAIN|socket hang up/i.test(JSON.stringify($json.error ?? $json)) }}",
+                    "rightValue": "=502",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        928,
+        144
+      ],
+      "id": "091f88b8-c846-4859-90bc-21c56cdb9969",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst fecha = $('Code - preparar fecha MIDAGRI')\n  .first().json.fecha_objetivo;\n\nconst error = $input.first().json.error ?? {};\n\nconst status = Number(\n  error.httpCode ??\n  error.statusCode ??\n  error.status ??\n  0\n);\n\nreturn [{\n  json: {\n    ok: false,\n    estado: 'PUENTE_INACTIVO',\n    mercado: 'MMF2',\n    fecha,\n    codigo_http: status || null,\n    ingesta_realizada: false,\n    requiere_revision: true,\n    mensaje:\n      'No fue posible establecer conexión con el ' +\n      'puente Python/ngrok de MIDAGRI. ' +\n      'Verifica que el bridge y ngrok estén activos ' +\n      'y que la URL configurada sea correcta. ' +\n      'No se descargó el boletín ni se actualizaron precios.'\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        160
+      ],
+      "id": "fad3153f-677c-47cc-a8f3-5ee2b2af4de1",
+      "name": "Code - Error conexión MIDAGRI1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst fecha = $('Code - preparar fecha MIDAGRI')\n  .first().json.fecha_objetivo;\n\nconst error = $input.first().json.error ?? {};\n\nconst status = Number(\n  error.httpCode ??\n  error.statusCode ??\n  error.status ??\n  0\n);\n\nconst detalle = String(\n  error.message ??\n  'Sin información adicional'\n);\n\nreturn [{\n  json: {\n    ok: false,\n    estado: 'ERROR_DESCARGA_SIN_CLASIFICAR',\n    mercado: 'MMF2',\n    fecha,\n    codigo_http: status || null,\n    ingesta_realizada: false,\n    requiere_revision: true,\n    mensaje:\n      'La descarga del boletín MIDAGRI no pudo ' +\n      'completarse. No se confirmó si el problema ' +\n      'corresponde al túnel, a la fuente o al servicio. ' +\n      'No se actualizaron los precios.',\n    detalle_tecnico: detalle.slice(0, 300)\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        192
+      ],
+      "id": "ff3bbc18-fdcb-4f47-8123-bc59e3ca8919",
+      "name": "Code - Error inesperado MIDAGRI1"
     }
   ],
   "pinData": {},
@@ -1362,31 +1366,6 @@
         ]
       ]
     },
-    "Switch1": {
-      "main": [
-        [
-          {
-            "node": "Code - Boletín aún no disponible1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Code - Error conexión MIDAGRI1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Code - Error inesperado MIDAGRI1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "HTTP Request - descargar PDF por Tunnel1": {
       "main": [
         [
@@ -1453,6 +1432,31 @@
           }
         ]
       ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Code - Boletín aún no disponible1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Error conexión MIDAGRI1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Error inesperado MIDAGRI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1464,9 +1468,12 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "a47b84e7-68fd-49e8-a2ea-dcefbfd58d32",
+  "versionId": "c94ba9a5-6471-40bc-80de-35d2e34d5f0d",
   "meta": {
-    "templateCredsSetupCompleted": true
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5b62e7e15bde60eadb5bd8099b933c21497cd00e8dceb64a70f5f6ac4a00ef14"
   },
-  "id": "cCC1p712obefY1IO"
+  "nodeGroups": [],
+  "id": "cCC1p712obefY1IO",
+  "tags": []
 }
