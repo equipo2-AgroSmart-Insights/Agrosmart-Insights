@@ -45,7 +45,7 @@ Descarga el ZIP desde <https://ngrok.com/download>, descomprímelo y anota la ru
 
 ```powershell
 cd C:\AgroSmart\midagri-bridge          # o la ruta dentro del repo
-$env:BRIDGE_TOKEN = "NanamiKento"       # cambia por tu token real
+$env:BRIDGE_TOKEN = "TU_TOKEN"       # cambia por tu token real
 py .\midagri_bridge.py
 ```
 
@@ -80,10 +80,10 @@ El script `iniciar_bridge.ps1` abre automáticamente las dos ventanas:
 
 ```powershell
 cd "src\midagri-bridge"
-.\iniciar_bridge.ps1 -Token "NanamiKento"
+.\iniciar_bridge.ps1 -Token "TU_TOKEN"
 
 # Si ngrok NO está en PATH, pasa la ruta completa:
-.\iniciar_bridge.ps1 -Token "NanamiKento" -NgrokPath "C:\ruta\a\ngrok.exe"
+.\iniciar_bridge.ps1 -Token "TU_TOKEN" -NgrokPath "C:\ruta\a\ngrok.exe"
 ```
 
 ---
