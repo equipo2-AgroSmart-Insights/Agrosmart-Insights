@@ -680,29 +680,20 @@ ni publicarlos en el repositorio.
 Los servicios deben utilizar los permisos mínimos necesarios para
 realizar sus operaciones.
 
+
 ### 7.5. Consideraciones para producción y respaldos
 
-El proyecto cuenta con una estrategia de respaldo documentada en el
-archivo ESTRATEGIA-RESPALDO.md.
+El proyecto cuenta con una estrategia de respaldo y restauración documentada en el archivo [ESTRATEGIA-RESPALDO.md](https://github.com/equipo2-AgroSmart-Insights/Agrosmart-Insights/blob/main/docs/w1-backup-restore/ESTRATEGIA-RESPALDO.md).
 
-Este documento establece los procedimientos relacionados con la
-protección y recuperación de la información del sistema.
+Este documento establece los procedimientos relacionados con la protección y recuperación de la información del sistema.
 
-La estrategia debe contemplar los datos almacenados en PostgreSQL y los
-recursos necesarios para reconstruir el entorno de trabajo.
+La estrategia contempla los datos almacenados en PostgreSQL y los recursos necesarios para reconstruir el entorno de trabajo utilizando cuentas nuevas de GitHub, Render y Vercel.
 
-Sin embargo, es importante diferenciar entre tener un procedimiento
-documentado y haber comprobado que funciona correctamente.
+Sin embargo, es importante diferenciar entre tener un procedimiento documentado y haber comprobado que funciona correctamente.
 
-Por ello, el equipo de QA debe ejecutar pruebas de restauración
-utilizando cuentas y entornos de prueba, verificar la información
-recuperada y compararla con el archivo MANIFIESTO.md.
+Por ello, el equipo de QA debe ejecutar pruebas de restauración utilizando cuentas y entornos de prueba, verificar la información recuperada y compararla con el archivo MANIFIESTO.md.
 
-Asimismo, se debe controlar que los cambios realizados directamente en
-Render o PostgreSQL queden registrados y sincronizados con el
-repositorio.
-
-Documento relacionado: ESTRATEGIA-RESPALDO.md.
+Asimismo, se debe controlar que los cambios realizados directamente en Render o PostgreSQL queden registrados y sincronizados con el repositorio.
 
 ## 8. CONCEPTOS TRANSVERSALES
 
@@ -822,12 +813,16 @@ identificadas como pendientes hasta que el equipo las confirme.
 | ADR-05 | Utilizar OpenRouter para acceder a los modelos generativos. | Configuración comunicada; verificar identificadores y failover. |
 | ADR-06 | Utilizar Langfuse para observabilidad de IA. | Implementada. |
 | ADR-07 | Utilizar Ngrok como puente temporal de comunicación con un servicio local. | Implementada como solución operativa; requiere evaluación. |
-| ADR-08 | Definir la infraestructura cloud definitiva. | Pendiente de decisión formal. |
+| ADR-08 | Mantener GitHub, Render y Vercel como proveedores de infraestructura, utilizando cuentas nuevas para reconstruir el sistema ante una contingencia. |  Acordada por el equipo el 06/11/2026; restauración pendiente de validación.  |
 | ADR-09 | Determinar si se conservan las tablas de alertas en inglés. | Pendiente de revisión. |
 
 ### 9.1. Decisión sobre infraestructura cloud
 
-El equipo debe evaluar las alternativas de infraestructura considerando:
+En la reunión del 06/11/2026, el equipo acordó mantener GitHub, Render y Vercel como proveedores de infraestructura para la reconstrucción de AgroSmart-Insights ante una contingencia.
+
+Se eligió la alternativa de utilizar cuentas nuevas en los mismos proveedores, en lugar de migrar el sistema a una plataforma cloud diferente, como Azure.
+
+La decisión considera los siguientes aspectos:
 
 - Costos de alojamiento.
 
@@ -843,9 +838,9 @@ El equipo debe evaluar las alternativas de infraestructura considerando:
 
 - Estrategia de respaldo y recuperación.
 
-La decisión final debe documentarse mediante un registro de decisión
-arquitectónica o ADR, indicando la alternativa seleccionada y las
-razones que justifican su elección.
+La reconstrucción se realizará utilizando el código fuente, los respaldos de PostgreSQL, los workflows y los procedimientos documentados en la estrategia de respaldo y restauración.
+
+Estado: Decisión acordada por el equipo el 06/11/2026. La ejecución y validación del procedimiento de restauración permanecen pendientes.
 
 ### 9.2. Decisión sobre el uso de OpenRouter
 
@@ -953,8 +948,8 @@ considerados para garantizar la estabilidad y evolución del proyecto.
 
 | **Riesgo identificado** | **Posible impacto** | **Tratamiento recomendado** |
 |:--:|:--:|:--:|
-| Dependencia del puente Ngrok. | La ingesta puede detenerse si el equipo local o el túnel dejan de funcionar. | Evaluar una alternativa estable alojada en infraestructura controlada. |
-| Cambios manuales en PostgreSQL y Render que no están registrados en Git. | Diferencias entre el entorno real y la documentación o los respaldos. | Versionar configuraciones, scripts y migraciones. |
+| Código del puente de comunicación mediante Ngrok no versionado en el repositorio Git. | Dificultad para reconstruir el servicio de ingesta ante una contingencia, debido a que el código necesario no está disponible en el repositorio. | Incorporar el código fuente al repositorio y documentar su configuración y procedimiento de despliegue. |
+| Configuraciones y cambios manuales en PostgreSQL y Render no registrados en Git. | Diferencias entre los entornos desplegados y los archivos disponibles para reconstruir el sistema, lo que puede provocar fallos durante la recuperación. | Versionar configuraciones, scripts y migraciones, y mantener sincronizados los cambios realizados en los servicios cloud. |
 | Procedimiento de respaldo sin validación integral. | Riesgo de no poder recuperar correctamente la información. | Realizar pruebas de restauración con QA. |
 | Configuración de failover no contrastada con el entorno desplegado. | La documentación puede no representar el comportamiento real del backend. | Verificar los modelos y las condiciones de conmutación. |
 | Tablas de alertas duplicadas o sin uso confirmado. | Riesgo de mantener estructuras innecesarias o eliminar información requerida. | Revisar dependencias antes de modificarlas. |
