@@ -51,7 +51,7 @@ jobs:
 
       - name: Subir el backup como artefacto
         if: ${{ env.HAS_DB_SECRET == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backup-render-postgres-${{ github.run_id }}
           path: backup-render-postgres.sql
