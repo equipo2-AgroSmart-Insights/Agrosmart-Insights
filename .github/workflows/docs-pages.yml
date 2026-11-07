@@ -1,4 +1,4 @@
-﻿name: Publish MkDocs Documentation
+name: Publish MkDocs Documentation
 
 on:
   push:
@@ -51,4 +51,4 @@ jobs:
 
       - name: Publicar documentación
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
