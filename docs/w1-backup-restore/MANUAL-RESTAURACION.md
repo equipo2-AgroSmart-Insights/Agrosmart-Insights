@@ -39,28 +39,25 @@ y esperar despliegues). Qué se respalda, qué no y por qué:
 ## 2. Cuentas y claves que vas a crear
 
 Anótalas en un gestor de contraseñas, **nunca en un archivo del
-repositorio**. Todas tienen plan gratuito **menos los dos modelos de IA del
+repositorio**. Todas tienen plan gratuito **menos los modelos de IA del
 chat**:
 
-> **Costo — revisa esto antes de empezar.** WF2 (el chat) usa dos modelos
-> que no son gratuitos (verificado el 05/11/2026 en las páginas de precios):
-> - `gemini-3.1-pro-preview`: en la tabla de precios de Gemini figura como
->   "Not available" en el plan gratuito. Hay que activar facturación en
->   Google AI Studio.
-> - `inclusionai/ling-3.0-flash` en OpenRouter: es de pago (US$ 0.021 por
->   millón de tokens de entrada y US$ 0.063 de salida). Hay que cargar crédito.
+> **Costo — revisa esto antes de empezar.** WF2 (el chat) usa dos modelos de
+> OpenRouter que son de pago (precios de OpenRouter al 06/11/2026, en US$
+> por millón de tokens):
+> - `inclusionai/ling-3.0-flash`: 0.021 de entrada y 0.063 de salida.
+> - `qwen/qwen3.6-plus`: 0.325 de entrada y 1.95 de salida.
 >
-> Si el equipo decide no pagar, en el paso 6 se cambian esos nodos por
-> modelos gratuitos (en Gemini, uno marcado "Free of charge"; en OpenRouter,
-> uno con sufijo `:free`). El chat funcionará, pero sus respuestas pueden
-> variar respecto de producción. Esa decisión es del equipo, no tuya.
+> Hay que cargar crédito en OpenRouter. Si el equipo decide no pagar, en el
+> paso 6 se cambian esos nodos por modelos con sufijo `:free`. El chat
+> funcionará, pero sus respuestas pueden variar respecto de producción. Esa
+> decisión es del equipo, no tuya.
 
 | Qué | Dónde se crea | Dónde se usa |
 |---|---|---|
 | Cuenta de GitHub | github.com | Repositorio nuevo |
 | Cuenta de Render | render.com (entra con tu GitHub) | Base de datos y n8n |
 | Cuenta de Vercel | vercel.com (entra con tu GitHub) | Frontend |
-| API key de Google Gemini (con facturación, ver arriba) | aistudio.google.com → Get API key | Credencial de n8n "Google Gemini(PaLM) Api account" (WF2) |
 | API key de OpenRouter (con crédito, ver arriba) | openrouter.ai → Keys | Credencial de n8n "OpenRouter account" (WF2) |
 | API key de Jina AI | jina.ai → API | Dentro de WF0 y WF2, en el nodo que llama a `api.jina.ai/v1/embeddings` |
 | Proyecto de Langfuse (public + secret key) | cloud.langfuse.com | Credencial de n8n "langfuse credential" (WF2) |
@@ -161,7 +158,6 @@ codigo/                  código fuente completo (tar.gz)
    | Nombre | Tipo | Datos |
    |---|---|---|
    | `Postgres account` | Postgres | Host, base, usuario y contraseña: Render → `agrosmart-postgres` → Connect → **Internal** (n8n y la base están en Render) |
-   | `Google Gemini(PaLM) Api account` | Google Gemini (PaLM) API | Tu API key de Gemini |
    | `OpenRouter account` | OpenRouter | Tu API key de OpenRouter |
    | `langfuse credential` | Basic Auth | Usuario = public key, contraseña = secret key de Langfuse |
    | `Copernicus OAuth2 - AgroSmart` | OAuth2 API, grant type **Client Credentials** | Client ID y Secret de Copernicus. Access Token URL: `https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token` |
@@ -180,8 +176,8 @@ codigo/                  código fuente completo (tar.gz)
 5. Abre cada nodo con credencial y confirma que tomó la tuya (si sale en
    rojo, elígela de la lista).
    - Solo si el equipo decidió no pagar los modelos (ver el recuadro de
-     costo del paso 2): en WF2, abre los 5 nodos de Gemini y los 5 de
-     OpenRouter y cambia el modelo por uno gratuito. Anota cuáles usaste.
+     costo del paso 2): en WF2, abre los 8 nodos de OpenRouter y cambia el
+     modelo por uno con sufijo `:free`. Anota cuáles usaste.
 6. Activa los workflows que tienen trigger: **WF2, WF3, WF4, WF5** y WF1.
    WF0 es de carga histórica: se corre a mano solo si la base viniera vacía.
 7. Prueba el chat:

@@ -70,10 +70,9 @@ manual; hay que escribirlos antes de que el QA restaure.
 | Servicio | Costo |
 |---|---|
 | GitHub, Render (plan free), Vercel (Hobby), Langfuse, Jina, Copernicus, MapTiler | Gratis en su plan básico |
-| Gemini 3.1 Pro Preview (chat) | **De pago**: no está en el plan gratuito |
-| OpenRouter `inclusionai/ling-3.0-flash` (chat) | **De pago**: centavos, pero exige cargar crédito |
+| OpenRouter: `inclusionai/ling-3.0-flash` y `qwen/qwen3.6-plus` (chat) | **De pago**: US$ 0.021–0.325 por millón de tokens de entrada; exige cargar crédito |
 
-Decisión: ☐ habilitar pago en ambas cuentas ☐ restaurar con modelos gratuitos (las respuestas del chat pueden variar).
+Decisión: ☐ cargar crédito en OpenRouter ☐ restaurar con modelos `:free` (las respuestas del chat pueden variar).
 
 ## Roles (según lo indicado por el asesor, 03/11)
 
