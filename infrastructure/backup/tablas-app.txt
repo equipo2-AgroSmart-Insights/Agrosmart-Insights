@@ -1,0 +1,27 @@
+# Tablas de la aplicación conocidas.
+#
+# Esta lista NO decide qué se respalda: respaldar.sh detecta en la base
+# todas las tablas de public salvo las internas de n8n y las prueba_*.
+# La lista sirve para avisar (::warning:: en el job y en MANIFIESTO.md)
+# cuando aparece una tabla nueva o desaparece una conocida, porque el
+# equipo crea y renombra tablas a mano fuera de las migraciones.
+#
+# Si el aviso dice que hay una tabla nueva: agregarla aquí (y, si cambia
+# la estructura que prueba el CI, en fixture-sintetico.sql).
+precios_diarios
+clima_diario
+documentos_rag
+productos_maestro
+producto_maestro
+producto_alias
+regiones_productoras
+eventos_calendario
+logs_ingesta
+alertas_riesgo_reglas
+alertas_riesgo
+alertas_riesgo_historial
+alertas_riesgo_ejecuciones
+productos_alias_mmf2
+alert_rules
+risk_alerts
+alert_status_history

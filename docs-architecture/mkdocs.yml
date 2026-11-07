@@ -1,0 +1,22 @@
+
+site_name: AgroSmart Insights - Arquitectura
+site_description: Documentación de arquitectura de software basada en arc42
+site_author: Equipo 2 - AgroSmart Insights
+
+theme:
+  name: material
+  language: es
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+
+nav:
+  - Inicio: index.md
+  - Arquitectura:
+      - Documento arc42: arquitectura/arc42.md
+  - Diagramas:
+      - Arquitectura general: diagramas/arquitectura-general.md
+      - Arquitectura RAG: diagramas/arquitectura-rag.md
+      - Funcionamiento de Ngrok: diagramas/funcionamiento-ngrok.md

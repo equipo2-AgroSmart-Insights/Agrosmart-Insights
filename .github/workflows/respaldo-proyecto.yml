@@ -1,0 +1,172 @@
+name: Respaldo del proyecto (backup + restauración verificada)
+# Reemplaza a backup-postgres.yml. Principio: en un repo público los
+# artefactos los puede descargar cualquier cuenta de GitHub, así que un
+# respaldo solo se sube cifrado y con lo mínimo necesario para restaurar.
+#
+# Ahora:
+#   1. respaldar: tablas de la app (las detecta en la base, sin las internas
+#      de n8n), funciones y vistas
+#      + workflows de n8n + código + manual, en un .7z cifrado con
+#      BACKUP_PASSPHRASE (AES-256, nombres de archivo incluidos).
+#   2. verificar-restauracion: descarga ese mismo .7z, lo restaura en una
+#      base vacía y compara filas. Un respaldo que nunca se restauró no está
+#      probado.
+#   3. prueba-sintetica (en PRs): el mismo circuito sobre una base inventada,
+#      sin secretos de producción.
+#
+# Secrets: RENDER_DATABASE_URL (ya existía) y BACKUP_PASSPHRASE (nuevo).
+# Manual: docs/w1-backup-restore/MANUAL-RESTAURACION.md
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # lunes 08:00 UTC
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - 'infrastructure/backup/**'
+      - 'src/database/migrations/**'
+      - '.github/workflows/respaldo-proyecto.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: respaldo-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prueba-sintetica:
+    if: github.event_name == 'pull_request'
+    name: Prueba del circuito con datos sintéticos
+    runs-on: ubuntu-latest
+    container:
+      image: postgres:18 # mismo pg_dump/pg_restore que producción
+    services:
+      origen:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_DB: agrosmart_origen
+          POSTGRES_USER: agrosmart
+          POSTGRES_PASSWORD: agrosmart_ci
+        options: >-
+          --health-cmd "pg_isready -U agrosmart -d agrosmart_origen"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      destino:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_DB: agrosmart_destino
+          POSTGRES_USER: agrosmart
+          POSTGRES_PASSWORD: agrosmart_ci
+        options: >-
+          --health-cmd "pg_isready -U agrosmart -d agrosmart_destino"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SOURCE_DATABASE_URL: postgresql://agrosmart:agrosmart_ci@origen:5432/agrosmart_origen
+      TARGET_DATABASE_URL: postgresql://agrosmart:agrosmart_ci@destino:5432/agrosmart_destino
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Instalar 7-Zip y jq
+        run: apt-get update -qq && (apt-get install -y -qq --no-install-recommends 7zip jq || apt-get install -y -qq --no-install-recommends p7zip-full jq)
+
+      - name: Cargar base de origen sintética
+        run: |
+          psql "$SOURCE_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f src/database/tests/fixtures_base.sql
+          psql "$SOURCE_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f src/database/migrations/003_alertas_riesgo.sql
+          psql "$SOURCE_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f infrastructure/backup/fixture-sintetico.sql
+
+      - name: Respaldar y verificar la restauración
+        run: |
+          BACKUP_PASSPHRASE=$(head -c 24 /dev/urandom | base64)
+          echo "::add-mask::$BACKUP_PASSPHRASE"
+          export BACKUP_PASSPHRASE
+          bash infrastructure/backup/respaldar.sh respaldo-salida
+          bash infrastructure/backup/verificar-restauracion.sh "$(ls respaldo-salida/*.7z)"
+
+  respaldar:
+    if: github.event_name != 'pull_request'
+    name: Respaldar producción (cifrado)
+    runs-on: ubuntu-latest
+    container:
+      image: postgres:18
+    env:
+      # `secrets.X` no se puede leer directo en `if:`; se indirecciona por env.
+      HAS_DB_SECRET: ${{ secrets.RENDER_DATABASE_URL != '' }}
+      HAS_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE != '' }}
+    steps:
+      - name: Exigir los secrets
+        if: ${{ env.HAS_DB_SECRET != 'true' || env.HAS_PASSPHRASE != 'true' }}
+        run: |
+          echo "::error::Faltan RENDER_DATABASE_URL o BACKUP_PASSPHRASE. Sin ellos no hay respaldo: se marca en rojo para que no pase desapercibido."
+          exit 1
+
+      - uses: actions/checkout@v7
+
+      - name: Instalar 7-Zip y jq
+        run: apt-get update -qq && (apt-get install -y -qq --no-install-recommends 7zip jq || apt-get install -y -qq --no-install-recommends p7zip-full jq)
+
+      - name: Armar el respaldo cifrado
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: bash infrastructure/backup/respaldar.sh respaldo-salida
+
+      - name: Subir el respaldo (solo el .7z cifrado)
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-proyecto-${{ github.run_id }}
+          path: respaldo-salida/
+          retention-days: 30
+          if-no-files-found: error
+
+  verificar-restauracion:
+    needs: respaldar
+    name: Restaurar el respaldo en una base vacía
+    runs-on: ubuntu-latest
+    container:
+      image: postgres:18
+    services:
+      destino:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_DB: agrosmart_restaurada
+          POSTGRES_USER: agrosmart
+          POSTGRES_PASSWORD: agrosmart_ci
+        options: >-
+          --health-cmd "pg_isready -U agrosmart -d agrosmart_restaurada"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Instalar 7-Zip y jq
+        run: apt-get update -qq && (apt-get install -y -qq --no-install-recommends 7zip jq || apt-get install -y -qq --no-install-recommends p7zip-full jq)
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: respaldo-proyecto-${{ github.run_id }}
+          path: respaldo-salida
+
+      - name: Restaurar y comparar
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          TARGET_DATABASE_URL: postgresql://agrosmart:agrosmart_ci@destino:5432/agrosmart_restaurada
+        run: bash infrastructure/backup/verificar-restauracion.sh "$(ls respaldo-salida/*.7z)"
+
+  avisar-falla:
+    needs: [respaldar, verificar-restauracion]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Abrir o actualizar issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label backup-failure --state open --json number --jq '.[0].number')
+          BODY="El respaldo semanal o su restauración de prueba falló: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Respaldo del proyecto fallando" --label backup-failure --body "$BODY"
+          fi

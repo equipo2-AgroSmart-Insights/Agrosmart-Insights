@@ -1,0 +1,30 @@
+{
+  "name": "agrosmart-frontend-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Orquestador de microfrontends de AgroSmart Insights",
+  "scripts": {
+    "dev": "concurrently -k -n \"CHAT,MONITOREO,MERCADOS,ALERTAS,CALENDARIO,SHELL\" -c \"cyan,yellow,magenta,blue,green,cyan\" \"npm:preview:chat\" \"npm:preview:monitoreo\" \"npm:preview:mercados\" \"npm:preview:alertas\" \"npm:preview:calendario\" \"npm:dev:shell\"",
+    "dev:shell": "cd agrosmart-frontend && npm run dev",
+    "dev:chat": "cd chat-microfrontend && npm run dev",
+    "dev:monitoreo": "cd monitoreo-microfrontend && npm run dev",
+    "dev:mercados": "cd mercados-microfrontend && npm run dev",
+    "dev:alertas": "cd alertas-microfrontend && npm run dev",
+    "dev:calendario": "cd calendario-microfrontend && npm run dev",
+    "build:chat": "cd chat-microfrontend && npm run build",
+    "preview:chat": "cd chat-microfrontend && npm run build && npm run preview",
+    "build:monitoreo": "cd monitoreo-microfrontend && npm run build",
+    "preview:monitoreo": "cd monitoreo-microfrontend && npm run build && npm run preview",
+    "build:mercados": "cd mercados-microfrontend && npm run build",
+    "preview:mercados": "cd mercados-microfrontend && npm run build && npm run preview",
+    "build:alertas": "cd alertas-microfrontend && npm run build",
+    "preview:alertas": "cd alertas-microfrontend && npm run build && npm run preview",
+    "build:calendario": "cd calendario-microfrontend && npm run build",
+    "preview:calendario": "cd calendario-microfrontend && npm run build && npm run preview",
+    "install:all": "npm install && npm --prefix agrosmart-frontend install && npm --prefix chat-microfrontend install && npm --prefix monitoreo-microfrontend install && npm --prefix mercados-microfrontend install && npm --prefix alertas-microfrontend install && npm --prefix calendario-microfrontend install",
+    "build:shell": "cd agrosmart-frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}

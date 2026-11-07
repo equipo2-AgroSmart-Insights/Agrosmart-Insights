@@ -1,0 +1,112 @@
+name: Evaluación de Calidad del Chat (IA)
+# Existía un harness de evaluación (src/ia-ops/tests/audit_eval.js, de
+# Cristhian, 17/09/2026) que compara las respuestas reales del chat contra
+# precios reales de la base de datos, pero nunca se integró a ningún
+# workflow -- nadie lo corría. Se activa acá, programado, usando el mismo
+# secret RENDER_DATABASE_URL que ya existe (n8n-drift-check.yml,
+# respaldo-proyecto.yml) para refrescar el dataset de referencia contra datos
+# reales antes de evaluar -- así comparar precios no da falsos positivos
+# solo porque el mercado cambió desde la última corrida.
+#
+# Nace también de un hallazgo real del 01/11/2026 (ver
+# docs/sprint-4/S4-LLMOps-Inventario-Modelos-y-Evals.md): el chat rechazaba
+# como "fuera de alcance" casi la mitad de un set de preguntas de precio
+# completamente legítimas, dependiendo de la frase exacta usada. Ese tipo
+# de regresión silenciosa es justo lo que esto debe seguir detectando.
+
+on:
+  schedule:
+    - cron: '0 6,18 * * *' # dos veces al día (1am y 1pm America/Lima)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  evals:
+    name: Evaluar respuestas reales del chat contra la base de datos
+    runs-on: ubuntu-latest
+    env:
+      # Mismo patrón que n8n-drift-check.yml: `secrets.X` directo dentro de
+      # un `if:` falla la validación del workflow en cualquier disparador.
+      HAS_DB_SECRET: ${{ secrets.RENDER_DATABASE_URL != '' }}
+    defaults:
+      run:
+        working-directory: src/ia-ops/tests
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/ia-ops/tests/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Avisar si falta el secret
+        if: ${{ env.HAS_DB_SECRET == 'false' }}
+        run: |
+          echo "::warning::RENDER_DATABASE_URL no está configurado -- se evaluará con el dataset cacheado (puede estar desactualizado en precio, no en si el chat rechaza preguntas legítimas)."
+
+      - name: Ejecutar evaluación
+        id: eval
+        env:
+          DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+          # LANGFUSE_PUBLIC_KEY/SECRET_KEY ya existían como secrets del repo
+          # desde el 08/09/2026 pero ningún workflow los usaba -- el script
+          # ya sabía pedirle a Langfuse costo/tokens acumulados
+          # (obtenerMetricasLangfuse en audit_eval.js), solo le faltaba la
+          # credencial real. Si Langfuse no responde o las claves no son
+          # válidas, la función ya maneja el error y devuelve null sin
+          # romper la evaluación.
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+        run: |
+          set -o pipefail
+          node audit_eval.js | tee eval-report.txt
+          exit "${PIPESTATUS[0]}"
+        continue-on-error: true
+
+      - name: Abrir o actualizar issue si la evaluación falló
+        if: ${{ steps.eval.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label ai-eval-failure --state open --json number --jq '.[0].number')
+          BODY="Detectado por \`ai-evals.yml\` el $(date -u +%Y-%m-%d) a las $(date -u +%H:%M) UTC.
+
+          \`\`\`
+          $(tail -20 eval-report.txt)
+          \`\`\`
+
+          Reporte completo: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Evaluación de calidad del chat en rojo" --label ai-eval-failure --body "$BODY"
+          fi
+
+      - name: Cerrar issue si ya quedó en verde
+        if: ${{ steps.eval.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label ai-eval-failure --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "Resuelto: la corrida del $(date -u +%Y-%m-%d) confirma que la evaluación vuelve a pasar."
+            gh issue close "$EXISTING" --repo "$GITHUB_REPOSITORY"
+          fi
+
+      - name: Subir reporte completo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-eval-report
+          path: src/ia-ops/tests/eval-report.txt
+          retention-days: 14
