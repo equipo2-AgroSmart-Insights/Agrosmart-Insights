@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       workflow_ids:
-        description: "IDs de n8n a exportar, separados por coma (ver Issue de drift). Usar 'todos' para resincronizar los 4 workflows ya versionados."
+        description: "IDs de n8n a exportar, separados por coma (ver Issue de drift). Usar 'todos' para resincronizar todos los workflows ya versionados."
         required: true
         type: string
 
