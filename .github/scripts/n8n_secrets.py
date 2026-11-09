@@ -22,6 +22,13 @@ SECRET_PATTERNS = [
     (re.compile(r'ghp_[a-zA-Z0-9]{36}'), '{{SECRETO_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}'),
     (re.compile(r'(postgres(?:ql)?://[^:/\s"\']+:)[^@\s"\']+@'),
      lambda m: m.group(1) + '{{PASSWORD_SE_DEBE_MOVER_A_CREDENCIAL}}@'),
+    # Valor de la cabecera del puente MIDAGRI (WF0, WF1, WF4), sea cual sea el
+    # token. El patrón literal de abajo solo reconoce el token original: al
+    # rotarlo, el export lo habría escrito en claro en un PR público y el drift
+    # check habría marcado esos workflows como desincronizados. No toca las
+    # expresiones de n8n (valores que empiezan con "="), que no son secretos.
+    (re.compile(r'("name"\s*:\s*"X-Bridge-Token"\s*,\s*"value"\s*:\s*")(?!=)(?:[^"\\]|\\.)*(")', re.IGNORECASE),
+     lambda m: m.group(1) + '{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}' + m.group(2)),
     (re.compile(r'NanamiKento'), '{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}'),
     (re.compile(r'maptiler\.com[^"\']*?[?&]key=[a-zA-Z0-9_-]{10,}'),
      lambda m: m.group(0).split('key=')[0] + 'key={{MAPTILER_API_KEY_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}'),

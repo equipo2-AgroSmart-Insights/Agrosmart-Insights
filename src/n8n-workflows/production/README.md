@@ -12,11 +12,11 @@ Flujos versionados como código (Sprint 1). Importar en n8n y configurar **Crede
 | `wf4-calendario-eventos-midagri.json` | WF4 — Calendario de eventos MIDAGRI | Cron mensual 06:00 + Webhook `GET /v1/calendario` |
 | `wf5-alertas-riesgo.json` | WF5 — Alertas de riesgo agrícola (cálculo + API de `alertas-microfrontend`) | Cron lun–sáb 14:00 (America/Lima) + Webhook `POST /v1/alertas` |
 
-> WF0, WF1 y WF4 leen de un servicio local expuesto con ngrok
-> (`sliding-babied-rendering.ngrok-free.dev`: `/pdf` y `/calendario-json`) cuyo
-> código no está en este repositorio. Si ese equipo está apagado, la ingesta
-> y el calendario fallan; y en una restauración desde cero no se pueden
-> levantar hasta que el código del servicio se versione.
+> WF0, WF1 y WF4 leen del puente MIDAGRI (`src/midagri-bridge/`), un servicio
+> local expuesto con ngrok (`sliding-babied-rendering.ngrok-free.dev`: `/pdf` y
+> `/calendario-json`, con la cabecera `X-Bridge-Token`). Si ese equipo está
+> apagado, la ingesta y el calendario fallan. Para levantarlo en otra máquina:
+> `src/midagri-bridge/README.md` o el paso 5.3 del manual de restauración.
 
 > WF5 necesita la migración `src/database/migrations/003_alertas_riesgo.sql`
 > aplicada antes de activarse (ver `src/database/README.md`). Tras importarlo

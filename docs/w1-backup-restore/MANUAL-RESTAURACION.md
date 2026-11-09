@@ -16,6 +16,7 @@ y esperar despliegues). Qué se respalda, qué no y por qué:
 | Base de datos PostgreSQL + pgvector | Render | Precios, clima, productos, alertas, calendario, documentos del chat |
 | n8n (orquestador) | Render | 7 workflows: ingesta (WF0, WF1), chat (WF2), NDVI (WF3), calendario (WF4), alertas (WF5) |
 | Frontend: 1 shell + 5 microfrontends | Vercel | La web que usa el agricultor |
+| Puente MIDAGRI | Tu computadora + ngrok | Descarga los PDFs de precios y el calendario de MIDAGRI para WF0, WF1 y WF4 |
 | Código y CI/CD | GitHub | Repositorio y pipelines |
 
 ## 0. Lo que te tiene que pasar el equipo
@@ -35,6 +36,8 @@ y esperar despliegues). Qué se respalda, qué no y por qué:
 | Node.js 24 | Probar el frontend (opcional) | `node --version` |
 | Cliente de PostgreSQL 18 (`psql`, `pg_restore`) | Restaurar la base | `pg_restore --version` debe decir 18 |
 | Git Bash (Windows) o una terminal (Linux/macOS) | Correr `restaurar-bd.sh` | — |
+| Python 3.11 o superior | Correr el puente MIDAGRI (paso 5.3) | `py --version` |
+| ngrok v3 | Darle URL pública al puente | `ngrok version` |
 
 ## 2. Cuentas y claves que vas a crear
 
@@ -64,6 +67,8 @@ chat**:
 | Cliente OAuth de Copernicus | dataspace.copernicus.eu → Dashboard → User Settings → OAuth clients → Create | Credencial de n8n "Copernicus OAuth2 - AgroSmart" (WF3) |
 | API key de MapTiler | cloud.maptiler.com → API keys | Variable `VITE_MAPTILER_API_KEY` del microfrontend de monitoreo |
 | Clave del webhook de NDVI | La inventas tú: una cadena larga y aleatoria | Credencial de n8n "Header Auth" (WF3) y `VITE_WF3_NDVI_KEY` |
+| Cuenta de ngrok (authtoken) | ngrok.com → panel → Your Authtoken | Túnel del puente MIDAGRI (paso 5.3) |
+| Token del puente | Lo inventas tú: una cadena larga y aleatoria | Puente (paso 5.3) y WF0, WF1, WF4 (paso 6) |
 
 ## 3. Abrir el respaldo
 
@@ -149,6 +154,39 @@ codigo/                  código fuente completo (tar.gz)
 > (job "Restaurar el respaldo en una base vacía"): si ese job está en verde,
 > este paso funciona.
 
+### 5.3 Puente MIDAGRI (para WF0, WF1 y WF4)
+
+WF0, WF1 y WF4 no pueden descargar directamente los PDFs de precios ni el
+calendario de MIDAGRI: lo hace por ellos un pequeño servidor en Python (el
+"puente", en `src/midagri-bridge/`). Corre **en tu computadora** y ngrok le
+da una URL pública para que n8n, en la nube, lo alcance.
+
+1. Crea una cuenta gratuita en ngrok (ngrok.com), instálalo y registra tu
+   authtoken (lo ves en el panel de ngrok):
+   ```powershell
+   ngrok config add-authtoken <TU_AUTHTOKEN_DE_NGROK>
+   ```
+2. Inventa un **token del puente**: una cadena larga y aleatoria. Lo usarás
+   aquí y en n8n (paso 6).
+3. En PowerShell, desde la carpeta del código restaurado:
+   ```powershell
+   cd src\midagri-bridge
+   py -m pip install -r requirements.txt
+   .\iniciar_bridge.ps1 -Token "<tu token del puente>"
+   ```
+   Se abren dos ventanas: el puente (puerto 8080) y ngrok. **No las
+   cierres** mientras uses la app.
+4. Comprueba que el puente responde:
+   ```powershell
+   Invoke-RestMethod "http://localhost:8080/health"
+   ```
+   Debe responder con `"ok": true`.
+5. Copia la URL pública que muestra la ventana de ngrok (línea
+   `Forwarding https://….ngrok-free.app`). Si reinicias ngrok, la URL puede
+   cambiar: entonces repite el reemplazo del paso 6.
+
+Detalle completo y solución de problemas: `src/midagri-bridge/README.md`.
+
 ## 6. n8n: credenciales y workflows
 
 1. Abre `https://<tu-dominio-n8n>/` y crea la cuenta de dueño (owner).
@@ -166,12 +204,15 @@ codigo/                  código fuente completo (tar.gz)
 3. **Import from File** con cada JSON de la carpeta `n8n/`, en este orden:
    WF5, WF3, WF4, WF2, WF1, WF0 (GMML y MMF2).
 4. Reemplaza los marcadores que dejó el respaldo (por seguridad, las claves
-   no viajan en el respaldo):
+   no viajan en el respaldo) y la URL del puente. Lo más rápido es hacerlo
+   con **Buscar y reemplazar** en cada archivo JSON *antes* de importarlo;
+   también se puede editar cada nodo en n8n.
 
-   | Marcador | Workflows | Reemplazar por |
+   | Buscar | Workflows | Reemplazar por |
    |---|---|---|
    | `{{JINA_API_KEY_SE_DEBE_ROTAR_Y_MOVER_A_CREDENCIAL}}` | WF0 (×2), WF2 | Tu API key de Jina |
-   | `{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}` | WF0, WF1, WF4 | Ver "Limitaciones conocidas" |
+   | `{{BRIDGE_TOKEN_SE_DEBE_MOVER_A_CREDENCIAL}}` | WF0, WF1, WF4 | Tu token del puente (paso 5.3) |
+   | `https://sliding-babied-rendering.ngrok-free.dev` | WF0, WF1, WF4 | Tu URL de ngrok (paso 5.3), sin `/` al final |
 
 5. Abre cada nodo con credencial y confirma que tomó la tuya (si sale en
    rojo, elígela de la lista).
@@ -239,6 +280,7 @@ Abre la URL del shell y marca:
 - [ ] **Monitoreo**: el mapa carga y la consulta NDVI devuelve una imagen.
 - [ ] **Alertas**: se listan alertas (o el mensaje de que no hay).
 - [ ] **Calendario**: carga los eventos que vinieron en el respaldo.
+- [ ] **Puente MIDAGRI**: `http://localhost:8080/health` responde `"ok": true` y la ventana de ngrok está en `online`.
 - [ ] Las filas de las tablas coinciden con `MANIFIESTO.md`.
 
 Para la presentación: valida todo una vez, y después **graba el video
@@ -246,13 +288,11 @@ haciéndolo otra vez desde cero**, siguiendo este manual paso a paso.
 
 ## Limitaciones conocidas (no son errores tuyos)
 
-1. **Puente local con ngrok.** WF0, WF1 y WF4 leen PDFs y el calendario
-   desde un servicio que corre en la computadora de un integrante, expuesto
-   con ngrok (`/pdf`, `/calendario-json`). Su código no está en el
-   repositorio, así que no se puede restaurar. Consecuencia: la app funciona
-   con los datos restaurados, pero **la ingesta diaria (WF1) y la
-   actualización del calendario (WF4) no traerán datos nuevos** hasta que ese
-   servicio se versione y se despliegue.
+1. **El puente MIDAGRI corre en una computadora, no en la nube.** Desde el
+   07/11 su código está en el repositorio y se restaura con el paso 5.3,
+   pero tiene que estar encendido (con su ventana de ngrok) para que WF1
+   traiga precios nuevos y WF4 actualice el calendario. Con el puente
+   apagado, la app funciona igual con los datos restaurados.
 2. **Lo que no viaja en el respaldo:** claves y contraseñas (se crean de
    nuevo en el paso 2), usuarios de n8n e historial de ejecuciones.
 3. **Plan gratuito de Render:** n8n tiene 512 MB de RAM y se duerme tras un
