@@ -1,7 +1,8 @@
 # Estrategia de respaldo y restauración — AgroSmart Insights (W1)
 
-Propuesta del rol DevSecOps para aprobar en la reunión de equipo del
-06/11/2026. Lo marcado con ☐ lo decide el equipo.
+Propuesta del rol DevSecOps, revisada en la reunión de equipo del
+06/11/2026 (ADR-08 del arc42). ☑ = decidido; ☐ = pendiente de decisión del
+equipo.
 
 ## Objetivo
 
@@ -34,7 +35,7 @@ siguiendo el manual, el respaldo no sirve.
 - **Automático:** cada lunes 03:00 (hora de Lima), workflow `respaldo-proyecto.yml`.
 - **Manual:** antes de cada entrega o cambio grande (Actions → Respaldo del proyecto → Run workflow).
 - **Retención:** 30 días en GitHub (4 respaldos semanales).
-- **Copia fuera de GitHub:** el último respaldo antes de cada entrega se guarda en ☐ OneDrive del líder DevSecOps ☐ Drive del equipo. Va cifrado, así que puede guardarse en la nube.
+- **Copia fuera de GitHub:** el último respaldo antes de cada entrega se guarda en ☐ OneDrive del líder DevSecOps ☐ Drive del equipo. Va cifrado, así que puede guardarse en la nube. *Situación actual:* el respaldo entregado al QA (07/11/2026) está en el OneDrive del líder DevSecOps.
 
 ## Seguridad
 
@@ -48,7 +49,7 @@ Un respaldo que nunca se restauró no está probado. Por eso:
 
 1. **Cada respaldo** se restaura solo en una base vacía y se comprueba que: las filas de cada tabla coincidan con las del origen, estén todas las funciones y vistas, no se haya colado ninguna tabla interna de n8n y el cálculo de alertas responda sobre los datos restaurados. Si algo no coincide, se abre un Issue `backup-failure`. Si aparece una tabla nueva o desaparece una conocida, el respaldo la incluye igual y avisa.
 2. **Cada cambio** a los scripts de respaldo se prueba en su PR con una base sintética.
-3. **La restauración completa** (nube nueva + manual) la ejecuta el QA, como se describe abajo.
+3. **La restauración completa** (nube nueva + manual) la ejecuta el QA, como se describe abajo. La primera se hizo el 09/11/2026 con el respaldo del 07/11/2026 y quedó grabada en video.
 
 ## Objetivos de recuperación
 
@@ -59,12 +60,13 @@ Un respaldo que nunca se restauró no está probado. Por eso:
 
 ## Dónde se restaura
 
-☐ **Mismos proveedores, cuentas nuevas** (GitHub + Render + Vercel) — *recomendado*:
-`render.yaml` crea la base y n8n automáticamente (Blueprint), es gratuito y
-es lo que el manual describe paso a paso.
+☑ **Mismos proveedores, cuentas nuevas** (GitHub + Render + Vercel) —
+*acordado por el equipo el 06/11/2026 (ADR-08)*: `render.yaml` crea la base
+y n8n automáticamente (Blueprint), es gratuito y es lo que el manual
+describe paso a paso.
 
-☐ **Otra nube** (por ejemplo, Azure): solo cambian los pasos 5.1 y 7 del
-manual; hay que escribirlos antes de que el QA restaure.
+~~Otra nube~~ (por ejemplo, Azure): descartada el 06/11/2026. Si se retoma,
+solo cambian los pasos 5.1 y 7 del manual.
 
 ## Costos
 
@@ -98,8 +100,8 @@ autor, completa sin darse cuenta lo que el manual no dice.
 
 ## Entrega al QA
 
-- [ ] Último respaldo en verde descargado (`.7z` + `.sha256`) y copia guardada fuera de GitHub.
-- [ ] Frase entregada por canal privado.
-- [ ] Enlace al manual y a esta estrategia.
-- [ ] Decisiones de esta página marcadas (nube y costos).
-- [ ] Fecha de la prueba privada del QA y fecha de grabación del video.
+- [x] Último respaldo en verde descargado (`.7z` + `.sha256`) y copia guardada fuera de GitHub (respaldo del 07/11/2026).
+- [x] Frase entregada por canal privado.
+- [x] Enlace al manual y a esta estrategia (viajan dentro del paquete).
+- [ ] Decisiones de esta página marcadas: nube ☑ (06/11/2026); costos de OpenRouter y copia fuera de GitHub, pendientes.
+- [x] Video de la restauración grabado el 09/11/2026. La fecha de la prueba privada no quedó registrada.
