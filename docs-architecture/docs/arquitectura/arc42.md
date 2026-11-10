@@ -714,7 +714,9 @@ La estrategia contempla los datos almacenados en PostgreSQL y los recursos neces
 
 Sin embargo, es importante diferenciar entre tener un procedimiento documentado y haber comprobado que funciona correctamente.
 
-Por ello, el equipo de QA debe ejecutar pruebas de restauración utilizando cuentas y entornos de prueba, verificar la información recuperada y compararla con el archivo MANIFIESTO.md.
+Por ello, el equipo de QA ejecuta pruebas de restauración utilizando cuentas y entornos de prueba, verifica la información recuperada y la compara con el archivo MANIFIESTO.md.
+
+El 09/11/2026, QA restauró el sistema completo en cuentas propias de GitHub, Render y Vercel siguiendo solo el manual, con el respaldo del 07/11/2026, y comparó los conteos con el MANIFIESTO.md; la restauración quedó grabada en video. Además, el flujo `respaldo-proyecto.yml` restaura cada respaldo semanal en una base vacía y compara las filas de todas las tablas, las funciones y las extensiones.
 
 Asimismo, se debe controlar que los cambios realizados directamente en Render o PostgreSQL queden registrados y sincronizados con el repositorio.
 
@@ -836,7 +838,7 @@ identificadas como pendientes hasta que el equipo las confirme.
 | ADR-05 | Utilizar OpenRouter para acceder a los modelos generativos. | Configuración comunicada; verificar identificadores y failover. |
 | ADR-06 | Utilizar Langfuse para observabilidad de IA. | Implementada. |
 | ADR-07 | Utilizar Ngrok como puente temporal de comunicación con un servicio local. | Implementada como solución operativa; requiere evaluación. |
-| ADR-08 | Mantener GitHub, Render y Vercel como proveedores de infraestructura, utilizando cuentas nuevas para reconstruir el sistema ante una contingencia. |  Acordada por el equipo el 06/11/2026; restauración pendiente de validación.  |
+| ADR-08 | Mantener GitHub, Render y Vercel como proveedores de infraestructura, utilizando cuentas nuevas para reconstruir el sistema ante una contingencia. |  Acordada por el equipo el 06/11/2026; restauración validada por QA el 09/11/2026.  |
 | ADR-09 | Determinar si se conservan las tablas de alertas en inglés. | Pendiente de revisión. |
 
 ### 9.1. Decisión sobre infraestructura cloud
@@ -863,7 +865,7 @@ La decisión considera los siguientes aspectos:
 
 La reconstrucción se realizará utilizando el código fuente, los respaldos de PostgreSQL, los workflows y los procedimientos documentados en la estrategia de respaldo y restauración.
 
-Estado: Decisión acordada por el equipo el 06/11/2026. La ejecución y validación del procedimiento de restauración permanecen pendientes.
+Estado: Decisión acordada por el equipo el 06/11/2026. El procedimiento de restauración fue ejecutado y validado por QA el 09/11/2026 en cuentas nuevas de los mismos proveedores.
 
 ### 9.2. Decisión sobre el uso de OpenRouter
 
@@ -971,9 +973,9 @@ considerados para garantizar la estabilidad y evolución del proyecto.
 
 | **Riesgo identificado** | **Posible impacto** | **Tratamiento recomendado** |
 |:--:|:--:|:--:|
-| Código del puente de comunicación mediante Ngrok no versionado en el repositorio Git. | Dificultad para reconstruir el servicio de ingesta ante una contingencia, debido a que el código necesario no está disponible en el repositorio. | Incorporar el código fuente al repositorio y documentar su configuración y procedimiento de despliegue. |
+| Puente de comunicación mediante Ngrok ejecutado en un equipo local. | Si el equipo o el túnel se apagan, la ingesta de precios y el calendario no reciben datos nuevos. | Código versionado en `src/midagri-bridge/` (PR #191) y documentado en el paso 5.3 del manual de restauración; evaluar su despliegue en la nube. |
 | Configuraciones y cambios manuales en PostgreSQL y Render no registrados en Git. | Diferencias entre los entornos desplegados y los archivos disponibles para reconstruir el sistema, lo que puede provocar fallos durante la recuperación. | Versionar configuraciones, scripts y migraciones, y mantener sincronizados los cambios realizados en los servicios cloud. |
-| Procedimiento de respaldo sin validación integral. | Riesgo de no poder recuperar correctamente la información. | Realizar pruebas de restauración con QA. |
+| Procedimiento de respaldo sin validación integral. | Riesgo de no poder recuperar correctamente la información. | Mitigado: restauración completa por QA (09/11/2026) y restauración automática de cada respaldo en una base vacía (`respaldo-proyecto.yml`). Repetir la prueba de QA en cada entrega mayor. |
 | Configuración de failover no contrastada con el entorno desplegado. | La documentación puede no representar el comportamiento real del backend. | Verificar los modelos y las condiciones de conmutación. |
 | Tablas de alertas duplicadas o sin uso confirmado. | Riesgo de mantener estructuras innecesarias o eliminar información requerida. | Revisar dependencias antes de modificarlas. |
 | Dependencia de servicios externos. | Una interrupción o cambio en las API puede afectar las funcionalidades. | Implementar mecanismos de control de errores y monitoreo. |
@@ -990,8 +992,8 @@ Las principales actividades de mejora identificadas son:
 
 3.  Registrar los cambios manuales realizados en Render y PostgreSQL.
 
-4.  Validar la estrategia de respaldo mediante pruebas reales de
-    restauración.
+4.  Repetir la restauración completa con QA en cada entrega mayor (la
+    primera se realizó el 09/11/2026).
 
 5.  Confirmar los identificadores exactos de los modelos generativos.
 
